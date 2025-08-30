@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS citext;
+
 -- =========================
 -- Support Tickets
 -- =========================
@@ -52,6 +54,8 @@ CREATE TABLE brands (
   id varchar(36) PRIMARY KEY,
   name varchar(100) NOT NULL,
   email citext UNIQUE NOT NULL,
+  sector varchar(20) NOT NULL,
+  password BYTEA NOT NULL,
   website varchar(255) NOT NULL,
   address text NOT NULL,
   campaigns int NOT NULL DEFAULT 0
@@ -65,9 +69,8 @@ CREATE TABLE status (
 CREATE TABLE campaigns (
   id varchar(36) PRIMARY KEY,
   brand_id varchar(36) NOT NULL,
-  name varchar(100) NOT NULL,
+  title varchar(100) NOT NULL,
   budget numeric(12,2) NOT NULL CHECK (budget >= 1000),
-  cpm float NOT NULL CHECK (cpm > 0),
   requirements text,
   platform varchar(20) NOT NULL,
   doc_link varchar(255),
@@ -90,8 +93,9 @@ CREATE TABLE users (
   first_name varchar(50) NOT NULL,
   last_name varchar(50),
   email citext UNIQUE NOT NULL,
+  password BYTEA NOT NULL,
   gender varchar(1) CHECK (gender IN ('M','F','O')),
-  age int CHECK (age >= 0 AND age <= 100),
+  age int CHECK (age > 0 AND age < 100),
   role varchar(5) NOT NULL,
   created_at timestamptz DEFAULT now(),
   CONSTRAINT fk_user_role FOREIGN KEY (role) REFERENCES roles (id)
@@ -99,9 +103,9 @@ CREATE TABLE users (
 
 CREATE TABLE platform_links (
   userid varchar(36) NOT NULL,
-  name varchar(10) NOT NULL,
+  platform varchar(10) NOT NULL,
   url varchar(255) NOT NULL,
-  PRIMARY KEY (userid, name),
+  PRIMARY KEY (userid, platform),
   CONSTRAINT fk_platform_user FOREIGN KEY (userid) REFERENCES users (id)
 );
 
