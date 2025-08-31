@@ -10,6 +10,7 @@ CREATE TABLE support_tickets (
   message text NOT NULL,
   status int NOT NULL,
   created_at timestamptz DEFAULT now()
+  type VARCHAR(10) NOT NULL CHECK (type IN ('brand', 'creator'))
 );
 
 CREATE TABLE ticket_status (
@@ -71,6 +72,7 @@ CREATE TABLE campaigns (
   brand_id varchar(36) NOT NULL,
   title varchar(100) NOT NULL,
   budget numeric(12,2) NOT NULL CHECK (budget >= 1000),
+  cpm float NOT NULL CHECK (cpm >= 10.0),
   requirements text,
   platform varchar(20) NOT NULL,
   doc_link varchar(255),
