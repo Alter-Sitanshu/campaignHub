@@ -11,8 +11,22 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-const QueryTimeOut = time.Minute * 3
+const QueryTimeOut time.Duration = time.Minute * 3
 
+// macros for ticket_status
+const (
+	OpenTicket  int = 1
+	CloseTicket int = 0
+)
+
+// macros for status
+const (
+	ActiveStatus  int = 1
+	DraftStatus   int = 0
+	ExpiredStatus int = 3
+)
+
+// macros for db errors
 var (
 	ErrNotFound     = errors.New("not found")
 	ErrTokenExpired = errors.New("invalid or expired token")
@@ -67,7 +81,24 @@ type Store struct {
 		UpdateCampaign(context.Context, UpdateCampaign) error
 		GetRecentCampaigns(context.Context, int, int) ([]Campaign, error)
 		GetCampaign(context.Context, string) (*Campaign, error)
-		//TODO
+	}
+	TicketInterface interface {
+		OpenTicket(context.Context, *Ticket) error
+		ResolveTicket(context.Context, string) error
+		FindTicket(context.Context, string) (*Ticket, error)
+		DeleteTicket(context.Context, string) error
+		FetchRecentTickets(context.Context, int, int, int) ([]Ticket, error)
+	}
+	SubmissionInterface interface {
+		MakeSubmission(context.Context, *Submission) error
+		DeleteSubmission(context.Context, string) error
+		FindSubmissionById(context.Context, string) (*Submission, error)
+		FindSubmissionsByFilters(context.Context, Filter) ([]Submission, error)
+		UpdateSubmission(context.Context, UpdateSubmission) error
+	}
+	LinkInterface interface {
+		AddLinks(context.Context, string, []Links) error
+		DeleteLinks(context.Context, string, string) error
 	}
 }
 
@@ -80,6 +111,15 @@ func NewStore(db *sql.DB) *Store {
 			db: db,
 		},
 		CampaignInterace: &CampaignStore{
+			db: db,
+		},
+		TicketInterface: &TicketStore{
+			db: db,
+		},
+		SubmissionInterface: &SubmissionStore{
+			db: db,
+		},
+		LinkInterface: &LinkStore{
 			db: db,
 		},
 	}

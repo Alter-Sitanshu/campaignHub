@@ -42,20 +42,18 @@ func destroyBrand() {
 	MockBrandStore.DeregisterBrand(context.Background(), "0001")
 }
 
-func seedCampaign(num int) []string {
+func SeedCampaign(ctx context.Context, num int) []string {
 	i := 0
 	var ids []string
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
 	tx, _ := MockCampaignStore.db.BeginTx(ctx, nil)
 	for i < num {
 		id := fmt.Sprintf("010%d", i)
 		query := `
-			INSERT INTO campaigns (id, brand_id, title, budget, requirements, platform, doc_link, status)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			INSERT INTO campaigns (id, brand_id, title, budget, cpm, requirements, platform, doc_link, status)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		`
 		args := []any{
-			id, "0001", fmt.Sprintf("title_%d", i), 1000.0, "", "youtube", "", 0,
+			id, "0001", fmt.Sprintf("title_%d", i), 1000.0, 101.0, "", "youtube", "", 0,
 		}
 		_, err := tx.ExecContext(ctx, query, args...)
 		if err != nil {
@@ -70,6 +68,10 @@ func seedCampaign(num int) []string {
 	return ids
 }
 
+func destroyCampaign(ctx context.Context, id string) {
+	MockCampaignStore.DeleteCampaign(ctx, id)
+}
+
 func TestLaunchCampaign(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
@@ -80,6 +82,7 @@ func TestLaunchCampaign(t *testing.T) {
 		BrandId:  "0001",
 		Title:    "mock_title",
 		Budget:   1000.0,
+		CPM:      101.0,
 		Req:      "mock_requirements",
 		Platform: "youtube",
 		DocLink:  "mock_link",
@@ -104,6 +107,7 @@ func TestGetCampaign(t *testing.T) {
 		BrandId:  "0001",
 		Title:    "mock_title",
 		Budget:   1000.0,
+		CPM:      101.0,
 		Req:      "mock_requirements",
 		Platform: "youtube",
 		DocLink:  "mock_link",
@@ -129,9 +133,9 @@ func TestGetCampaign(t *testing.T) {
 func TestGetRecentCampaigns(t *testing.T) {
 	generateBrand()
 	defer destroyBrand()
-	GenIds := seedCampaign(10)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
+	GenIds := SeedCampaign(ctx, 10)
 	got, err := MockCampaignStore.GetRecentCampaigns(ctx, 0, 10)
 	if err != nil {
 		log.Printf("Fetching error in campaign feed: %v", err.Error())
@@ -161,6 +165,7 @@ func TestEndCampaign(t *testing.T) {
 		BrandId:  "0001",
 		Title:    "mock_title",
 		Budget:   1000.0,
+		CPM:      101.0,
 		Req:      "mock_requirements",
 		Platform: "youtube",
 		DocLink:  "mock_link",
@@ -186,6 +191,7 @@ func TestUpdateCampaign(t *testing.T) {
 		BrandId:  "0001",
 		Title:    "mock_title",
 		Budget:   1000.0,
+		CPM:      101.0,
 		Req:      "mock_requirements",
 		Platform: "youtube",
 		DocLink:  "mock_link",

@@ -17,6 +17,7 @@ type Campaign struct {
 	BrandId string  `json:"brand_id"`
 	Title   string  `json:"title"`
 	Budget  float64 `json:"budget"`
+	CPM     float64 `json:"cpm"`
 	Req     string  `json:"requirements"`
 	// added this to segregate the campaigns on the basis of platform
 	Platform  string `json:"platform"`
@@ -27,6 +28,7 @@ type Campaign struct {
 
 // Update Campaign payload
 type UpdateCampaign struct {
+	// No option to update CPM to avoid frauds
 	Id      string   `json:"id"` //this is not a pointer cause it is mandatory
 	Title   *string  `json:"title"`
 	Budget  *float64 `json:"budget"`
@@ -37,14 +39,15 @@ type UpdateCampaign struct {
 // This function adds a new campaign record
 func (c *CampaignStore) LaunchCampaign(ctx context.Context, campaign *Campaign) error {
 	query := `
-		INSERT INTO campaigns (id, brand_id, title, budget, requirements, platform, doc_link, status)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO campaigns (id, brand_id, title, budget, cpm, requirements, platform, doc_link, status)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
 	_, err := c.db.ExecContext(ctx, query,
 		campaign.Id,
 		campaign.BrandId,
 		campaign.Title,
 		campaign.Budget,
+		campaign.CPM,
 		campaign.Req,
 		campaign.Platform,
 		campaign.DocLink,
@@ -129,7 +132,7 @@ func (c *CampaignStore) UpdateCampaign(ctx context.Context, payload UpdateCampai
 func (c *CampaignStore) GetRecentCampaigns(ctx context.Context, offset int, limit int) ([]Campaign, error) {
 	var output []Campaign
 	query := `
-		SELECT id, brand_id, title, budget, requirements, platform, doc_link, status, created_at
+		SELECT id, brand_id, title, budget, cpm, requirements, platform, doc_link, status, created_at
 		FROM campaigns
 		ORDER BY created_at DESC, id DESC
 		LIMIT $1 OFFSET $2
@@ -147,6 +150,7 @@ func (c *CampaignStore) GetRecentCampaigns(ctx context.Context, offset int, limi
 			&row.BrandId,
 			&row.Title,
 			&row.Budget,
+			&row.CPM,
 			&row.Req,
 			&row.Platform,
 			&row.DocLink,
@@ -164,7 +168,7 @@ func (c *CampaignStore) GetRecentCampaigns(ctx context.Context, offset int, limi
 }
 func (c *CampaignStore) GetCampaign(ctx context.Context, id string) (*Campaign, error) {
 	query := `
-		SELECT id, brand_id, title, budget, requirements, platform, doc_link, status, created_at
+		SELECT id, brand_id, title, budget, cpm, requirements, platform, doc_link, status, created_at
 		FROM campaigns
 		WHERE id = $1
 	`
@@ -174,6 +178,7 @@ func (c *CampaignStore) GetCampaign(ctx context.Context, id string) (*Campaign, 
 		&row.BrandId,
 		&row.Title,
 		&row.Budget,
+		&row.CPM,
 		&row.Req,
 		&row.Platform,
 		&row.DocLink,

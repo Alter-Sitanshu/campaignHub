@@ -83,8 +83,7 @@ func TestGetBrand(t *testing.T) {
 }
 
 func TestCreateBrand(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx := t.Context()
 	t.Run("Creating a valid brand entity", func(t *testing.T) {
 		mockBrand := &Brand{
 			Id:        "0001",

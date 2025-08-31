@@ -14,6 +14,11 @@ type UserStore struct {
 	db *sql.DB
 }
 
+type LinkStore struct {
+	db *sql.DB
+}
+
+// Links model
 type Links struct {
 	Platform string `json:"platform"`
 	Url      string `json:"url"`
@@ -244,5 +249,51 @@ func (u *UserStore) UpdateUser(ctx context.Context, payload UpdatePayload) error
 	}
 	// Successfully updated the user information
 	tx.Commit()
+	return nil
+}
+
+// ----------  LinkStore Implementation ---------------
+
+func (l *LinkStore) AddLinks(ctx context.Context, id string, links []Links) error {
+	query := `
+		INSERT INTO platform_links (userid, platform, url)
+		VALUES ($1, $2, $3)
+	`
+	tx, err := l.db.BeginTx(ctx, nil)
+	if err != nil {
+		// error starting a transaction
+		log.Printf("error beginning transaction: %v", err.Error())
+		return err
+	}
+	for _, v := range links {
+		_, err := tx.ExecContext(ctx, query, id, v.Platform, v.Url)
+		if err != nil {
+			// rollback the inserted links
+			tx.Rollback()
+			log.Printf("error inserting links: %v", err.Error())
+			return err
+		}
+	}
+
+	// successfully inserted the links
+	tx.Commit()
+	return nil
+}
+
+// Deletes a link associated to a creator
+func (l *LinkStore) DeleteLinks(ctx context.Context, id string, platform string) error {
+	query := `
+		DELETE FROM platform_links
+		WHERE userid = $1 AND platform = $2
+	`
+	if id == "" || platform == "" {
+		return fmt.Errorf("invalid id or platform")
+	}
+	_, err := l.db.ExecContext(ctx, query, id, platform)
+	if err != nil {
+		log.Printf("error deleting links: %v", err.Error())
+		return err
+	}
+	// Successfully deleted the link
 	return nil
 }

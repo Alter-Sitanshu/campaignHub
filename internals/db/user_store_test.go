@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"testing"
 	"time"
@@ -10,16 +11,34 @@ import (
 )
 
 var MockUserStore UserStore
+var MockLinkStore LinkStore
 
 func init() {
 	MockUserStore = UserStore{
 		db: MockDB,
 	}
+	MockLinkStore.db = MockDB
 }
 
 func TestGetUsers(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+	user := User{
+		Id:        "0001",
+		FirstName: "Croc",
+		LastName:  "Singh",
+		Email:     "sitanshu5@gmail.com",
+		Gender:    "M",
+		Age:       20,
+		Role:      "LVL1",
+	}
+	if err := user.Password.Hash("random_pass"); err != nil {
+		log.Printf("Hashing error: %v\n", err.Error())
+		t.Fail()
+	}
+	if err := MockUserStore.CreateUser(ctx, &user); err != nil {
+		t.Fail()
+	}
 	t.Run("Getting user by id", func(t *testing.T) {
 		_, err := MockUserStore.GetUserById(ctx, "0001") // This is a given id that will always exist
 		if err != nil {
@@ -48,11 +67,11 @@ func TestGetUsers(t *testing.T) {
 			t.Fail()
 		}
 	})
+	MockUserStore.DeleteUser(ctx, user.Id)
 }
 
 func TestCreateUser(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx := t.Context()
 	t.Run("Creating a valid user", func(t *testing.T) {
 		user := User{
 			Id:        "0002",
@@ -210,8 +229,7 @@ func TestUpdateUser(t *testing.T) {
 }
 
 func TestDeleteUsers(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx := t.Context()
 	t.Run("Delete a valid user", func(t *testing.T) {
 		// Creating the user to be deleted
 		user := User{
@@ -240,6 +258,79 @@ func TestDeleteUsers(t *testing.T) {
 		err := MockUserStore.DeleteUser(ctx, "NA") // Impossible to occur in DB
 		if err == nil {
 			// We expect an error to occur
+			t.Fail()
+		}
+	})
+}
+
+// ----------- LinkStore Tests ---------------
+
+func seedLinks(num int) []Links {
+	var output []Links
+	for i := range num {
+		link := Links{
+			Platform: randString(7),
+			Url:      fmt.Sprintf("example_%d.com", i),
+		}
+		output = append(output, link)
+	}
+	return output
+}
+
+func destroyLinks(ctx context.Context, uid string, links []Links) {
+	for _, v := range links {
+		MockLinkStore.DeleteLinks(ctx, uid, v.Platform)
+	}
+}
+
+func TestAddLink(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+	// make a mock creator
+	uid := generateCreator(ctx, "0001")
+	defer destroyCreator(ctx, uid)
+
+	links := seedLinks(10)
+	defer destroyLinks(ctx, uid, links)
+	t.Run("adding valid links", func(t *testing.T) {
+		err := MockLinkStore.AddLinks(ctx, uid, links)
+		if err != nil {
+			t.Fail()
+		}
+	})
+}
+
+func TestDeleteLinks(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+
+	uid := generateCreator(ctx, "0001")
+	defer destroyCreator(ctx, uid)
+
+	links := seedLinks(1)
+	defer destroyLinks(ctx, uid, links)
+
+	t.Run("blank input for uid and platform", func(t *testing.T) {
+		err := MockLinkStore.DeleteLinks(ctx, "", "")
+		if err == nil {
+			t.Fail()
+		}
+	})
+	t.Run("with blank uid and valid platform", func(t *testing.T) {
+		err := MockLinkStore.DeleteLinks(ctx, "", links[0].Platform)
+		if err == nil {
+			t.Fail()
+		}
+	})
+	t.Run("empty invalid input for platform parameter", func(t *testing.T) {
+		err := MockLinkStore.DeleteLinks(ctx, uid, "")
+		if err == nil {
+			t.Fail()
+		}
+	})
+	t.Run("deleting valid link", func(t *testing.T) {
+		err := MockLinkStore.DeleteLinks(ctx, uid, links[0].Platform)
+		if err != nil {
 			t.Fail()
 		}
 	})
