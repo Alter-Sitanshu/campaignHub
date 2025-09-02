@@ -26,6 +26,7 @@ CREATE TABLE accounts (
   holder_id varchar(36) NOT NULL,
   holder_type varchar(10) NOT NULL CHECK (holder_type IN ('user','brand')),
   amount numeric(12,2) NOT NULL DEFAULT 0 CHECK (amount >= 0),
+  active boolean DEFAULT TRUE,
   created_at timestamptz DEFAULT now(),
   UNIQUE (holder_id, holder_type)
 );
@@ -43,7 +44,7 @@ CREATE TABLE transactions (
   status int NOT NULL,
   type varchar(20) NOT NULL CHECK (type IN ('withdraw', 'payout', 'deposit')),
   created_at timestamptz DEFAULT now(),
-  CONSTRAINT fk_tx_from FOREIGN KEY (from_id) REFERENCES accounts (id),
+  CONSTRAINT fk_tx_from FOREIGN KEY (from_id) REFERENCES accounts (id) ,
   CONSTRAINT fk_tx_to FOREIGN KEY (to_id) REFERENCES accounts (id),
   CONSTRAINT fk_tx_status FOREIGN KEY (status) REFERENCES tx_status (id)
 );
