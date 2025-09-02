@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 )
 
@@ -22,11 +23,11 @@ func init() {
 	}
 }
 
-func generateBrand() {
+func generateBrand(bid string) {
 	// I need a base brand which will post campaign
 	// Cause of dependancy of campaigns on brands
 	mockBrand := &Brand{
-		Id:        "0001",
+		Id:        bid,
 		Name:      "MockBrand",
 		Email:     "mockbrand@gmail.com",
 		Sector:    "skin_care",
@@ -38,11 +39,11 @@ func generateBrand() {
 	MockBrandStore.RegisterBrand(context.Background(), mockBrand)
 }
 
-func destroyBrand() {
-	MockBrandStore.DeregisterBrand(context.Background(), "0001")
+func destroyBrand(bid string) {
+	MockBrandStore.DeregisterBrand(context.Background(), bid)
 }
 
-func SeedCampaign(ctx context.Context, num int) []string {
+func SeedCampaign(ctx context.Context, bid string, num int) []string {
 	i := 0
 	var ids []string
 	tx, _ := MockCampaignStore.db.BeginTx(ctx, nil)
@@ -53,7 +54,7 @@ func SeedCampaign(ctx context.Context, num int) []string {
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		`
 		args := []any{
-			id, "0001", fmt.Sprintf("title_%d", i), 1000.0, 101.0, "", "youtube", "", 0,
+			id, bid, fmt.Sprintf("title_%d", i), 1000.0, 101.0, "", "youtube", "", 0,
 		}
 		_, err := tx.ExecContext(ctx, query, args...)
 		if err != nil {
@@ -75,11 +76,12 @@ func destroyCampaign(ctx context.Context, id string) {
 func TestLaunchCampaign(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
-	generateBrand()
-	defer destroyBrand()
+	bid := uuid.New().String()
+	generateBrand(bid)
+	defer destroyBrand(bid)
 	temp_camp := Campaign{
 		Id:       "0001",
-		BrandId:  "0001",
+		BrandId:  bid,
 		Title:    "mock_title",
 		Budget:   1000.0,
 		CPM:      101.0,
@@ -98,13 +100,14 @@ func TestLaunchCampaign(t *testing.T) {
 }
 
 func TestGetCampaign(t *testing.T) {
-	generateBrand()
+	bid := uuid.New().String()
+	generateBrand(bid)
+	defer destroyBrand(bid)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
-	defer destroyBrand()
 	temp_camp := Campaign{
 		Id:       "0001",
-		BrandId:  "0001",
+		BrandId:  bid,
 		Title:    "mock_title",
 		Budget:   1000.0,
 		CPM:      101.0,
@@ -131,11 +134,12 @@ func TestGetCampaign(t *testing.T) {
 }
 
 func TestGetRecentCampaigns(t *testing.T) {
-	generateBrand()
-	defer destroyBrand()
+	bid := uuid.New().String()
+	generateBrand(bid)
+	defer destroyBrand(bid)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
-	GenIds := SeedCampaign(ctx, 10)
+	GenIds := SeedCampaign(ctx, bid, 10)
 	got, err := MockCampaignStore.GetRecentCampaigns(ctx, 0, 10)
 	if err != nil {
 		log.Printf("Fetching error in campaign feed: %v", err.Error())
@@ -156,13 +160,14 @@ func TestGetRecentCampaigns(t *testing.T) {
 }
 
 func TestEndCampaign(t *testing.T) {
-	generateBrand()
-	defer destroyBrand()
+	bid := uuid.New().String()
+	generateBrand(bid)
+	defer destroyBrand(bid)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	temp_camp := Campaign{
 		Id:       "0001",
-		BrandId:  "0001",
+		BrandId:  bid,
 		Title:    "mock_title",
 		Budget:   1000.0,
 		CPM:      101.0,
@@ -182,13 +187,14 @@ func TestEndCampaign(t *testing.T) {
 }
 
 func TestUpdateCampaign(t *testing.T) {
-	generateBrand()
-	defer destroyBrand()
+	bid := uuid.New().String()
+	generateBrand(bid)
+	defer destroyBrand(bid)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	temp_camp := Campaign{
 		Id:       "0001",
-		BrandId:  "0001",
+		BrandId:  bid,
 		Title:    "mock_title",
 		Budget:   1000.0,
 		CPM:      101.0,

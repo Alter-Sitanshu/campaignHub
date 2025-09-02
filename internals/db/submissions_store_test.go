@@ -6,6 +6,8 @@ import (
 	"log"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 var MockSubStore SubmissionStore
@@ -73,10 +75,11 @@ func TestMakeSubmission(t *testing.T) {
 	creator := generateCreator(ctx, "0001")
 	defer destroyCreator(ctx, creator)
 	// mock brand
-	generateBrand() // brandid - 0001
-	defer destroyBrand()
+	bid := uuid.New().String()
+	generateBrand(bid)
+	defer destroyBrand(bid)
 	// mock campaign
-	camp := SeedCampaign(ctx, 1)[0]
+	camp := SeedCampaign(ctx, bid, 1)[0]
 	defer destroyCampaign(ctx, camp)
 	t.Run("mock submission", func(t *testing.T) {
 		sub := Submission{
@@ -105,10 +108,11 @@ func TestFindSubmission(t *testing.T) {
 	creator := generateCreator(ctx, "0001")
 	defer destroyCreator(ctx, creator)
 	// mock brand
-	generateBrand() // brandid - 0001
-	defer destroyBrand()
+	bid := uuid.New().String()
+	generateBrand(bid)
+	defer destroyBrand(bid)
 	// mock campaign
-	camp := SeedCampaign(ctx, 1)[0]
+	camp := SeedCampaign(ctx, bid, 1)[0]
 	defer destroyCampaign(ctx, camp)
 
 	// mock submission
@@ -148,10 +152,11 @@ func TestFilteringSubmissions(t *testing.T) {
 	creator := generateCreator(ctx, "0001")
 	defer destroyCreator(ctx, creator)
 	// mock brand
-	generateBrand() // brandid - 0001
-	defer destroyBrand()
+	bid := uuid.New().String()
+	generateBrand(bid)
+	defer destroyBrand(bid)
 	// mock campaign
-	camp := SeedCampaign(ctx, 1)[0]
+	camp := SeedCampaign(ctx, bid, 1)[0]
 	defer destroyCampaign(ctx, camp)
 
 	// mock submissions
@@ -184,10 +189,11 @@ func TestUpdateSubmissions(t *testing.T) {
 	creator := generateCreator(ctx, "0001")
 	defer destroyCreator(ctx, creator)
 	// mock brand
-	generateBrand() // brandid - 0001
-	defer destroyBrand()
+	bid := uuid.New().String()
+	generateBrand(bid)
+	defer destroyBrand(bid)
 	// mock campaign
-	camp := SeedCampaign(ctx, 1)[0]
+	camp := SeedCampaign(ctx, bid, 1)[0]
 	defer destroyCampaign(ctx, camp)
 
 	// mock submissions
@@ -233,10 +239,11 @@ func TestDeleteSub(t *testing.T) {
 	creator := generateCreator(ctx, "0001")
 	defer destroyCreator(ctx, creator)
 	// mock brand
-	generateBrand() // brandid - 0001
-	defer destroyBrand()
+	bid := uuid.New().String()
+	generateBrand(bid)
+	defer destroyBrand(bid)
 	// mock campaign
-	camp := SeedCampaign(ctx, 1)[0]
+	camp := SeedCampaign(ctx, bid, 1)[0]
 	defer destroyCampaign(ctx, camp)
 
 	// mock submission
