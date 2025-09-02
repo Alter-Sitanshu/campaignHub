@@ -28,7 +28,7 @@ func init() {
 	}
 }
 
-func randString(size int) string {
+func RandString(size int) string {
 	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	var output string
 

@@ -269,7 +269,7 @@ func seedLinks(num int) []Links {
 	var output []Links
 	for i := range num {
 		link := Links{
-			Platform: randString(7),
+			Platform: RandString(7),
 			Url:      fmt.Sprintf("example_%d.com", i),
 		}
 		output = append(output, link)

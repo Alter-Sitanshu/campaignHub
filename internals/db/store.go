@@ -13,6 +13,12 @@ import (
 
 const QueryTimeOut time.Duration = time.Minute * 3
 
+// macros for transactions
+const (
+	FailedTxStatus  int = 0
+	SuccessTxStatus int = 1
+)
+
 // macros for ticket_status
 const (
 	OpenTicket  int = 1
@@ -100,6 +106,11 @@ type Store struct {
 		AddLinks(context.Context, string, []Links) error
 		DeleteLinks(context.Context, string, string) error
 	}
+	TransactionInterface interface {
+		Payout(context.Context, *Transaction) error
+		Deposit(context.Context, *Transaction) error
+		Withdraw(context.Context, *Transaction) error
+	}
 }
 
 func NewStore(db *sql.DB) *Store {
@@ -120,6 +131,9 @@ func NewStore(db *sql.DB) *Store {
 			db: db,
 		},
 		LinkInterface: &LinkStore{
+			db: db,
+		},
+		TransactionInterface: &TransactionStore{
 			db: db,
 		},
 	}
