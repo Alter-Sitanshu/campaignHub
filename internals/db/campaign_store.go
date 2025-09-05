@@ -68,19 +68,20 @@ func (c *CampaignStore) EndCampaign(ctx context.Context, id string) error {
 		log.Printf("Error initialising transaction: %v\n", err.Error())
 		return err
 	}
-	// TODO: Try removing the hard coded value of status id
+	defer tx.Rollback()
+	// Iniate a payout bill to the creators associated to the campaign
+	// TODO: API layer
+
 	query := `
 		UPDATE campaigns
 		SET status = $1
 		WHERE id = $2
 	`
-	_, err = tx.ExecContext(ctx, query, 3, id)
+	_, err = tx.ExecContext(ctx, query, ExpiredStatus, id)
 	if err != nil {
 		log.Printf("Error occured while closing campaign(%s): %v\n", id, err.Error())
 		return err
 	}
-
-	// TODO: Iniate a payout bill to the creators associated to the campaign
 
 	// successfully ended the campaign
 	return nil

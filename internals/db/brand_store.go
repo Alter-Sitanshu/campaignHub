@@ -133,8 +133,8 @@ func (b *BrandStore) RegisterBrand(ctx context.Context, new_brand *Brand) error 
 		return err
 	}
 
-	// TODO : CREATE THE BRAND'S ACCOUNT
-
+	// CREATE THE BRAND'S ACCOUNT
+	// Prompt the brand to create account if it tries to launch a campaign
 	// Successfully onboarded brand
 	tx.Commit()
 	return nil
@@ -145,17 +145,42 @@ func (b *BrandStore) DeregisterBrand(ctx context.Context, id string) error {
 		log.Printf("Error Beginning transaction: %v\n", err.Error())
 		return err
 	}
+	defer tx.Rollback()
+	// Restrict Brands if they have atleast one active campaign
+	var active_campaigns int
+	checkQuery := `
+		SELECT COUNT(*) FROM campaigns WHERE brand_id = $1 AND status = $2
+	`
+	err = tx.QueryRowContext(ctx, checkQuery, id, ActiveStatus).Scan(&active_campaigns)
+	if err != nil {
+		log.Printf("error deleting brand account(%s): %v\n", id, err.Error())
+		return err
+	}
+	if active_campaigns > 0 {
+		log.Printf("restricted deactivation, open campaigns found")
+		return fmt.Errorf("restricted deactivation, open campaigns found")
+	}
 	query := `
 		DELETE FROM brands
 		WHERE id = $1
 	`
 	_, err = tx.ExecContext(ctx, query, id)
 	if err != nil {
+		log.Printf("error deleting brand account(%s): %v\n", id, err.Error())
 		return err
 	}
 
-	// TODO: Delete the brands bank account
-	// TODO: Replace the brandID in campaigns with NA
+	// Delete the brands bank account
+	DeleteAccQuery := `
+		DELETE FROM accounts
+		WHERE holder_id = $1
+	`
+	_, err = tx.ExecContext(ctx, DeleteAccQuery, id)
+	if err != nil {
+		log.Printf("error deleting account details of %s: %v\n", id, err.Error())
+		return err
+	}
+	// The campaigns connected to the brands also disappear
 
 	tx.Commit()
 	return nil

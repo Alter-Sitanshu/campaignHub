@@ -6,26 +6,41 @@ import (
 	"log"
 	"math/big"
 
-	"github.com/Alter-Sitanshu/campaignHub/internals/env"
-	"github.com/joho/godotenv"
+	"github.com/Alter-Sitanshu/campaignHub/env"
 )
 
-var MockDB *sql.DB
+var (
+	MockDB            *sql.DB
+	MockUserStore     UserStore
+	MockLinkStore     LinkStore
+	MockTsStore       TransactionStore
+	MockTicketStore   TicketStore
+	MockSubStore      SubmissionStore
+	MockBrandStore    BrandStore
+	MockCampaignStore CampaignStore
+)
 
-func init() {
-	err := godotenv.Load("../../.env")
+func Init() {
+	envCfg := env.New()
+	dsn := envCfg.DBADDR
+	log.Println(dsn)
+	var err error
+	MockDB, err = sql.Open("postgres", dsn)
 	if err != nil {
-		log.Fatal("Error loading .env", err.Error())
+		log.Fatalf("failed to connect to db: %v", err)
 	}
-	MockDB, err = Mount(
-		env.GetString("DB_ADDR", ""),
-		5, // max connections to db
-		2, // max idle connections
-		1, // 1 min idle time
-	)
-	if err != nil {
-		log.Fatal("Error loading .env", err.Error())
+
+	if err := MockDB.Ping(); err != nil {
+		log.Fatalf("failed to ping db: %v", err)
 	}
+
+	MockBrandStore.db = MockDB
+	MockUserStore.db = MockDB
+	MockLinkStore.db = MockDB
+	MockTsStore.db = MockDB
+	MockTicketStore.db = MockDB
+	MockSubStore.db = MockDB
+	MockCampaignStore.db = MockDB
 }
 
 func RandString(size int) string {

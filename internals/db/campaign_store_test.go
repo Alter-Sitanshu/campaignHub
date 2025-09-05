@@ -8,20 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/joho/godotenv"
 )
-
-var MockCampaignStore CampaignStore
-
-func init() {
-	err := godotenv.Load("../../.env")
-	if err != nil {
-		log.Fatal("Error loading .env", err.Error())
-	}
-	MockCampaignStore = CampaignStore{
-		db: MockDB,
-	}
-}
 
 func generateBrand(bid string) {
 	// I need a base brand which will post campaign

@@ -70,7 +70,6 @@ type Store struct {
 		// FollowBrand(context.Context, string, string) error
 		// UnFollowBrand(context.Context, string, string) error
 		// ctx, from_id, to_id, type(withdraw/deposit), amount, tx
-		// ExecTransaction(context.Context, string, string, string, float32, sql.Tx) error
 	}
 	BrandInterface interface {
 		GetBrandById(context.Context, string) (*Brand, error)

@@ -11,12 +11,6 @@ import (
 	"github.com/google/uuid"
 )
 
-var MockTsStore TransactionStore
-
-func init() {
-	MockTsStore.db = MockDB
-}
-
 func generateAccounts(ctx context.Context, holder_id, type_ string) *Account {
 	acc_id := uuid.New().String()
 	acc := Account{

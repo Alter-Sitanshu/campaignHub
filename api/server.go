@@ -23,6 +23,10 @@ type DBConfig struct {
 	MaxIdleConns int
 }
 
+const (
+	defaultUserLVL = "LVL1"
+)
+
 func NewApplication(store *db.Store, cfg *Config) *Application {
 	router := gin.Default()
 	app := Application{
@@ -32,6 +36,7 @@ func NewApplication(store *db.Store, cfg *Config) *Application {
 	}
 	router.GET("/", app.HealthCheck)
 	router.POST("/users/create", app.CreateUser)
+	router.GET("/users/:id", app.GetUser)
 
 	return &app
 }

@@ -6,10 +6,10 @@ startdb:
 	docker run project
 
 migrateup:
-	@migrate -path $(MIGRATION_PATH) -database $(DB_ADDR) -verbose up
+	@migrate -path $(MIGRATION_PATH) -database $(MAKEDB) -verbose up
 
 migratedown:
-	@migrate -path $(MIGRATION_PATH) -database $(DB_ADDR) -verbose down
+	@migrate -path $(MIGRATION_PATH) -database $(MAKEDB) -verbose down
 
 migration:
 	@migrate create -seq -ext sql -dir $(MIGRATION_PATH) $(filter-out $@, $(MAKECMDGOALS))

@@ -10,12 +10,6 @@ import (
 	"github.com/google/uuid"
 )
 
-var MockSubStore SubmissionStore
-
-func init() {
-	MockSubStore.db = MockDB
-}
-
 func generateCreator(ctx context.Context, mockUserId string) string {
 	query := `
 		INSERT INTO users (id, first_name, last_name, email, password, gender, age, role)

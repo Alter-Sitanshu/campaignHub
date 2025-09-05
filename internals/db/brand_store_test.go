@@ -6,21 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/joho/godotenv"
 	"golang.org/x/crypto/bcrypt"
 )
-
-var MockBrandStore BrandStore
-
-func init() {
-	err := godotenv.Load("../../.env")
-	if err != nil {
-		log.Fatal("Error loading .env", err.Error())
-	}
-	MockBrandStore = BrandStore{
-		db: MockDB,
-	}
-}
 
 func TestGetBrand(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

@@ -75,7 +75,7 @@ func (u *UserStore) GetUserById(ctx context.Context, id string) (*User, error) {
 	)
 	if err != nil {
 		// for debugging: Comment out later
-		log.Printf("DB Query Error for Id(%s): %v\n\n", id, err.Error())
+		log.Printf("DB Query Error for Id(%s): %v\n", id, err.Error())
 		return nil, err
 	}
 
@@ -122,6 +122,7 @@ func (u *UserStore) CreateUser(ctx context.Context, user *User) error {
 		log.Printf("Error Beginning transaction: %v\n", err.Error())
 		return err
 	}
+	defer tx.Rollback()
 	query := `
 		INSERT INTO users (id, first_name, last_name, email, password, gender, age, role)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -141,8 +142,17 @@ func (u *UserStore) CreateUser(ctx context.Context, user *User) error {
 		log.Printf("Error creating a user: %v\n", err.Error())
 		return err
 	}
-	// TODO: Open an account for user
-	// TODO: Add their Platform Links
+	// Open an account for user
+	// Ask them to open an account only when they want to join a campaign
+	// Add their Platform Links
+	if user.PlatformLinks != nil {
+		var link_store *LinkStore = &LinkStore{db: u.db}
+		err = link_store.AddLinks(ctx, user.Id, user.PlatformLinks)
+		if err != nil {
+			log.Printf("error adding platform links: %v", err.Error())
+			return err
+		}
+	}
 	tx.Commit()
 	return nil
 }
@@ -154,6 +164,7 @@ func (u *UserStore) DeleteUser(ctx context.Context, id string) error {
 		log.Printf("Error Beginning transaction: %v\n", err.Error())
 		return err
 	}
+	defer tx.Rollback()
 	_, err = u.GetUserById(ctx, id)
 	if err != nil {
 		return err
@@ -166,18 +177,14 @@ func (u *UserStore) DeleteUser(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	// TODO : Clean up the links related to the user
-	// query = `
-	// 	DELETE FROM platform_links
-	// 	WHERE id = $1
-	// `
-	// _, err = tx.ExecContext(ctx, query, id)
-	// if err != nil {
-	// 	return err
-	// }
-	// TODO: Delete the users bank account
-	// I am not deleting the submissions
-	// TODO: Replace the userid in submissions to NA
+	// Clean up the links related to the user
+	// Handled at the DB layer
+
+	// Delete the users bank account
+	// TODO: API layer
+
+	// Delete all the related submissions
+	// Handled at the DB layer
 	tx.Commit()
 	return nil
 }

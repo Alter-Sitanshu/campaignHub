@@ -8,14 +8,6 @@ import (
 	"time"
 )
 
-var MockTicketStore TicketStore
-
-func init() {
-	MockTicketStore = TicketStore{
-		db: MockDB,
-	}
-}
-
 func seedTickets(ctx context.Context, num int) []string {
 	i := 0
 	var ids []string

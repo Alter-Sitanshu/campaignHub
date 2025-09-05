@@ -4,17 +4,17 @@ import (
 	"log"
 
 	"github.com/Alter-Sitanshu/campaignHub/api"
+	"github.com/Alter-Sitanshu/campaignHub/env"
 	"github.com/Alter-Sitanshu/campaignHub/internals/db"
-	"github.com/Alter-Sitanshu/campaignHub/internals/env"
 	"github.com/joho/godotenv"
 )
 
 func main() {
-	// Loading the environment variables
-	err := godotenv.Load(".env")
-	if err != nil {
-		log.Fatal("Error loading .env", err.Error())
+
+	if err := godotenv.Load(".env"); err != nil {
+		log.Println("No .env file found, relying on system environment")
 	}
+
 	config := api.Config{
 		Addr: env.GetString("PORT", ":8080"), // default port 8080
 		DbCfg: api.DBConfig{

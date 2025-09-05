@@ -10,9 +10,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var MockUserStore UserStore
-var MockLinkStore LinkStore
-
 func init() {
 	MockUserStore = UserStore{
 		db: MockDB,
@@ -23,14 +20,16 @@ func init() {
 func TestGetUsers(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+
 	user := User{
-		Id:        "0001",
-		FirstName: "Croc",
-		LastName:  "Singh",
-		Email:     "sitanshu5@gmail.com",
-		Gender:    "M",
-		Age:       20,
-		Role:      "LVL1",
+		Id:            "0001",
+		FirstName:     "Croc",
+		LastName:      "Singh",
+		Email:         "sitanshu5@gmail.com",
+		Gender:        "M",
+		Age:           20,
+		Role:          "LVL1",
+		PlatformLinks: []Links{},
 	}
 	if err := user.Password.Hash("random_pass"); err != nil {
 		log.Printf("Hashing error: %v\n", err.Error())
@@ -74,13 +73,14 @@ func TestCreateUser(t *testing.T) {
 	ctx := t.Context()
 	t.Run("Creating a valid user", func(t *testing.T) {
 		user := User{
-			Id:        "0002",
-			FirstName: "Croc",
-			LastName:  "Singh",
-			Email:     "crocs2@gmail.com",
-			Gender:    "M",
-			Age:       20,
-			Role:      "LVL1",
+			Id:            "0002",
+			FirstName:     "Croc",
+			LastName:      "Singh",
+			Email:         "crocs2@gmail.com",
+			Gender:        "M",
+			Age:           20,
+			Role:          "LVL1",
+			PlatformLinks: []Links{},
 		}
 		if err := user.Password.Hash("random_pass"); err != nil {
 			log.Printf("Hashing error: %v\n", err.Error())
@@ -93,13 +93,14 @@ func TestCreateUser(t *testing.T) {
 	})
 	t.Run("Checking age range", func(t *testing.T) {
 		user := User{
-			Id:        "0003",
-			FirstName: "Croc",
-			LastName:  "Singh",
-			Email:     "crocs3@gmail.com",
-			Gender:    "M",
-			Age:       0,
-			Role:      "LVL1",
+			Id:            "0003",
+			FirstName:     "Croc",
+			LastName:      "Singh",
+			Email:         "crocs3@gmail.com",
+			Gender:        "M",
+			Age:           0,
+			Role:          "LVL1",
+			PlatformLinks: []Links{},
 		}
 		if err := user.Password.Hash("random_pass"); err != nil {
 			t.Fail()
@@ -111,13 +112,14 @@ func TestCreateUser(t *testing.T) {
 	})
 	t.Run("Checking age range", func(t *testing.T) {
 		user := User{
-			Id:        "0004",
-			FirstName: "Croc",
-			LastName:  "Singh",
-			Email:     "crocs4@gmail.com",
-			Gender:    "M",
-			Age:       100,
-			Role:      "LVL1",
+			Id:            "0004",
+			FirstName:     "Croc",
+			LastName:      "Singh",
+			Email:         "crocs4@gmail.com",
+			Gender:        "M",
+			Age:           100,
+			Role:          "LVL1",
+			PlatformLinks: []Links{},
 		}
 		if err := user.Password.Hash("random_pass"); err != nil {
 			log.Printf("Hashing error: %v\n", err.Error())
@@ -134,13 +136,14 @@ func TestUpdateUser(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	user := User{
-		Id:        "0002",
-		FirstName: "Croc",
-		LastName:  "Singh",
-		Email:     "crocs2@gmail.com",
-		Gender:    "M",
-		Age:       20,
-		Role:      "LVL1",
+		Id:            "0002",
+		FirstName:     "Croc",
+		LastName:      "Singh",
+		Email:         "crocs2@gmail.com",
+		Gender:        "M",
+		Age:           20,
+		Role:          "LVL1",
+		PlatformLinks: []Links{},
 	}
 	if err := user.Password.Hash("random_pass"); err != nil {
 		log.Printf("Hashing error: %v\n", err.Error())
@@ -233,13 +236,14 @@ func TestDeleteUsers(t *testing.T) {
 	t.Run("Delete a valid user", func(t *testing.T) {
 		// Creating the user to be deleted
 		user := User{
-			Id:        "0002",
-			FirstName: "Croc",
-			LastName:  "Singh",
-			Email:     "crocs2@gmail.com",
-			Gender:    "M",
-			Age:       20,
-			Role:      "LVL1",
+			Id:            "0002",
+			FirstName:     "Croc",
+			LastName:      "Singh",
+			Email:         "crocs2@gmail.com",
+			Gender:        "M",
+			Age:           20,
+			Role:          "LVL1",
+			PlatformLinks: []Links{},
 		}
 		if err := user.Password.Hash("random_pass"); err != nil {
 			log.Printf("Hashing error: %v\n", err.Error())
