@@ -29,7 +29,6 @@ type Campaign struct {
 // Update Campaign payload
 type UpdateCampaign struct {
 	// No option to update CPM to avoid frauds
-	Id      string   `json:"id"` //this is not a pointer cause it is mandatory
 	Title   *string  `json:"title"`
 	Budget  *float64 `json:"budget"`
 	Req     *string  `json:"requirements"`
@@ -88,7 +87,7 @@ func (c *CampaignStore) EndCampaign(ctx context.Context, id string) error {
 }
 
 // This functions updates a specific campaign details
-func (c *CampaignStore) UpdateCampaign(ctx context.Context, payload UpdateCampaign) error {
+func (c *CampaignStore) UpdateCampaign(ctx context.Context, campaign_id string, payload UpdateCampaign) error {
 	var queryBuilder strings.Builder
 	queryBuilder.WriteString("UPDATE campaigns SET ")
 	var expressions []string // query parameters
@@ -117,7 +116,7 @@ func (c *CampaignStore) UpdateCampaign(ctx context.Context, payload UpdateCampai
 	}
 	queryBuilder.WriteString(strings.Join(expressions, ", "))
 	queryBuilder.WriteString(fmt.Sprintf(" WHERE id = $%d", i))
-	args = append(args, payload.Id)
+	args = append(args, campaign_id)
 	query := queryBuilder.String()
 	_, err := c.db.ExecContext(ctx, query, args...)
 
@@ -167,6 +166,86 @@ func (c *CampaignStore) GetRecentCampaigns(ctx context.Context, offset int, limi
 	// return the fetched the feed
 	return output, nil
 }
+
+func (c *CampaignStore) GetBrandCampaigns(ctx context.Context, brandid string) ([]Campaign, error) {
+	var output []Campaign
+	query := `
+		SELECT id, title, budget, cpm, requirements, platform, doc_link, status, created_at
+		FROM campaigns
+		ORDER BY created_at DESC, id DESC
+		WHERE brand_id = $1
+	`
+	rows, err := c.db.QueryContext(ctx, query, brandid)
+	if err != nil {
+		log.Printf("Error fetching campaigns: %v\n", err.Error())
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var row Campaign
+		err = rows.Scan(
+			&row.Id,
+			&row.BrandId,
+			&row.Title,
+			&row.Budget,
+			&row.CPM,
+			&row.Req,
+			&row.Platform,
+			&row.DocLink,
+			&row.Status,
+			&row.CreatedAt,
+		)
+		if err != nil {
+			log.Printf("Error scanning campaign: %v\n", err.Error())
+			return nil, err
+		}
+		output = append(output, row)
+	}
+	// return the fetched the feed
+	return output, nil
+}
+
+func (c *CampaignStore) GetUserCampaigns(ctx context.Context, userid string) ([]Campaign, error) {
+	var output []Campaign
+	query := `
+		SELECT id, title, budget, cpm, requirements, platform, doc_link, status, created_at
+		FROM campaigns
+		ORDER BY created_at DESC, id DESC
+		WHERE id = (SELECT campaign_id
+			FROM submissions
+			WHERE user_id = $1
+		)
+	`
+	rows, err := c.db.QueryContext(ctx, query, userid)
+	if err != nil {
+		log.Printf("Error fetching campaigns: %v\n", err.Error())
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var row Campaign
+		err = rows.Scan(
+			&row.Id,
+			&row.BrandId,
+			&row.Title,
+			&row.Budget,
+			&row.CPM,
+			&row.Req,
+			&row.Platform,
+			&row.DocLink,
+			&row.Status,
+			&row.CreatedAt,
+		)
+		if err != nil {
+			log.Printf("Error scanning campaign: %v\n", err.Error())
+			return nil, err
+		}
+		output = append(output, row)
+	}
+	// return the fetched the feed
+	return output, nil
+}
+
 func (c *CampaignStore) GetCampaign(ctx context.Context, id string) (*Campaign, error) {
 	query := `
 		SELECT id, brand_id, title, budget, cpm, requirements, platform, doc_link, status, created_at

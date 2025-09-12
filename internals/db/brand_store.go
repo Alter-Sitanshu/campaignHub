@@ -27,7 +27,6 @@ type Brand struct {
 
 type BrandUpdatePayload struct {
 	// I wont allow brands to change their names/sector (Prevention measure for frauds)
-	Id      string  `json:"id"`
 	Email   *string `json:"email"`
 	NewPass *string `json:"new_pass"`
 	Website *string `json:"website"`
@@ -186,7 +185,7 @@ func (b *BrandStore) DeregisterBrand(ctx context.Context, id string) error {
 	return nil
 }
 
-func (b *BrandStore) UpdateBrand(ctx context.Context, payload BrandUpdatePayload) error {
+func (b *BrandStore) UpdateBrand(ctx context.Context, brand_id string, payload BrandUpdatePayload) error {
 	var p PassW
 	var queryBuilder strings.Builder
 	queryBuilder.WriteString("UPDATE brands SET ")
@@ -216,7 +215,7 @@ func (b *BrandStore) UpdateBrand(ctx context.Context, payload BrandUpdatePayload
 	}
 	queryBuilder.WriteString(strings.Join(cols, ", "))
 	queryBuilder.WriteString(fmt.Sprintf(" WHERE id = $%d", i))
-	args = append(args, payload.Id)
+	args = append(args, brand_id)
 	query := queryBuilder.String()
 
 	if len(cols) == 0 {

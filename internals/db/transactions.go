@@ -257,9 +257,9 @@ func (ts *TransactionStore) OpenAccount(ctx context.Context, acc *Account) error
 func (ts *TransactionStore) DisableAccount(ctx context.Context, id string) error {
 	query := `
 		UPDATE accounts SET active = $1
-		WHERE id = $2
+		WHERE id = $2 AND active = $3
 	`
-	_, err := ts.db.ExecContext(ctx, query, false, id)
+	_, err := ts.db.ExecContext(ctx, query, false, id, true)
 	if err != nil {
 		log.Printf("error disabling account: %s", id)
 		return err
@@ -304,4 +304,39 @@ func (ts *TransactionStore) GetAccount(ctx context.Context, id string) (*Account
 
 	// fetched account
 	return &acc, nil
+}
+
+func (ts *TransactionStore) GetAllAccounts(ctx context.Context, limit, offset int) ([]Account, error) {
+	query := `
+		SELECT id, holder_id, holder_type, amount, created_at 
+		FROM accounts
+		LIMIT = $1 OFFSET = $2
+	`
+	// fetching the account details
+	var output []Account
+	rows, err := ts.db.QueryContext(ctx, query, limit, offset)
+	if err != nil {
+		log.Printf("%v\n", err.Error())
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var acc Account
+		err := rows.Scan(
+			&acc.Id,
+			&acc.HolderId,
+			&acc.Type,
+			&acc.Amount,
+			&acc.CreatedAt,
+		)
+		if err != nil {
+			// log the error for debugging
+			log.Printf("invalid credentials for account: %v\n", err.Error())
+			return nil, err
+		}
+		output = append(output, acc)
+	}
+
+	// fetched account
+	return output, nil
 }

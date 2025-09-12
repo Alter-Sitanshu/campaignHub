@@ -40,7 +40,6 @@ type User struct {
 
 // User update Options
 type UpdatePayload struct {
-	Id        string  `json:"id"` // taking id in payload to get the target user
 	FirstName *string `json:"first_name"`
 	LastName  *string `json:"last_name"`
 	Email     *string `json:"email"`
@@ -79,6 +78,9 @@ func (u *UserStore) GetUserById(ctx context.Context, id string) (*User, error) {
 		return nil, err
 	}
 
+	link_store := &LinkStore{db: u.db}
+	user.PlatformLinks = link_store.GetLinks(ctx, user.Id)
+
 	return &user, nil
 }
 
@@ -109,9 +111,17 @@ func (u *UserStore) GetUserByEmail(ctx context.Context, email string) (*User, er
 	if err != nil {
 		// For Debugging: Comment out later
 		log.Printf("DB QUery Error for MailID(%s): %v\n", email, err.Error())
-		return nil, err
+		switch {
+		case err.Error() == `pq: duplicate key value violates unique constraint "users_name_key"`:
+			return nil, ErrDupliName
+		case err.Error() == `pq: duplicate key value violates unique constraint "users_email_key"`:
+			return nil, ErrDupliMail
+		default:
+			return nil, err
+		}
 	}
-
+	link_store := &LinkStore{db: u.db}
+	user.PlatformLinks = link_store.GetLinks(ctx, user.Id)
 	return &user, nil
 }
 
@@ -189,7 +199,7 @@ func (u *UserStore) DeleteUser(ctx context.Context, id string) error {
 	return nil
 }
 
-func (u *UserStore) UpdateUser(ctx context.Context, payload UpdatePayload) error {
+func (u *UserStore) UpdateUser(ctx context.Context, id string, payload UpdatePayload) error {
 	var p PassW // To hash the new password if given
 	tx, err := u.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -238,7 +248,7 @@ func (u *UserStore) UpdateUser(ctx context.Context, payload UpdatePayload) error
 
 	queryBuilder.WriteString(strings.Join(setClauses, ", "))
 	queryBuilder.WriteString(fmt.Sprintf(" WHERE id = $%d", i))
-	args = append(args, payload.Id)
+	args = append(args, id)
 
 	query := queryBuilder.String()
 	res, err := tx.ExecContext(ctx, query, args...)
@@ -303,4 +313,32 @@ func (l *LinkStore) DeleteLinks(ctx context.Context, id string, platform string)
 	}
 	// Successfully deleted the link
 	return nil
+}
+
+func (l *LinkStore) GetLinks(ctx context.Context, id string) []Links {
+	var output []Links
+	query := `
+		SELECT platform, url
+		FROM platform_links
+		WHERE userid = $1
+	`
+	rows, err := l.db.QueryContext(ctx, query, id)
+	if err != nil {
+		log.Printf("error: %v", err.Error())
+		return nil
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var link Links
+		if err = rows.Scan(
+			&link.Platform,
+			&link.Url,
+		); err != nil {
+			log.Printf("error fetching links: %v\n", err.Error())
+			return nil
+		}
+		output = append(output, link)
+	}
+	return output
 }
