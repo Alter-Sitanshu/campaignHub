@@ -113,17 +113,16 @@ func TestUpdateBrand(t *testing.T) {
 	NewAddress := "newaddress"
 	t.Run("Updating Brand Entity", func(t *testing.T) {
 		payload := BrandUpdatePayload{
-			Id:      mockBrand.Id,
 			Email:   &NewEmail,
 			Website: &NewWebsite,
 			NewPass: &NewPass,
 			Address: &NewAddress,
 		}
-		err := MockBrandStore.UpdateBrand(ctx, payload)
+		err := MockBrandStore.UpdateBrand(ctx, mockBrand.Id, payload)
 		if err != nil {
 			t.Fail()
 		}
-		updatedBrand, _ := MockBrandStore.GetBrandById(ctx, payload.Id)
+		updatedBrand, _ := MockBrandStore.GetBrandById(ctx, mockBrand.Id)
 		if updatedBrand.Address != NewAddress ||
 			updatedBrand.Email != NewEmail ||
 			updatedBrand.Website != NewWebsite {

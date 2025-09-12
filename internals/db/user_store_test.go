@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Alter-Sitanshu/campaignHub/internals"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -159,38 +160,37 @@ func TestUpdateUser(t *testing.T) {
 	NewPass := "newpassword"
 	t.Run("updating user", func(t *testing.T) {
 		payload := UpdatePayload{
-			Id:        user.Id,
 			FirstName: &NewFName,
 		}
 		// Only updating FirstName
-		err := MockUserStore.UpdateUser(ctx, payload)
+		err := MockUserStore.UpdateUser(ctx, user.Id, payload)
 		if err != nil {
 			t.Fail()
 		}
 		// Only updating LastName
 		payload.FirstName = nil
 		payload.LastName = &NewLName
-		err = MockUserStore.UpdateUser(ctx, payload)
+		err = MockUserStore.UpdateUser(ctx, user.Id, payload)
 		if err != nil {
 			t.Fail()
 		}
 		// Only updating Email
 		payload.LastName = nil
 		payload.Email = &NewEmail
-		err = MockUserStore.UpdateUser(ctx, payload)
+		err = MockUserStore.UpdateUser(ctx, user.Id, payload)
 		if err != nil {
 			t.Fail()
 		}
 		// Only updating Gender
 		payload.Email = nil
 		payload.Gender = &NewGender
-		err = MockUserStore.UpdateUser(ctx, payload)
+		err = MockUserStore.UpdateUser(ctx, user.Id, payload)
 		if err != nil {
 			t.Fail()
 		}
 		// Only updating Password
 		payload.NewPass = &NewPass
-		err = MockUserStore.UpdateUser(ctx, payload)
+		err = MockUserStore.UpdateUser(ctx, user.Id, payload)
 		if err != nil {
 			t.Fail()
 		}
@@ -209,21 +209,18 @@ func TestUpdateUser(t *testing.T) {
 	NewGender = "N" // Not Possible
 	t.Run("Invalid Gender type", func(t *testing.T) {
 		payload := UpdatePayload{
-			Id:     user.Id,
 			Gender: &NewGender,
 		}
 
-		err := MockUserStore.UpdateUser(ctx, payload)
+		err := MockUserStore.UpdateUser(ctx, user.Id, payload)
 		if err == nil {
 			t.Fail()
 		}
 	})
 	t.Run("No fields to update", func(t *testing.T) {
-		payload := UpdatePayload{
-			Id: user.Id,
-		}
+		payload := UpdatePayload{}
 
-		err := MockUserStore.UpdateUser(ctx, payload)
+		err := MockUserStore.UpdateUser(ctx, user.Id, payload)
 		if err == nil {
 			t.Fail()
 		}
@@ -273,7 +270,7 @@ func seedLinks(num int) []Links {
 	var output []Links
 	for i := range num {
 		link := Links{
-			Platform: RandString(7),
+			Platform: internals.RandString(7),
 			Url:      fmt.Sprintf("example_%d.com", i),
 		}
 		output = append(output, link)

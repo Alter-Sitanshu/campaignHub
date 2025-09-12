@@ -195,19 +195,19 @@ func TestUpdateCampaign(t *testing.T) {
 	NewBudget := 1000.01
 	NewReq := "new_req"
 	NewDocLink := "new_doc_link"
+	campaign_id := temp_camp.Id
 	t.Run("updating a campaign", func(t *testing.T) {
 		payload := UpdateCampaign{
-			Id:      temp_camp.Id,
 			Title:   &NewTitle,
 			Budget:  &NewBudget,
 			Req:     &NewReq,
 			DocLink: &NewDocLink,
 		}
-		err := MockCampaignStore.UpdateCampaign(ctx, payload)
+		err := MockCampaignStore.UpdateCampaign(ctx, campaign_id, payload)
 		if err != nil {
 			t.Fail()
 		}
-		updatedCampaign, _ := MockCampaignStore.GetCampaign(ctx, payload.Id)
+		updatedCampaign, _ := MockCampaignStore.GetCampaign(ctx, campaign_id)
 		if updatedCampaign.Title != NewTitle ||
 			updatedCampaign.Budget != NewBudget ||
 			updatedCampaign.Req != NewReq ||

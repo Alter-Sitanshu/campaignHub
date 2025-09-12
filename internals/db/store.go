@@ -64,7 +64,7 @@ type Store struct {
 		GetUserByEmail(context.Context, string) (*User, error)
 		CreateUser(context.Context, *User) error
 		DeleteUser(context.Context, string) error
-		UpdateUser(context.Context, UpdatePayload) error
+		UpdateUser(context.Context, string, UpdatePayload) error
 
 		// TODO: Implement the follow/unfollow brand option(AT LAST)
 		// FollowBrand(context.Context, string, string) error
@@ -76,16 +76,19 @@ type Store struct {
 		GetBrandsByFilter(context.Context, string, any) ([]Brand, error)
 		RegisterBrand(context.Context, *Brand) error
 		DeregisterBrand(context.Context, string) error
-		UpdateBrand(context.Context, BrandUpdatePayload) error
+		UpdateBrand(context.Context, string, BrandUpdatePayload) error
 		// ctx, from_id, to_id, type(withdraw/deposit), amount, tx
 		// ExecTransaction(context.Context, string, string, string, float32, sql.Tx) error
 	}
 	CampaignInterace interface {
 		LaunchCampaign(context.Context, *Campaign) error
 		EndCampaign(context.Context, string) error
-		UpdateCampaign(context.Context, UpdateCampaign) error
+		UpdateCampaign(context.Context, string, UpdateCampaign) error
 		GetRecentCampaigns(context.Context, int, int) ([]Campaign, error)
+		GetBrandCampaigns(context.Context, string) ([]Campaign, error)
+		GetUserCampaigns(context.Context, string) ([]Campaign, error)
 		GetCampaign(context.Context, string) (*Campaign, error)
+		DeleteCampaign(context.Context, string) error
 	}
 	TicketInterface interface {
 		OpenTicket(context.Context, *Ticket) error
@@ -104,11 +107,17 @@ type Store struct {
 	LinkInterface interface {
 		AddLinks(context.Context, string, []Links) error
 		DeleteLinks(context.Context, string, string) error
+		GetLinks(context.Context, string) []Links
 	}
 	TransactionInterface interface {
 		Payout(context.Context, *Transaction) error
 		Deposit(context.Context, *Transaction) error
 		Withdraw(context.Context, *Transaction) error
+		OpenAccount(context.Context, *Account) error
+		DisableAccount(context.Context, string) error
+		DeleteAccount(context.Context, string) error
+		GetAccount(context.Context, string) (*Account, error)
+		GetAllAccounts(context.Context, int, int) ([]Account, error)
 	}
 }
 
