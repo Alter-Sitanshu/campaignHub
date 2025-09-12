@@ -5,6 +5,7 @@ import (
 
 	"github.com/Alter-Sitanshu/campaignHub/api"
 	"github.com/Alter-Sitanshu/campaignHub/env"
+	"github.com/Alter-Sitanshu/campaignHub/internals/auth"
 	"github.com/Alter-Sitanshu/campaignHub/internals/db"
 	"github.com/joho/godotenv"
 )
@@ -23,6 +24,14 @@ func main() {
 			MaxIdleConns: env.GetInt("MAXIDLECONN", 5),
 			MaxIdleTime:  env.GetInt("MAXIDLETIME", 5), // 5 Minutes -> Converted into an interval internally
 		},
+		TokenCfg: api.TokenConfig{
+			JWTSecret:        env.GetString("JWT_KEY", ""),
+			PASETO_SYM:       env.GetString("PASETO_SYM", ""),
+			PASETO_ASYM_PRIV: env.GetString("PASETO_ASYM_PRIV", ""),
+			PASETO_ASYM_PUB:  env.GetString("PASETO_ASYM,_PUB", ""),
+		},
+		ISS: env.GetString("ISS", "admin"),
+		AUD: env.GetString("AUD", "admin"),
 	}
 
 	// Making DB connection
@@ -35,12 +44,22 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error connecting to DB %v\n", err.Error())
 	}
+	// Setting the Token Makers
+	jwt_Maker, err := auth.NewJWTMaker(config.TokenCfg.JWTSecret)
+	if err != nil {
+		log.Fatal("error making jwt maker\n")
+	}
+	paseto_Maker, err := auth.NewPASETOMaker(config.TokenCfg.PASETO_SYM)
+	if err != nil {
+		log.Fatal("error making paseto maker\n")
+	}
 
 	appStore := db.NewStore(db_)
 	app := api.NewApplication(
 		appStore,
 		&config,
+		jwt_Maker,
+		paseto_Maker,
 	)
-
 	app.Run()
 }
