@@ -46,7 +46,17 @@ jobs:
     - name: Run migrations
       env:
         MAKEDB: ${{ secrets.MAKEDB }}
+        PASETO_ASYM_PRIV: ${{ secrets.PASETO_ASYM_PRIV }}
+        PASETO_ASYM_PUB: ${{ secrets.PASETO_ASYM_PUB }}
+        PASETO_SYM: ${{ secrets.PASETO_SYM }}
+        JWT_KEY: ${{ secrets.JWT_KEY }}
       run: make migrateup
 
     - name: Test
+      env:
+        DB_HOST: postgres
+        DB_PORT: 5433
+        DB_USER: root
+        DB_PASS: ${{ secrets.POSTGRES_PASSWORD }}
+        DB_NAME: campaignhub
       run: make test
