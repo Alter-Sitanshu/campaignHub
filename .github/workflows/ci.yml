@@ -40,12 +40,12 @@ jobs:
 
       - name: Run migrations
         env:
-          MAKEDB: postgres://root:${{ secrets.POSTGRES_PASSWORD }}%25@postgres:5432/campaignhub?sslmode=disable
+          MAKEDB: postgres://root:${{ secrets.POSTGRES_PASSWORD }}25@postgres:5432/campaignhub?sslmode=disable
         run: make migrateup
 
       - name: Run tests
         env:
-          DB_ADDR: postgres://root:${{ secrets.POSTGRES_PASSWORD }}%25@postgres:5432/campaignhub?sslmode=disable
+          DB_ADDR: postgres://root:${{ secrets.POSTGRES_PASSWORD }}25@postgres:5432/campaignhub?sslmode=disable
           DB_HOST: postgres
           DB_PORT: 5432
           DB_USER: root
