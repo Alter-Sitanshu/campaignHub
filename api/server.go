@@ -1,6 +1,8 @@
 package api
 
 import (
+	"time"
+
 	"github.com/Alter-Sitanshu/campaignHub/internals/auth"
 	"github.com/Alter-Sitanshu/campaignHub/internals/db"
 	"github.com/gin-gonic/gin"
@@ -38,6 +40,8 @@ type TokenConfig struct {
 
 const (
 	defaultUserLVL = "LVL1"
+	SessionTimeout = time.Hour * 24 * 7 // Timeout of 7 Days
+	CookieExp      = 3600 * 24 * 7      // 7 Days
 )
 
 func NewApplication(store *db.Store, cfg *Config, PASETO, JWT auth.TokenMaker) *Application {

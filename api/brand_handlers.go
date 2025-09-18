@@ -49,16 +49,35 @@ func (app *Application) CreateBrand(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, WriteError("Server Error"))
 		return
 	}
-	err := app.store.BrandInterface.RegisterBrand(ctx, &brand)
+	// TODO -> Mail the brand to a custom url to verify them
+	// --> Create a Session Payload
+	SessionToken, err := app.pasetoMaker.CreateToken(app.cfg.ISS,
+		app.cfg.AUD, brand.Email, SessionTimeout,
+	)
+	if err != nil {
+		log.Printf("error generating session for(%v): %v", brand.Email, err.Error())
+		c.JSON(http.StatusInternalServerError, WriteError("Server Error"))
+		return
+	}
+	err = app.store.BrandInterface.RegisterBrand(ctx, &brand)
 	if err != nil {
 		// Internal error
 		log.Printf("Could not register brand: %v\n", err.Error())
 		c.JSON(http.StatusInternalServerError, WriteError("Server Error"))
 		return
 	}
-
-	// successfully user created
-	c.JSON(http.StatusCreated, WriteResponse(&brand))
+	// --> Return the session token/ Assign it to the cookie
+	c.SetCookie(
+		"session",
+		SessionToken,
+		CookieExp,
+		"/",
+		"",    // For Development (TODO : Change to domain)
+		false, // Secure (HTTPS only)(TODO : Change later)
+		true,  // HttpOnly
+	)
+	// successfully brand created
+	c.JSON(http.StatusCreated, WriteResponse(brand))
 }
 
 func (app *Application) GetBrand(c *gin.Context) {

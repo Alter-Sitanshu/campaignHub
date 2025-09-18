@@ -3,7 +3,6 @@ package api
 import (
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/Alter-Sitanshu/campaignHub/internals/db"
 	"github.com/gin-gonic/gin"
@@ -63,8 +62,9 @@ func (app *Application) CreateUser(c *gin.Context) {
 	// Verify the user details by a JWT Token
 	// TODO -> Mail the user to a custom url to verify them
 	// --> Create a Session Payload
-	dur := time.Hour * 24 * 7 // Timeout of 7 Days
-	SessionToken, err := app.pasetoMaker.CreateToken(app.cfg.ISS, app.cfg.AUD, user.Email, dur)
+	SessionToken, err := app.pasetoMaker.CreateToken(app.cfg.ISS,
+		app.cfg.AUD, user.Email, SessionTimeout,
+	)
 	if err != nil {
 		log.Printf("error generating session for(%v): %v", user.Email, err.Error())
 		c.JSON(http.StatusInternalServerError, WriteError("Server Error"))
@@ -86,17 +86,18 @@ func (app *Application) CreateUser(c *gin.Context) {
 		return
 	}
 
-	// --> Return the session token(Choosing this for simplicity)/ Assign it to the cookie
-	type response struct {
-		token string
-		user  *db.User
-	}
-	FinalResponse := response{
-		token: SessionToken,
-		user:  &user,
-	}
+	// --> Return the session token/ Assign it to the cookie
+	c.SetCookie(
+		"session",
+		SessionToken,
+		CookieExp,
+		"/",
+		"",    // For Development (TODO : Change to domain)
+		false, // Secure (HTTPS only)(TODO : Change later)
+		true,  // HttpOnly
+	)
 	// successfully user created
-	c.JSON(http.StatusCreated, WriteResponse(FinalResponse))
+	c.JSON(http.StatusCreated, WriteResponse(user))
 }
 
 func (app *Application) GetUserById(c *gin.Context) {

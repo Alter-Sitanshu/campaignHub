@@ -1,7 +1,7 @@
 include .env
 MIGRATION_PATH = ./database/migrations
 
-.PHONY: startdb migratedown migrateup migration server
+.PHONY: startdb migratedown migrateup migration server test
 startdb:
 	docker run project
 
@@ -13,6 +13,9 @@ migratedown:
 
 migration:
 	@migrate create -seq -ext sql -dir $(MIGRATION_PATH) $(filter-out $@, $(MAKECMDGOALS))
+
+test:
+	go test -v ./...
 	
 server:
 	go run main.go
