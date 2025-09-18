@@ -20,6 +20,8 @@ func TestPasetoInvalidKeySize(t *testing.T) {
 func TestPaseto(t *testing.T) {
 	secretKey := internals.RandString(32)
 	payload := &Payload{
+		Issuer:    "admin",
+		Audience:  "admin",
 		Sub:       "useremail.com",
 		IssuedAt:  time.Unix(time.Now().Unix(), 0),
 		ExpiredAt: time.Unix(time.Now().Add(time.Minute*5).Unix(), 0),
@@ -57,9 +59,11 @@ func TestPaseto(t *testing.T) {
 func TestPasetoExpiredToken(t *testing.T) {
 	secretKey := internals.RandString(32)
 	payload := &Payload{
+		Issuer:    "admin",
+		Audience:  "admin",
 		Sub:       "useremail.com",
 		IssuedAt:  time.Unix(time.Now().Unix(), 0),
-		ExpiredAt: time.Unix(time.Now().Add(time.Minute*5).Unix(), 0),
+		ExpiredAt: time.Unix(time.Now().Add(-time.Minute*5).Unix(), 0),
 	}
 	randomCreds(payload)
 	t.Run("generating an expired PASETO Token", func(t *testing.T) {

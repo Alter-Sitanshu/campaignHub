@@ -25,6 +25,8 @@ func TestInvalidKeySize(t *testing.T) {
 func TestJWT(t *testing.T) {
 	secretKey := internals.RandString(32)
 	payload := &Payload{
+		Issuer:    "admin",
+		Audience:  "admin",
 		Sub:       "useremail.com",
 		IssuedAt:  time.Unix(time.Now().Unix(), 0),
 		ExpiredAt: time.Unix(time.Now().Add(time.Minute*5).Unix(), 0),
@@ -62,9 +64,11 @@ func TestJWT(t *testing.T) {
 func TestExpiredToken(t *testing.T) {
 	secretKey := internals.RandString(32)
 	payload := &Payload{
+		Issuer:    "admin",
+		Audience:  "admin",
 		Sub:       "useremail.com",
 		IssuedAt:  time.Unix(time.Now().Unix(), 0),
-		ExpiredAt: time.Unix(time.Now().Add(time.Minute*5).Unix(), 0),
+		ExpiredAt: time.Unix(time.Now().Add(-time.Minute*5).Unix(), 0),
 	}
 	randomCreds(payload)
 	t.Run("generating an expired JWT Token", func(t *testing.T) {
