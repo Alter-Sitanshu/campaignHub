@@ -41,6 +41,9 @@ jobs:
         which migrate
       
     - name: Run migrations
+      env:
+        MAKEDB: ${{ secrets.MAKEDB }}
+        DB_ADDR: ${{ secrets.DB_ADDR }}
       run: make migrateup
 
     - name: Test

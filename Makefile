@@ -1,4 +1,4 @@
-include .env
+-include .env
 MIGRATION_PATH = ./database/migrations
 
 .PHONY: startdb migratedown migrateup migration server test
