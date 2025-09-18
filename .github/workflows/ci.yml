@@ -31,7 +31,7 @@ jobs:
 
     - name: Debug files
       run: ls -R
-      
+
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
@@ -46,7 +46,6 @@ jobs:
     - name: Run migrations
       env:
         MAKEDB: ${{ secrets.MAKEDB }}
-        DB_ADDR: ${{ secrets.DB_ADDR }}
       run: make migrateup
 
     - name: Test
