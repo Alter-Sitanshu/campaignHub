@@ -31,7 +31,6 @@ func TestJWT(t *testing.T) {
 		IssuedAt:  time.Unix(time.Now().Unix(), 0),
 		ExpiredAt: time.Unix(time.Now().Add(time.Minute*5).Unix(), 0),
 	}
-	randomCreds(payload)
 	t.Run("generating a valid JWT Token", func(t *testing.T) {
 		maker, err := NewJWTMaker(secretKey)
 		if err != nil {
@@ -47,8 +46,8 @@ func TestJWT(t *testing.T) {
 		if err != nil {
 			t.Fail()
 		}
-		if payload.IssuedAt != verifiedPayload.IssuedAt ||
-			payload.ExpiredAt != verifiedPayload.ExpiredAt ||
+		if !payload.IssuedAt.Equal(verifiedPayload.IssuedAt) ||
+			!payload.ExpiredAt.Equal(verifiedPayload.ExpiredAt) ||
 			payload.Sub != verifiedPayload.Sub || payload.Issuer != verifiedPayload.Issuer ||
 			payload.Audience != verifiedPayload.Audience {
 			t.Fail()
