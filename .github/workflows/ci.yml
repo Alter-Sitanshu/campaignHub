@@ -7,19 +7,18 @@ on:
     branches: [ "main" ]
 
 jobs:
-
   test:
     runs-on: ubuntu-latest
-    
+
     services:
       postgres:
-        image: postgres:12-alpine
+        image: postgres:12
         env:
           POSTGRES_DB: campaignhub
           POSTGRES_USER: root
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
         ports:
-          - 5433:5432
+          - 5432:5432   # map 5432 to avoid confusion
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -27,37 +26,33 @@ jobs:
           --health-retries 5
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Debug files
-      run: ls -R
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24'
 
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.24'
-    
-    - name: Install golang-migrate
-      run: |
-        curl -L https://github.com/golang-migrate/migrate/releases/download/v4.19.0/migrate.linux-amd64.tar.gz | tar xvz 
-        sudo mv migrate /usr/bin/
-        which migrate
-      
-    - name: Run migrations
-      env:
-        MAKEDB: ${{ secrets.MAKEDB }}
-      run: make migrateup
+      - name: Install golang-migrate
+        run: |
+          curl -L https://github.com/golang-migrate/migrate/releases/download/v4.19.0/migrate.linux-amd64.tar.gz | tar xvz
+          sudo mv migrate /usr/bin/
 
-    - name: Test
-      env:
-        DB_HOST: postgres
-        DB_PORT: 5433
-        DB_USER: root
-        DB_PASS: ${{ secrets.POSTGRES_PASSWORD }}
-        DB_NAME: campaignhub
-        PASETO_ASYM_PRIV: ${{ secrets.PASETO_ASYM_PRIV }}
-        PASETO_ASYM_PUB: ${{ secrets.PASETO_ASYM_PUB }}
-        PASETO_SYM: ${{ secrets.PASETO_SYM }}
-        JWT_KEY: ${{ secrets.JWT_KEY }}
-        DB_ADDR: ${{ secrets.DB_ADDR }}
-      run: make test
+      - name: Run migrations
+        env:
+          MAKEDB: postgres://root:${{ secrets.POSTGRES_PASSWORD }}@postgres:5432/campaignhub?sslmode=disable
+        run: make migrateup
+
+      - name: Run tests
+        env:
+          DB_ADDR: postgres://root:${{ secrets.POSTGRES_PASSWORD }}@postgres:5432/campaignhub?sslmode=disable
+          DB_HOST: postgres
+          DB_PORT: 5432
+          DB_USER: root
+          DB_PASS: ${{ secrets.POSTGRES_PASSWORD }}
+          DB_NAME: campaignhub
+          PASETO_ASYM_PRIV: ${{ secrets.PASETO_ASYM_PRIV }}
+          PASETO_ASYM_PUB: ${{ secrets.PASETO_ASYM_PUB }}
+          PASETO_SYM: ${{ secrets.PASETO_SYM }}
+          JWT_KEY: ${{ secrets.JWT_KEY }}
+        run: make test

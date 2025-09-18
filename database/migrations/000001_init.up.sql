@@ -137,14 +137,14 @@ CREATE INDEX idx_brand_name ON brands (name);
 CREATE INDEX idx_submissions_campaign_status ON submissions (campaign_id, status);
 
 
-INSERT INTO TABLE status (id, name)
+INSERT INTO status (id, name)
 VALUES (0, 'draft'), (1, 'active'), (3, 'expired');
 
-INSERT INTO TABLE tx_status (id, name)
+INSERT INTO tx_status (id, name)
 VALUES (0, 'failed'), (1, 'active');
 
-INSERT INTO TABLE roles (id, name)
+INSERT INTO roles (id, name)
 VALUES ('sup', 'superuser'), ('LVL1', 'base');
 
-INSERT INTO TABLE ticket_status (id, name)
+INSERT INTO ticket_status (id, name)
 VALUES (0, 'resolved'), (1, 'open');
