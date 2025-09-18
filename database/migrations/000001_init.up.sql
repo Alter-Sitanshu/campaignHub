@@ -9,7 +9,7 @@ CREATE TABLE support_tickets (
   subject varchar(100) NOT NULL,
   message text NOT NULL,
   status int NOT NULL,
-  created_at timestamptz DEFAULT now()
+  created_at timestamptz DEFAULT now(),
   type VARCHAR(10) NOT NULL CHECK (type IN ('brand', 'creator'))
 );
 
