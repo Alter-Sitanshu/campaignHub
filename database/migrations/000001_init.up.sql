@@ -141,7 +141,7 @@ INSERT INTO status (id, name)
 VALUES (0, 'draft'), (1, 'active'), (3, 'expired');
 
 INSERT INTO tx_status (id, name)
-VALUES (0, 'failed'), (1, 'active');
+VALUES (0, 'failed'), (1, 'success');
 
 INSERT INTO roles (id, name)
 VALUES ('sup', 'superuser'), ('LVL1', 'base');
