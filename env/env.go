@@ -20,7 +20,7 @@ func New() *Config {
 	return &Config{
 		DBADDR: GetString("DB_ADDR", ""),
 		DBHost: GetString("DB_HOST", "localhost"),
-		DBPort: GetString("DB_PORT", "5432"),
+		DBPort: GetString("DB_PORT", "5433"),
 		DBUser: GetString("DB_USER", "postgres"),
 		DBPass: GetString("DB_PASS", ""),
 		DBName: GetString("DB_NAME", "postgres"),

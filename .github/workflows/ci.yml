@@ -46,10 +46,6 @@ jobs:
     - name: Run migrations
       env:
         MAKEDB: ${{ secrets.MAKEDB }}
-        PASETO_ASYM_PRIV: ${{ secrets.PASETO_ASYM_PRIV }}
-        PASETO_ASYM_PUB: ${{ secrets.PASETO_ASYM_PUB }}
-        PASETO_SYM: ${{ secrets.PASETO_SYM }}
-        JWT_KEY: ${{ secrets.JWT_KEY }}
       run: make migrateup
 
     - name: Test
@@ -59,4 +55,9 @@ jobs:
         DB_USER: root
         DB_PASS: ${{ secrets.POSTGRES_PASSWORD }}
         DB_NAME: campaignhub
+        PASETO_ASYM_PRIV: ${{ secrets.PASETO_ASYM_PRIV }}
+        PASETO_ASYM_PUB: ${{ secrets.PASETO_ASYM_PUB }}
+        PASETO_SYM: ${{ secrets.PASETO_SYM }}
+        JWT_KEY: ${{ secrets.JWT_KEY }}
+        DB_ADDR: ${{ secrets.DB_ADDR }}
       run: make test
