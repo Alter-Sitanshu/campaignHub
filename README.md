@@ -7,7 +7,7 @@ It supports transactions, campaign management, submissions, and support ticketin
 
 ## 📐 ER Diagram
 
-![Database Diagram](./Database/CamapaignHub.png)  
+![Database Diagram](./database/CamapaignHub.png)  
 *(Exported from [dbdiagram.io](https://dbdiagram.io))*  
 
 ---
