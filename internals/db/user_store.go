@@ -48,6 +48,38 @@ type UpdatePayload struct {
 	NewPass *string `json:"new_pass"`
 }
 
+// Function to mark a user verified
+func (u *UserStore) VerifyUser(ctx context.Context, typ, id string) error {
+	user_query := `
+		UPDATE users
+		SET is_verified = true
+		WHERE id = $1
+	`
+	brand_query := `
+		UPDATE brands
+		SET is_verified = true
+		WHERE id = $1
+	`
+	switch typ {
+	case "U":
+		_, err := u.db.ExecContext(ctx, user_query, id)
+		if err != nil {
+			log.Printf("invalid user id")
+			return err
+		}
+	case "B":
+		_, err := u.db.ExecContext(ctx, brand_query, id)
+		if err != nil {
+			log.Printf("invalid brand id")
+			return err
+		}
+	default:
+		return fmt.Errorf("invalid credentials")
+	}
+	// successfully verified
+	return nil
+}
+
 // Returns the user object pointer and and error, searching by their ID
 func (u *UserStore) GetUserById(ctx context.Context, id string) (*User, error) {
 	// filter by id
@@ -110,15 +142,8 @@ func (u *UserStore) GetUserByEmail(ctx context.Context, email string) (*User, er
 
 	if err != nil {
 		// For Debugging: Comment out later
-		log.Printf("DB QUery Error for MailID(%s): %v\n", email, err.Error())
-		switch {
-		case err.Error() == `pq: duplicate key value violates unique constraint "users_name_key"`:
-			return nil, ErrDupliName
-		case err.Error() == `pq: duplicate key value violates unique constraint "users_email_key"`:
-			return nil, ErrDupliMail
-		default:
-			return nil, err
-		}
+		log.Printf("DB Query Error for MailID(%s): %v\n", email, err.Error())
+		return nil, err
 	}
 	link_store := &LinkStore{db: u.db}
 	user.PlatformLinks = link_store.GetLinks(ctx, user.Id)
@@ -188,13 +213,34 @@ func (u *UserStore) DeleteUser(ctx context.Context, id string) error {
 		return err
 	}
 	// Clean up the links related to the user
-	// Handled at the DB layer
-
+	query = `
+		DELETE FROM platform_links
+		WHERE userid = $1
+	`
+	_, err = tx.ExecContext(ctx, query, id)
+	if err != nil {
+		return err
+	}
 	// Delete the users bank account
-	// TODO: API layer
-
+	query = `
+		DELETE FROM accounts
+		WHERE holder_id = $1
+	`
+	_, err = tx.ExecContext(ctx, query, id)
+	if err != nil {
+		return err
+	}
 	// Delete all the related submissions
-	// Handled at the DB layer
+	query = `
+		DELETE FROM submissions
+		WHERE creator_id = $1
+	`
+	_, err = tx.ExecContext(ctx, query, id)
+	if err != nil {
+		return err
+	}
+
+	// Cleaned up the User related fields
 	tx.Commit()
 	return nil
 }

@@ -3,8 +3,10 @@ package api
 import (
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/Alter-Sitanshu/campaignHub/internals/db"
+	"github.com/Alter-Sitanshu/campaignHub/internals/mailer"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -29,9 +31,11 @@ type BrandResponse struct {
 
 func (app *Application) CreateBrand(c *gin.Context) {
 	ctx := c.Request.Context()
+	var err error        // error for the functions used while creating a brand
+	var flag bool = true // flag to check if the brand is created in the db
 	var payload BrandPaylaod
 	// Checking for required fields
-	if err := c.ShouldBindJSON(&payload); err != nil {
+	if err = c.ShouldBindJSON(&payload); err != nil {
 		c.JSON(http.StatusBadRequest, WriteError(err.Error()))
 		return
 	}
@@ -49,33 +53,53 @@ func (app *Application) CreateBrand(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, WriteError("Server Error"))
 		return
 	}
-	// TODO -> Mail the brand to a custom url to verify them
-	// --> Create a Session Payload
-	SessionToken, err := app.pasetoMaker.CreateToken(app.cfg.ISS,
-		app.cfg.AUD, brand.Email, SessionTimeout,
-	)
-	if err != nil {
-		log.Printf("error generating session for(%v): %v", brand.Email, err.Error())
-		c.JSON(http.StatusInternalServerError, WriteError("Server Error"))
-		return
-	}
+	// Clean up before return
+	defer func() {
+		if err != nil && flag {
+			// Encountered an error while Verification
+			// Undo the brand creation
+			app.store.BrandInterface.DeregisterBrand(ctx, brand.Id)
+		}
+	}()
 	err = app.store.BrandInterface.RegisterBrand(ctx, &brand)
 	if err != nil {
 		// Internal error
+		flag = false // setting flag to false to indicate no creation in DB
 		log.Printf("Could not register brand: %v\n", err.Error())
 		c.JSON(http.StatusInternalServerError, WriteError("Server Error"))
 		return
 	}
-	// --> Return the session token/ Assign it to the cookie
-	c.SetCookie(
-		"session",
-		SessionToken,
-		CookieExp,
-		"/",
-		"",    // For Development (TODO : Change to domain)
-		false, // Secure (HTTPS only)(TODO : Change later)
-		true,  // HttpOnly
+	// Mail the brand to a custom url to verify them
+	// Create the brand verification JWT Token
+	tokenSub := "B" + " " + brand.Id
+	token, err := app.jwtMaker.CreateToken(
+		app.cfg.ISS, app.cfg.AUD, tokenSub, time.Hour,
 	)
+	if err != nil {
+		log.Printf("error creating brand JWt: %v\n", err.Error())
+		c.JSON(http.StatusInternalServerError, WriteError("Server Error"))
+		return
+	}
+	// Mail the brand a custom url to verify them
+	InvitationReq := mailer.EmailRequest{
+		To:      brand.Email,
+		Subject: "Verify your account",
+		Body:    mailer.InviteBody(token),
+	}
+	// Implementing a retry fallback
+	tries := 1
+	for tries <= app.cfg.MailCfg.MailRetries {
+		err = app.mailer.PushMail(InvitationReq)
+		if err == nil {
+			break
+		}
+		tries++
+	}
+	if err != nil && tries > app.cfg.MailCfg.MailRetries {
+		log.Printf("error sending verification to %s: %v\n", brand.Email, err.Error())
+		c.JSON(http.StatusInternalServerError, WriteError("Server Error"))
+		return
+	}
 	// successfully brand created
 	c.JSON(http.StatusCreated, WriteResponse(brand))
 }

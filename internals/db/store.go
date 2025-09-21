@@ -65,6 +65,7 @@ type Store struct {
 		CreateUser(context.Context, *User) error
 		DeleteUser(context.Context, string) error
 		UpdateUser(context.Context, string, UpdatePayload) error
+		VerifyUser(ctx context.Context, typ, email string) error
 
 		// TODO: Implement the follow/unfollow brand option(AT LAST)
 		// FollowBrand(context.Context, string, string) error

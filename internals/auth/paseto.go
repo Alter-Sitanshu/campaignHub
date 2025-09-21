@@ -20,14 +20,15 @@ type PASETOMaker struct {
 }
 
 // Creates a new paseto maker instance
-func NewPASETOMaker(secretKey string) (TokenMaker, error) {
+func NewPASETOMaker(secretKey []byte) (TokenMaker, error) {
 	if len(secretKey) != chacha20poly1305.KeySize {
+		log.Printf("got key size: %d\n", len(secretKey))
 		return nil, ErrInvalidKeySize
 	}
 	// return the struct
 	return &PASETOMaker{
 		paseto:       paseto.NewV2(),
-		symmetricKey: []byte(secretKey),
+		symmetricKey: secretKey,
 	}, nil
 }
 

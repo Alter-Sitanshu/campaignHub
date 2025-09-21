@@ -1,12 +1,14 @@
 package main
 
 import (
+	"encoding/base64"
 	"log"
 
 	"github.com/Alter-Sitanshu/campaignHub/api"
 	"github.com/Alter-Sitanshu/campaignHub/env"
 	"github.com/Alter-Sitanshu/campaignHub/internals/auth"
 	"github.com/Alter-Sitanshu/campaignHub/internals/db"
+	"github.com/Alter-Sitanshu/campaignHub/internals/mailer"
 	"github.com/joho/godotenv"
 )
 
@@ -32,6 +34,14 @@ func main() {
 		},
 		ISS: env.GetString("ISS", "admin"),
 		AUD: env.GetString("AUD", "admin"),
+		MailCfg: api.MailConfig{
+			Host:        "smtp.gmail.com",
+			Port:        587,
+			Username:    env.GetString("MAIL_USERNAME", "admin"),
+			Password:    env.GetString("MAIL_PASS", ""),
+			From:        env.GetString("FROM_ACC", ""),
+			MailRetries: 5,
+		},
 	}
 
 	// Making DB connection
@@ -47,19 +57,28 @@ func main() {
 	// Setting the Token Makers
 	jwt_Maker, err := auth.NewJWTMaker(config.TokenCfg.JWTSecret)
 	if err != nil {
-		log.Fatal("error making jwt maker\n")
+		log.Fatalf("error making jwt maker: %v\n", err.Error())
 	}
-	paseto_Maker, err := auth.NewPASETOMaker(config.TokenCfg.PASETO_SYM)
+	paseto_key, _ := base64.StdEncoding.DecodeString(config.TokenCfg.PASETO_SYM)
+	paseto_Maker, err := auth.NewPASETOMaker(paseto_key)
 	if err != nil {
-		log.Fatal("error making paseto maker\n")
+		log.Fatalf("error making paseto maker: %v\n", err.Error())
 	}
-
+	mailer := mailer.NewMailService(
+		config.MailCfg.From,
+		config.MailCfg.Host,
+		config.MailCfg.Username,
+		config.MailCfg.Password,
+		config.MailCfg.Port,
+	)
+	log.Printf("%s: %s\n", mailer.Username, mailer.Password)
 	appStore := db.NewStore(db_)
 	app := api.NewApplication(
 		appStore,
 		&config,
 		jwt_Maker,
 		paseto_Maker,
+		mailer,
 	)
 	app.Run()
 }

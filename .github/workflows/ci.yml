@@ -7,10 +7,16 @@ on:
     branches: [ "main" ]
 
 jobs:
+  # testing job to run tests
   test:
     runs-on: ubuntu-latest
 
     services:
+      mailhog:
+        image: mailhog/mailhog
+        ports:
+          - 1025:1025   # SMTP PORT
+          - 8025:8025   # Web UI PORT
       postgres:
         image: postgres:12
         env:

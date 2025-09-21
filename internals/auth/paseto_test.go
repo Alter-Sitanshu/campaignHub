@@ -10,7 +10,7 @@ import (
 func TestPasetoInvalidKeySize(t *testing.T) {
 	t.Run("invalid key size", func(t *testing.T) {
 		secretKey := internals.RandString(30)
-		_, err := NewPASETOMaker(secretKey)
+		_, err := NewPASETOMaker([]byte(secretKey))
 		if err == nil {
 			t.Fail()
 		}
@@ -27,7 +27,7 @@ func TestPaseto(t *testing.T) {
 		ExpiredAt: time.Unix(time.Now().Add(time.Minute*5).Unix(), 0),
 	}
 	t.Run("generating a valid PASETO Token", func(t *testing.T) {
-		maker, err := NewPASETOMaker(secretKey)
+		maker, err := NewPASETOMaker([]byte(secretKey))
 		if err != nil {
 			t.Fail()
 		}
@@ -66,7 +66,7 @@ func TestPasetoExpiredToken(t *testing.T) {
 	}
 	randomCreds(payload)
 	t.Run("generating an expired PASETO Token", func(t *testing.T) {
-		maker, err := NewPASETOMaker(secretKey)
+		maker, err := NewPASETOMaker([]byte(secretKey))
 		if err != nil {
 			t.Fail()
 		}
@@ -95,7 +95,7 @@ func TestPasetoInvalidToken(t *testing.T) {
 		ExpiredAt: time.Unix(time.Now().Add(time.Minute*5).Unix(), 0),
 	}
 	t.Run("generating an invalid PASETO Token", func(t *testing.T) {
-		maker, err := NewPASETOMaker(secretKey)
+		maker, err := NewPASETOMaker([]byte(secretKey))
 		if err != nil {
 			t.Fail()
 		}

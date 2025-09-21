@@ -1,10 +1,15 @@
 package api
 
 import (
+	"errors"
 	"log"
 	"net/http"
+	"strings"
+	"time"
 
+	"github.com/Alter-Sitanshu/campaignHub/internals/auth"
 	"github.com/Alter-Sitanshu/campaignHub/internals/db"
+	"github.com/Alter-Sitanshu/campaignHub/internals/mailer"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -35,11 +40,61 @@ func (app *Application) HealthCheck(c *gin.Context) {
 	c.JSON(http.StatusOK, WriteResponse("Server Running !"))
 }
 
+// Account verification route handler
+func (app *Application) Verification(c *gin.Context) {
+	ctx := c.Request.Context()
+	token := c.Query("token")
+	payload, err := app.jwtMaker.VerifyToken(token)
+	if err != nil {
+		if errors.Is(err, auth.ErrTokenExpired) {
+			log.Printf("error token expired\n")
+			c.JSON(http.StatusUnauthorized, WriteError("Token Expired"))
+		} else {
+			log.Printf("error token invalid")
+			c.JSON(http.StatusUnauthorized, WriteError("Invalid Token"))
+		}
+		return
+	}
+	// content has ["type", "id"] : type can be U and B
+	content := strings.Split(payload.Sub, " ")
+	TokenTyp := content[0]
+	TokenEmail := content[1]
+	// User verified -> create session -> Redirect to welcome page
+	err = app.store.UserInterface.VerifyUser(ctx, TokenTyp, TokenEmail)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, WriteError("Server Error. Try Again."))
+		return
+	}
+	// --> Create a Session Payload
+	SessionToken, err := app.pasetoMaker.CreateToken(app.cfg.ISS,
+		app.cfg.AUD, payload.Sub, SessionTimeout,
+	)
+	if err != nil {
+		log.Printf("error generating session for(%v): %v\n", payload.Sub, err.Error())
+		c.JSON(http.StatusInternalServerError, WriteError("Please login manually"))
+		return
+	}
+	// --> Assign it to the cookie
+	c.SetCookie(
+		"session",
+		SessionToken,
+		CookieExp,
+		"/",
+		"",    // For Development (TODO : Change to domain)
+		false, // Secure (HTTPS only)(TODO : Change later)
+		true,  // HttpOnly
+	)
+	// TODO: Redirect the user to Welcome Screen
+	c.Redirect(http.StatusFound, "http://localhost:8080/")
+}
+
 func (app *Application) CreateUser(c *gin.Context) {
 	ctx := c.Request.Context()
+	var err error        // error for the functions used while creating a user
+	var flag bool = true // flag to check if the user is created in the db
 	var payload UserPaylaod
 	// Checking for required fields
-	if err := c.ShouldBindJSON(&payload); err != nil {
+	if err = c.ShouldBindJSON(&payload); err != nil {
 		c.JSON(http.StatusBadRequest, WriteError(err.Error()))
 		return
 	}
@@ -59,19 +114,18 @@ func (app *Application) CreateUser(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, WriteError("Server Error"))
 		return
 	}
-	// Verify the user details by a JWT Token
-	// TODO -> Mail the user to a custom url to verify them
-	// --> Create a Session Payload
-	SessionToken, err := app.pasetoMaker.CreateToken(app.cfg.ISS,
-		app.cfg.AUD, user.Email, SessionTimeout,
-	)
-	if err != nil {
-		log.Printf("error generating session for(%v): %v", user.Email, err.Error())
-		c.JSON(http.StatusInternalServerError, WriteError("Server Error"))
-		return
-	}
+	// Clean up before return
+	defer func() {
+		if err != nil && flag {
+			// Encountered an error while Verification
+			// Undo the user creation
+			app.store.UserInterface.DeleteUser(ctx, user.Id)
+		}
+	}()
+	// First create the User in the DB
 	err = app.store.UserInterface.CreateUser(ctx, &user)
 	if err != nil {
+		flag = false // setting the flag false to indicate no creation in DB
 		switch {
 		case err == db.ErrDupliName:
 			c.JSON(http.StatusInternalServerError, WriteError("name already taken"))
@@ -85,18 +139,38 @@ func (app *Application) CreateUser(c *gin.Context) {
 		log.Printf("Could not create user: %v\n", err.Error())
 		return
 	}
-
-	// --> Return the session token/ Assign it to the cookie
-	c.SetCookie(
-		"session",
-		SessionToken,
-		CookieExp,
-		"/",
-		"",    // For Development (TODO : Change to domain)
-		false, // Secure (HTTPS only)(TODO : Change later)
-		true,  // HttpOnly
+	// Create the user verification JWT Token
+	tokenSub := "U" + " " + user.Id
+	token, err := app.jwtMaker.CreateToken(
+		app.cfg.ISS, app.cfg.AUD, tokenSub, time.Hour,
 	)
-	// successfully user created
+	if err != nil {
+		log.Printf("error creating user JWt: %v\n", err.Error())
+		c.JSON(http.StatusInternalServerError, WriteError("Server Error"))
+		return
+	}
+	// Mail the user to a custom url to verify them
+	InvitationReq := mailer.EmailRequest{
+		To:      user.Email,
+		Subject: "Verify your account",
+		Body:    mailer.InviteBody(token),
+	}
+	// Implementing a retry fallback
+	tries := 1
+	for tries <= app.cfg.MailCfg.MailRetries {
+		err = app.mailer.PushMail(InvitationReq)
+		if err == nil {
+			break
+		}
+		tries++
+	}
+	if err != nil && tries > app.cfg.MailCfg.MailRetries {
+		log.Printf("error sending verification to %s: %v\n", user.Email, err.Error())
+		c.JSON(http.StatusInternalServerError, WriteError("Server Error"))
+		return
+	}
+
+	// successfully user created with is_verified = false
 	c.JSON(http.StatusCreated, WriteResponse(user))
 }
 
