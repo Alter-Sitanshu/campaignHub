@@ -5,6 +5,8 @@ import (
 	"log"
 	"net/smtp"
 	"time"
+
+	"github.com/Alter-Sitanshu/campaignHub/internals/db"
 )
 
 // The struct implements the Mail service for the application
@@ -45,6 +47,9 @@ func (m *MailService) PushMail(req EmailRequest) error {
 	// build the addr
 	addr := fmt.Sprintf("%s:%d", m.Host, m.Port)
 	// Connect to the server, authenticate, and send the email
+	if m.From == "" || req.To == "" {
+		return fmt.Errorf("invalid from or to address")
+	}
 	to := []string{req.To}
 	err := smtp.SendMail(addr, auth, m.From, to, req.Body)
 	if err != nil {
@@ -57,10 +62,10 @@ func (m *MailService) PushMail(req EmailRequest) error {
 }
 
 // Invitation mail payload needs the token to be verified
-// TODO: CHANGE THE VERIFICATION ROUTE
-func InviteBody(token string) []byte {
+// TODO: CHANGE THE VERIFICATION ROUTE and email of user
+func InviteBody(email, token string) []byte {
 	return []byte("From: CampaignHub Team <no-reply@campaignhub.com>\r\n" +
-		"To: user@example.com\r\n" +
+		"To: " + email + "\r\n" +
 		"Subject: Verify your account\r\n" +
 		"MIME-Version: 1.0\r\n" +
 		"Content-Type: text/html; charset=UTF-8\r\n" +
@@ -93,6 +98,61 @@ func InviteBody(token string) []byte {
 			© %d CampaignHub. All rights reserved.</p>`,
 			time.Now().Year(),
 		) +
+		"</body>" +
+		"</html>")
+}
+
+// Function generates the email template for the raised ticket notification
+func GenerateTicketEmail(email string, ticket db.Ticket) []byte {
+	return []byte("From: CampaignHub Team <no-reply@campaignhub.com>\r\n" +
+		"To: support.campaignhub@gmail.com\r\n" +
+		"Subject: New Ticket Raised - " + ticket.Id + "\r\n" +
+		"MIME-Version: 1.0\r\n" +
+		"Content-Type: text/html; charset=UTF-8\r\n" +
+		"\r\n" +
+		"<html>" +
+		"<body style='font-family: Arial, sans-serif; background-color:#f9fafb; padding:20px;'>" +
+		"<div style='max-width:600px; margin:auto; background:#ffffff; padding:20px; border-radius:8px; border:1px solid #e5e7eb;'>" +
+		"<h2 style='color:#111827;'>🎫 New Ticket Raised</h2>" +
+
+		"<p><strong>Ticket ID:</strong> " + ticket.Id + "</p>" +
+		"<p><strong>Subject:</strong> " + ticket.Subject + "</p>" +
+		"<p><strong>Reporter Email:</strong> " + email + "</p>" +
+		"<p><strong>Message:</strong><br/>" + ticket.Message + "</p>" +
+		"<p><strong>Created At:</strong> " + ticket.CreatedAt + "</p>" +
+		"<p><strong>User Type:</strong> " + ticket.Type + "</p>" +
+
+		"<p style='margin-top:20px; font-size:12px; color:#6b7280;'>This is an automated message from CampaignHub.</p>" +
+		"</div>" +
+		"</body>" +
+		"</html>")
+}
+
+// Funtion generates the email template for the password reset
+// TODO: Change the reset link
+func GeneratePasswordResetEmail(email, token string) []byte {
+	resetLink := "https://yourapp.com/reset-password?token=" + token
+
+	return []byte("From: CampaignHub Team <no-reply@campaignhub.com>\r\n" +
+		"To: " + email + "\r\n" +
+		"Subject: Reset Your CampaignHub Password\r\n" +
+		"MIME-Version: 1.0\r\n" +
+		"Content-Type: text/html; charset=UTF-8\r\n" +
+		"\r\n" +
+		"<html>" +
+		"<body style='font-family: Arial, sans-serif; background-color:#f9fafb; padding:20px;'>" +
+		"<div style='max-width:600px; margin:auto; background:#ffffff; padding:20px; border-radius:8px; border:1px solid #e5e7eb;'>" +
+		"<h2 style='color:#111827;'>🔐 Password Reset Request</h2>" +
+
+		"<p>Hello,</p>" +
+		"<p>We received a request to reset your password. If you made this request, click the button below:</p>" +
+
+		"<p><a href='" + resetLink + "' style='display:inline-block;padding:10px 20px;font-size:16px;color:#fff;" +
+		"text-decoration:none;background-color:#4CAF50;border-radius:5px;'>Reset Password</a></p>" +
+
+		"<p>If you didn’t request a password reset, you can safely ignore this email.</p>" +
+		"<p style='margin-top:20px; font-size:12px; color:#6b7280;'>This link will expire in 15 minutes for your security.</p>" +
+		"</div>" +
 		"</body>" +
 		"</html>")
 }
