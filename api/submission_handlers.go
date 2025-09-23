@@ -19,10 +19,24 @@ type SubmissionPayload struct {
 
 func (app *Application) CreateSubmission(c *gin.Context) {
 	ctx := c.Request.Context()
+	LogInUser, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	User, ok := LogInUser.(*db.User)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
 	var payload SubmissionPayload
 	// validating the struct
 	if err := c.ShouldBindJSON(&payload); err != nil {
 		c.JSON(http.StatusBadRequest, WriteError(err.Error()))
+		return
+	}
+	if User.Id != payload.CreatorId {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
 	// making the submission object
@@ -49,14 +63,40 @@ func (app *Application) CreateSubmission(c *gin.Context) {
 
 func (app *Application) DeleteSubmission(c *gin.Context) {
 	ctx := c.Request.Context()
+	LogInUser, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	User, ok := LogInUser.(*db.User)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
 	sub_id := c.Request.PathValue("sub_id")
 	// validate the submission id
 	if ok := uuid.Validate(sub_id); ok != nil {
 		c.JSON(http.StatusInternalServerError, WriteError("invalid credentials"))
 		return
 	}
+
+	// check if the submission belongs to the user
+	submission, err := app.store.SubmissionInterface.FindSubmissionById(ctx, sub_id)
+	if err != nil {
+		if err == db.ErrNotFound {
+			c.JSON(http.StatusInternalServerError, WriteError("invalid credentials"))
+			return
+		}
+		c.JSON(http.StatusInternalServerError, WriteError("server error"))
+		return
+	}
+	if submission.CreatorId != User.Id {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+
 	// try deleting the submission
-	err := app.store.SubmissionInterface.DeleteSubmission(ctx, sub_id)
+	err = app.store.SubmissionInterface.DeleteSubmission(ctx, sub_id)
 	if err != nil {
 		if err == db.ErrNotFound {
 			c.JSON(http.StatusInternalServerError, WriteError("invalid credentials"))
@@ -131,6 +171,17 @@ func (app *Application) UpdateSubmission(c *gin.Context) {
 
 func (app *Application) GetSubmission(c *gin.Context) {
 	ctx := c.Request.Context()
+	LogInUser, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	User, ok := LogInUser.(*db.User)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+
 	sub_id := c.Request.PathValue("sub_id")
 	if ok := uuid.Validate(sub_id); ok != nil {
 		c.JSON(http.StatusInternalServerError, WriteError("invalid credentials"))
@@ -145,6 +196,10 @@ func (app *Application) GetSubmission(c *gin.Context) {
 			return
 		}
 		c.JSON(http.StatusInternalServerError, WriteError("server error"))
+	}
+	if sub.CreatorId != User.Id {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
 	}
 
 	// successful fetching

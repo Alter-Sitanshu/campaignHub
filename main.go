@@ -40,6 +40,7 @@ func main() {
 			Username:    env.GetString("MAIL_USERNAME", "admin"),
 			Password:    env.GetString("MAIL_PASS", ""),
 			From:        env.GetString("FROM_ACC", ""),
+			Support:     env.GetString("MAIL_SUPPORT", ""),
 			MailRetries: 5,
 		},
 	}

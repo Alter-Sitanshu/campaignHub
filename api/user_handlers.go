@@ -1,13 +1,10 @@
 package api
 
 import (
-	"errors"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 
-	"github.com/Alter-Sitanshu/campaignHub/internals/auth"
 	"github.com/Alter-Sitanshu/campaignHub/internals/db"
 	"github.com/Alter-Sitanshu/campaignHub/internals/mailer"
 	"github.com/gin-gonic/gin"
@@ -33,59 +30,6 @@ type UserResponse struct {
 	Gender        string     `json:"gender" binding:"required"`
 	Age           int        `json:"age" binding:"required"`
 	PlatformLinks []db.Links `json:"links" binding:"required"`
-}
-
-// Just a dummy function that helps in checking if the server is working fine
-func (app *Application) HealthCheck(c *gin.Context) {
-	c.JSON(http.StatusOK, WriteResponse("Server Running !"))
-}
-
-// Account verification route handler
-func (app *Application) Verification(c *gin.Context) {
-	ctx := c.Request.Context()
-	token := c.Query("token")
-	payload, err := app.jwtMaker.VerifyToken(token)
-	if err != nil {
-		if errors.Is(err, auth.ErrTokenExpired) {
-			log.Printf("error token expired\n")
-			c.JSON(http.StatusUnauthorized, WriteError("Token Expired"))
-		} else {
-			log.Printf("error token invalid")
-			c.JSON(http.StatusUnauthorized, WriteError("Invalid Token"))
-		}
-		return
-	}
-	// content has ["type", "id"] : type can be U and B
-	content := strings.Split(payload.Sub, " ")
-	TokenTyp := content[0]
-	TokenEmail := content[1]
-	// User verified -> create session -> Redirect to welcome page
-	err = app.store.UserInterface.VerifyUser(ctx, TokenTyp, TokenEmail)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, WriteError("Server Error. Try Again."))
-		return
-	}
-	// --> Create a Session Payload
-	SessionToken, err := app.pasetoMaker.CreateToken(app.cfg.ISS,
-		app.cfg.AUD, payload.Sub, SessionTimeout,
-	)
-	if err != nil {
-		log.Printf("error generating session for(%v): %v\n", payload.Sub, err.Error())
-		c.JSON(http.StatusInternalServerError, WriteError("Please login manually"))
-		return
-	}
-	// --> Assign it to the cookie
-	c.SetCookie(
-		"session",
-		SessionToken,
-		CookieExp,
-		"/",
-		"",    // For Development (TODO : Change to domain)
-		false, // Secure (HTTPS only)(TODO : Change later)
-		true,  // HttpOnly
-	)
-	// TODO: Redirect the user to Welcome Screen
-	c.Redirect(http.StatusFound, "http://localhost:8080/")
 }
 
 func (app *Application) CreateUser(c *gin.Context) {
@@ -140,7 +84,7 @@ func (app *Application) CreateUser(c *gin.Context) {
 		return
 	}
 	// Create the user verification JWT Token
-	tokenSub := "U" + " " + user.Id
+	tokenSub := user.Id
 	token, err := app.jwtMaker.CreateToken(
 		app.cfg.ISS, app.cfg.AUD, tokenSub, time.Hour,
 	)
@@ -153,7 +97,7 @@ func (app *Application) CreateUser(c *gin.Context) {
 	InvitationReq := mailer.EmailRequest{
 		To:      user.Email,
 		Subject: "Verify your account",
-		Body:    mailer.InviteBody(token),
+		Body:    mailer.InviteBody(user.Email, token),
 	}
 	// Implementing a retry fallback
 	tries := 1
@@ -176,11 +120,27 @@ func (app *Application) CreateUser(c *gin.Context) {
 
 func (app *Application) GetUserById(c *gin.Context) {
 	ctx := c.Request.Context()
+	// Fetching the logged in user
+	LogInUser, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	User, ok := LogInUser.(*db.User)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
 	ID := c.Request.PathValue("id")
-
-	ok := uuid.Validate(ID) // validate the user id
-	if ok != nil {
+	if ok := uuid.Validate(ID); ok != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
+		return
+	}
+	// Authorise the user
+	if ID != User.Id {
+		log.Printf("unauthorised access from: %v\n", LogInUser)
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
 	}
 	// fetching the user
 	user, err := app.store.UserInterface.GetUserById(ctx, ID)
@@ -212,8 +172,21 @@ func (app *Application) GetUserById(c *gin.Context) {
 
 func (app *Application) GetUserByEmail(c *gin.Context) {
 	ctx := c.Request.Context()
-
+	LogInUser, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	User, ok := LogInUser.(*db.User)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
 	mail := c.Request.PathValue("email")
+	if mail != User.Email {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
 	// fetching the user
 	user, err := app.store.UserInterface.GetUserByEmail(ctx, mail)
 	if err != nil {
@@ -244,9 +217,26 @@ func (app *Application) GetUserByEmail(c *gin.Context) {
 
 func (app *Application) DeleteUser(c *gin.Context) {
 	ctx := c.Request.Context()
+	// get the ucrrent logged in user
+	LogInUser, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	User, ok := LogInUser.(*db.User)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
 	ID := c.Request.PathValue("id")
 	if ok := uuid.Validate(ID); ok != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
+		return
+	}
+	// Authorise the user
+	if ID != User.Id {
+		log.Printf("unauthorised access from: %v\n", LogInUser)
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
 	// deleting the user
@@ -269,7 +259,28 @@ func (app *Application) DeleteUser(c *gin.Context) {
 
 func (app *Application) UpdateUser(c *gin.Context) {
 	ctx := c.Request.Context()
-	id := c.Request.PathValue("id")
+	// Fetch the logged in user
+	LogInUser, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	User, ok := LogInUser.(*db.User)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	ID := c.Request.PathValue("id")
+	if ok := uuid.Validate(ID); ok != nil {
+		c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
+		return
+	}
+	// Authorise the user
+	if ID != User.Id {
+		log.Printf("unauthorised access from: %v\n", LogInUser)
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
 	var payload db.UpdatePayload
 	// Checking for required fields
 	if err := c.ShouldBindJSON(&payload); err != nil {
@@ -277,7 +288,7 @@ func (app *Application) UpdateUser(c *gin.Context) {
 		return
 	}
 	// updating the user
-	err := app.store.UserInterface.UpdateUser(ctx, id, payload)
+	err := app.store.UserInterface.UpdateUser(ctx, ID, payload)
 	if err != nil {
 		if err == db.ErrNotFound {
 			// bad request error
@@ -290,7 +301,7 @@ func (app *Application) UpdateUser(c *gin.Context) {
 		return
 	}
 	// fetching the updated user
-	user, err := app.store.UserInterface.GetUserById(ctx, id)
+	user, err := app.store.UserInterface.GetUserById(ctx, ID)
 	if err != nil {
 		if err == db.ErrNotFound {
 			// bad request error

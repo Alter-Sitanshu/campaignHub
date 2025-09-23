@@ -24,9 +24,23 @@ type CampaignPayload struct {
 
 func (app *Application) CreateCampaign(c *gin.Context) {
 	ctx := c.Request.Context()
+	LogInUser, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	User, ok := LogInUser.(*db.User)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
 	var payload CampaignPayload
 	if err := c.BindJSON(&payload); err != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid input"))
+		return
+	}
+	if User.Id != payload.BrandId {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
 	// making the payload
@@ -71,9 +85,29 @@ func (app *Application) GetBrandCampaigns(c *gin.Context) {
 
 func (app *Application) StopCampaign(c *gin.Context) {
 	ctx := c.Request.Context()
+	LogInUser, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	User, ok := LogInUser.(*db.User)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
 	ID := c.Request.PathValue("campaign_id")
 	if ok := uuid.Validate(ID); ok != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid request"))
+		return
+	}
+	// fetch campaign details
+	campaign, err := app.store.CampaignInterace.GetCampaign(ctx, ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, WriteError("internal server error"))
+		return
+	}
+	if campaign.BrandId != User.Id && User.Role != "admin" {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
 
@@ -88,12 +122,31 @@ func (app *Application) StopCampaign(c *gin.Context) {
 
 func (app *Application) DeleteCampaign(c *gin.Context) {
 	ctx := c.Request.Context()
+	LogInUser, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	User, ok := LogInUser.(*db.User)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
 	ID := c.Request.PathValue("campaign_id")
 	if ok := uuid.Validate(ID); ok != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid request"))
 		return
 	}
-
+	// fetch campaign details
+	campaign, err := app.store.CampaignInterace.GetCampaign(ctx, ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, WriteError("internal server error"))
+		return
+	}
+	if campaign.BrandId != User.Id && User.Role != "admin" {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
 	// delete the campaign
 	if err := app.store.CampaignInterace.DeleteCampaign(ctx, ID); err != nil {
 		c.JSON(http.StatusInternalServerError, WriteError("internal server error"))
@@ -105,9 +158,24 @@ func (app *Application) DeleteCampaign(c *gin.Context) {
 
 func (app *Application) GetUserCampaigns(c *gin.Context) {
 	ctx := c.Request.Context()
+	LogInUser, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	User, ok := LogInUser.(*db.User)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
 	UserID := c.Query("userid")
 	if ok := uuid.Validate(UserID); ok != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid request"))
+		return
+	}
+	// Auhtorise user
+	if UserID != User.Id && User.Role != "admin" {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
 	campaigns, err := app.store.CampaignInterace.GetUserCampaigns(ctx, UserID)
@@ -122,6 +190,16 @@ func (app *Application) GetUserCampaigns(c *gin.Context) {
 
 func (app *Application) UpdateCampaign(c *gin.Context) {
 	ctx := c.Request.Context()
+	LogInUser, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	User, ok := LogInUser.(*db.User)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
 	campaign_id := c.Request.PathValue("campaign_id")
 	var payload db.UpdateCampaign
 	// checking the parameters entered
@@ -129,8 +207,21 @@ func (app *Application) UpdateCampaign(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, WriteError("invalid parameters"))
 		return
 	}
+
+	// fetch the campaign details
+	campaign, err := app.store.CampaignInterace.GetCampaign(ctx, campaign_id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, WriteError("internal server error"))
+		return
+	}
+	// Authorise user
+	if campaign.BrandId != User.Id && User.Role != "admin" {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+
 	// update request
-	err := app.store.CampaignInterace.UpdateCampaign(ctx, campaign_id, payload)
+	err = app.store.CampaignInterace.UpdateCampaign(ctx, campaign_id, payload)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, WriteError("server error"))
 		return
@@ -160,4 +251,27 @@ func (app *Application) GetCampaignFeed(c *gin.Context) {
 
 	// return the campaign feed
 	c.JSON(http.StatusOK, WriteResponse(output))
+}
+
+func (app *Application) GetCampaign(c *gin.Context) {
+	ctx := c.Request.Context()
+	campaign_id := c.Request.PathValue("campaign_id")
+	if ok := uuid.Validate(campaign_id); ok != nil {
+		c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
+		return
+	}
+	campaignResponse, err := app.store.CampaignInterace.GetCampaign(ctx, campaign_id)
+	if err != nil {
+		if err == db.ErrNotFound {
+			// bad request error
+			c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
+			return
+		}
+		// server error
+		log.Printf("could not find campaign: %v", err.Error()) // log to fix the error
+		c.JSON(http.StatusInternalServerError, WriteError("server error"))
+		return
+	}
+	// successfully fetched the campaign
+	c.JSON(http.StatusOK, WriteResponse(campaignResponse))
 }

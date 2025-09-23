@@ -387,3 +387,23 @@ func TestDisableAccount(t *testing.T) {
 		}
 	})
 }
+
+func TestGetAllAccounts(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+	// create mock creator
+	uid := uuid.New().String()
+	generateCreator(ctx, uid)
+	defer destroyCreator(ctx, uid)
+	// Create their accounts
+	user_acc := generateAccounts(ctx, uid, "user")
+	defer destroyAccounts(ctx, user_acc.Id)
+	t.Run("fetching all accounts", func(t *testing.T) {
+		log.Printf("fetching accounts\n")
+		accounts, err := MockTsStore.GetAllAccounts(ctx, 0, 10)
+		if err != nil || len(accounts) == 0 {
+			log.Printf("%v", len(accounts))
+			t.Fail()
+		}
+	})
+}

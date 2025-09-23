@@ -71,7 +71,7 @@ func (app *Application) CreateBrand(c *gin.Context) {
 	}
 	// Mail the brand to a custom url to verify them
 	// Create the brand verification JWT Token
-	tokenSub := "B" + " " + brand.Id
+	tokenSub := brand.Id
 	token, err := app.jwtMaker.CreateToken(
 		app.cfg.ISS, app.cfg.AUD, tokenSub, time.Hour,
 	)
@@ -84,7 +84,7 @@ func (app *Application) CreateBrand(c *gin.Context) {
 	InvitationReq := mailer.EmailRequest{
 		To:      brand.Email,
 		Subject: "Verify your account",
-		Body:    mailer.InviteBody(token),
+		Body:    mailer.InviteBody(brand.Email, token),
 	}
 	// Implementing a retry fallback
 	tries := 1
@@ -140,9 +140,20 @@ func (app *Application) GetBrand(c *gin.Context) {
 
 func (app *Application) DeleteBrand(c *gin.Context) {
 	ctx := c.Request.Context()
+	// fetch the logged in user
+	LogInUser, ok := c.Get("user_id")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
 	ID := c.Request.PathValue("brand_id")
 	if ok := uuid.Validate(ID); ok != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
+		return
+	}
+	if ID != LogInUser {
+		log.Printf("error: unauthorised access by: %v\n", LogInUser)
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised"))
 		return
 	}
 	// deleting the user
@@ -165,7 +176,18 @@ func (app *Application) DeleteBrand(c *gin.Context) {
 
 func (app *Application) UpdateBrand(c *gin.Context) {
 	ctx := c.Request.Context()
+	// fetching the logged in user
+	LogInUser, ok := c.Get("user_id")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
 	brand_id := c.Request.PathValue("brand_id")
+	if brand_id != LogInUser {
+		log.Printf("error: unauthorised access by: %v\n", LogInUser)
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised"))
+		return
+	}
 	var payload db.BrandUpdatePayload
 	// Checking for required fields
 	if err := c.ShouldBindJSON(&payload); err != nil {

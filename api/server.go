@@ -25,10 +25,6 @@ type Config struct {
 	TokenCfg TokenConfig
 	Addr     string
 	MailCfg  MailConfig
-	OTPCfg   OTPConfig
-}
-
-type OTPConfig struct {
 }
 
 type MailConfig struct {
@@ -37,6 +33,7 @@ type MailConfig struct {
 	Username    string
 	Password    string // The app password for the Gmail
 	From        string // sender email address
+	Support     string // tickets are sent to this address
 	Expiry      time.Duration
 	MailRetries int
 }
@@ -56,9 +53,10 @@ type TokenConfig struct {
 }
 
 const (
-	defaultUserLVL = "LVL1"
-	SessionTimeout = time.Hour * 24 * 7 // Timeout of 7 Days
-	CookieExp      = 3600 * 24 * 7      // 7 Days
+	defaultUserLVL   = "LVL1"
+	SessionTimeout   = time.Hour * 24 * 7 // Timeout of 7 Days
+	CookieExp        = 3600 * 24 * 7      // 7 Days
+	ResetTokenExpiry = time.Minute * 15   // 15 Minutes
 )
 
 func NewApplication(store *db.Store, cfg *Config, PASETO, JWT auth.TokenMaker,
@@ -73,51 +71,80 @@ func NewApplication(store *db.Store, cfg *Config, PASETO, JWT auth.TokenMaker,
 		pasetoMaker: PASETO,
 		mailer:      mailer,
 	}
+
+	// Public routes
 	router.GET("/", app.HealthCheck)
-	// user verification route
-	router.GET("/verify", app.Verification) // query parameter: token
+	// query parameter: token | entity should be in ["users", "brands"]
+	router.GET("/:entity/verify", app.Verification)
+	router.POST("/login", app.Login)
+	router.POST("/users/signup", app.CreateUser)
+	router.POST("/brands/signup", app.CreateBrand)
+	// entity should be in ["users", "brands"]
+	router.POST("/:entity/forgot_password/request", app.ForgotPassword)
+	router.POST("/:entity/forgot_password/confirm", app.ResetPassword) // query parameter token
+	router.POST("/admin/login", app.AuthMiddleware(), app.AdminLogin)
+
 	// Users routes
-	router.POST("/users", app.CreateUser)
-	router.GET("/users/:id", app.GetUserById)
-	router.GET("/users/email/:email", app.GetUserByEmail)
-	router.DELETE("/users/:id", app.DeleteUser)
-	router.PATCH("/users/:id", app.UpdateUser)
-	router.GET("/users/campaigns/:id", app.GetUserCampaigns) // parameter: id
+	users := router.Group("/users", app.AuthMiddleware())
+	{
+		users.GET("/:id", app.GetUserById)
+		users.GET("/email/:email", app.GetUserByEmail)
+		users.DELETE("/:id", app.DeleteUser)
+		users.PATCH("/:id", app.UpdateUser)
+		users.GET("/campaigns/:id", app.GetUserCampaigns) // parameter: id
+	}
 
 	// Brand routes
-	router.GET("/brands/:brand_id", app.GetBrand)
-	router.POST("/brands", app.CreateBrand)
-	router.DELETE("/brands/:brand_id", app.DeleteBrand)
-	router.PATCH("/brands/:brand_id", app.UpdateBrand)
-	router.GET("/brands/campaigns/:brand_id", app.GetBrandCampaigns) // parameter: brandid
+	brands := router.Group("/brands", app.AuthMiddleware())
+	{
+		brands.GET("/:brand_id", app.GetBrand)
+		brands.DELETE("/:brand_id", app.DeleteBrand)
+		brands.PATCH("/:brand_id", app.UpdateBrand)
+		brands.GET("/campaigns/:brand_id", app.GetBrandCampaigns) // parameter: brandid
+	}
 
 	// campaign routes
-	router.GET("/campaigns", app.GetCampaignFeed)
-	router.POST("/campaigns", app.CreateCampaign)
-	router.PUT("/campaigns/:campaign_id", app.StopCampaign)
-	router.DELETE("/campaigns/:campaign_id", app.DeleteCampaign)
-	router.PATCH("/campaigns/:campaign_id", app.UpdateCampaign)
+	campaigns := router.Group("/campaigns", app.AuthMiddleware())
+	{
+		campaigns.GET("", app.GetCampaignFeed) // query parametes: limit, offset
+		campaigns.GET("/:campaign_id", app.GetCampaign)
+		campaigns.GET("/user/:userid", app.GetUserCampaigns) // parameter: user_id
+		campaigns.GET("/brand/:brandid", app.GetBrandCampaigns)
+		campaigns.POST("", app.CreateCampaign)
+		campaigns.PUT("/:campaign_id", app.StopCampaign)
+		campaigns.DELETE("/:campaign_id", app.DeleteCampaign)
+		campaigns.PATCH("/:campaign_id", app.UpdateCampaign)
+	}
 
 	// tickets routes
-	router.GET("/tickets", app.GetRecentTickets) // query: status("open"/"close"), limit, offset
-	router.POST("/tickets/", app.RaiseTicket)
-	router.PUT("/tickets/:ticket_id", app.CloseTicket)
-	router.DELETE("/tickets/:ticket_id", app.DeleteTicket)
-	router.GET("/tickets/:ticket_id", app.GetTicket)
+	tickets := router.Group("/tickets", app.AuthMiddleware())
+	{
+		tickets.GET("", app.GetRecentTickets) // query: status("open"/"close"), limit, offset
+		tickets.GET("/:ticket_id", app.GetTicket)
+		tickets.POST("", app.RaiseTicket)
+		tickets.PUT("/:ticket_id", app.CloseTicket)
+		tickets.DELETE("/:ticket_id", app.DeleteTicket)
+	}
 
 	// submissions routes
-	router.POST("/submissions", app.CreateSubmission)
-	router.GET("/submissions/:sub_id", app.GetSubmission)
-	router.GET("/submissions", app.FilterSubmissions) // query: creator_id, campaign_id, time
-	router.DELETE("/submissions/:sub_id", app.DeleteSubmission)
-	router.PATCH("/submissions/:sub_id", app.UpdateSubmission)
+	submission := router.Group("/submissions", app.AuthMiddleware())
+	{
+		submission.GET("", app.FilterSubmissions) // query: creator_id, campaign_id, time
+		submission.GET("/:sub_id", app.GetSubmission)
+		submission.POST("", app.CreateSubmission)
+		submission.DELETE("/:sub_id", app.DeleteSubmission)
+		submission.PATCH("/:sub_id", app.UpdateSubmission)
+	}
 
 	// accounts routes
-	router.GET("/accounts/:acc_id", app.GetUserAccount)
-	router.POST("/accounts", app.CreateAccount)
-	router.DELETE("/accounts/:acc_id", app.DeleteUserAccount)
-	router.PUT("/accounts/:acc_id", app.DisableUserAccount)
-	router.GET("/accounts", app.GetAllAccounts)
+	accounts := router.Group("/accounts", app.AuthMiddleware())
+	{
+		accounts.GET("", app.GetAllAccounts)
+		accounts.GET("/:acc_id", app.GetUserAccount)
+		accounts.POST("", app.CreateAccount)
+		accounts.DELETE("/accounts/:acc_id", app.DeleteUserAccount)
+		accounts.PUT("/accounts/:acc_id", app.DisableUserAccount)
+	}
 
 	return &app
 }

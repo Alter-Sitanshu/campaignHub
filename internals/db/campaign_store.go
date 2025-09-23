@@ -41,7 +41,13 @@ func (c *CampaignStore) LaunchCampaign(ctx context.Context, campaign *Campaign) 
 		INSERT INTO campaigns (id, brand_id, title, budget, cpm, requirements, platform, doc_link, status)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
-	_, err := c.db.ExecContext(ctx, query,
+	tx, err := c.db.BeginTx(ctx, nil)
+	if err != nil {
+		log.Printf("Error Beginning transaction: %v\n", err.Error())
+		return err
+	}
+	defer tx.Rollback()
+	_, err = tx.ExecContext(ctx, query,
 		campaign.Id,
 		campaign.BrandId,
 		campaign.Title,
@@ -57,6 +63,17 @@ func (c *CampaignStore) LaunchCampaign(ctx context.Context, campaign *Campaign) 
 		return err
 	}
 	// successfully launched a new campaign
+	update_brand_query := `
+		UPDATE brands
+		SET campaigns = campaigns + 1
+		WHERE id = $1
+	`
+	_, err = tx.ExecContext(ctx, update_brand_query, campaign.BrandId)
+	if err != nil {
+		log.Printf("Error updating brand's campaign count: %v\n", err.Error())
+		return err
+	}
+	tx.Commit()
 	return nil
 }
 
@@ -172,8 +189,8 @@ func (c *CampaignStore) GetBrandCampaigns(ctx context.Context, brandid string) (
 	query := `
 		SELECT id, title, budget, cpm, requirements, platform, doc_link, status, created_at
 		FROM campaigns
-		ORDER BY created_at DESC, id DESC
 		WHERE brand_id = $1
+		ORDER BY created_at DESC, id DESC
 	`
 	rows, err := c.db.QueryContext(ctx, query, brandid)
 	if err != nil {
@@ -185,7 +202,6 @@ func (c *CampaignStore) GetBrandCampaigns(ctx context.Context, brandid string) (
 		var row Campaign
 		err = rows.Scan(
 			&row.Id,
-			&row.BrandId,
 			&row.Title,
 			&row.Budget,
 			&row.CPM,
@@ -208,13 +224,13 @@ func (c *CampaignStore) GetBrandCampaigns(ctx context.Context, brandid string) (
 func (c *CampaignStore) GetUserCampaigns(ctx context.Context, userid string) ([]Campaign, error) {
 	var output []Campaign
 	query := `
-		SELECT id, title, budget, cpm, requirements, platform, doc_link, status, created_at
+		SELECT id, brand_id, title, budget, cpm, requirements, platform, doc_link, status, created_at
 		FROM campaigns
-		ORDER BY created_at DESC, id DESC
 		WHERE id = (SELECT campaign_id
 			FROM submissions
-			WHERE user_id = $1
+			WHERE creator_id = $1
 		)
+		ORDER BY created_at DESC, id DESC
 	`
 	rows, err := c.db.QueryContext(ctx, query, userid)
 	if err != nil {

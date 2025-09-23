@@ -221,3 +221,93 @@ func TestUpdateCampaign(t *testing.T) {
 		MockCampaignStore.DeleteCampaign(ctx, temp_camp.Id)
 	})
 }
+
+func TestGetBrandCampaigns(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+	brandID := uuid.New().String()
+	generateBrand(brandID)
+	defer destroyBrand(brandID)
+	t.Run("fetching brand campaigns", func(t *testing.T) {
+		campaign := &Campaign{
+			Id:        uuid.New().String(),
+			BrandId:   brandID,
+			Title:     "Brand Campaign",
+			Budget:    1000,
+			CPM:       10,
+			Req:       "Requirements",
+			Platform:  "Instagram",
+			DocLink:   "http://doc.link",
+			Status:    1,
+			CreatedAt: time.Now().Format(time.RFC3339),
+		}
+		err := MockCampaignStore.LaunchCampaign(ctx, campaign)
+		if err != nil {
+			t.Fail()
+		}
+
+		campaigns, err := MockCampaignStore.GetBrandCampaigns(ctx, brandID)
+		if err != nil || len(campaigns) == 0 {
+			log.Printf("got: %v, want: %v", len(campaigns), 1)
+			t.Fail()
+		}
+		MockCampaignStore.DeleteCampaign(ctx, campaign.Id)
+	})
+
+}
+
+func TestGetUserCampaigns(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+	// create the user
+	userID := uuid.New().String()
+	creator := generateCreator(ctx, userID)
+	defer destroyCreator(ctx, creator)
+	// create the brand
+	brandID := uuid.New().String()
+	generateBrand(brandID)
+	defer destroyBrand(brandID)
+	campaignID := uuid.New().String()
+	t.Run("fetching user campaigns", func(t *testing.T) {
+		// Insert campaign
+		campaign := &Campaign{
+			Id:        campaignID,
+			BrandId:   brandID,
+			Title:     "User Campaign",
+			Budget:    2000,
+			CPM:       20,
+			Req:       "Requirements",
+			Platform:  "YouTube",
+			DocLink:   "http://doc.link",
+			Status:    1,
+			CreatedAt: time.Now().Format(time.RFC3339),
+		}
+		err := MockCampaignStore.LaunchCampaign(ctx, campaign)
+		if err != nil {
+			t.Fail()
+		}
+		user_submission := &Submission{
+			Id:         uuid.New().String(),
+			CreatorId:  userID,
+			CampaignId: campaignID,
+			Url:        "http://submission.link",
+			Status:     0,
+			Views:      0,
+			Earnings:   0.0,
+		}
+		// Make a submission for the user
+		err = MockSubStore.MakeSubmission(ctx, user_submission)
+		if err != nil {
+			t.Fail()
+		}
+
+		campaigns, err := MockCampaignStore.GetUserCampaigns(ctx, userID)
+		if err != nil || len(campaigns) == 0 || campaigns[0].Id != campaignID {
+			log.Printf("got: %v, want: %v", len(campaigns), 1)
+			t.Fail()
+		}
+		MockSubStore.DeleteSubmission(ctx, user_submission.Id)
+		MockCampaignStore.DeleteCampaign(ctx, campaign.Id)
+	})
+
+}

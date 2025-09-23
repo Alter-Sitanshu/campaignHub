@@ -306,11 +306,11 @@ func (ts *TransactionStore) GetAccount(ctx context.Context, id string) (*Account
 	return &acc, nil
 }
 
-func (ts *TransactionStore) GetAllAccounts(ctx context.Context, limit, offset int) ([]Account, error) {
+func (ts *TransactionStore) GetAllAccounts(ctx context.Context, offset, limit int) ([]Account, error) {
 	query := `
 		SELECT id, holder_id, holder_type, amount, created_at 
 		FROM accounts
-		LIMIT = $1 OFFSET = $2
+		LIMIT $1 OFFSET $2
 	`
 	// fetching the account details
 	var output []Account

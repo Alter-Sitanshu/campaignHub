@@ -50,6 +50,16 @@ func (app *Application) CreateAccount(c *gin.Context) {
 
 func (app *Application) GetUserAccount(c *gin.Context) {
 	ctx := c.Request.Context()
+	LogInUser, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	User, ok := LogInUser.(*db.User)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
 	acc_id := c.Request.PathValue("acc_id")
 	if ok := uuid.Validate(acc_id); ok != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
@@ -66,6 +76,11 @@ func (app *Application) GetUserAccount(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, WriteError("server error"))
 		return
 	}
+	// check if the user is the owner of the account
+	if acc.HolderId != User.Id && User.Role != "admin" {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorized request"))
+		return
+	}
 
 	// return acc details to the user
 	c.JSON(http.StatusOK, WriteResponse(acc))
@@ -73,6 +88,16 @@ func (app *Application) GetUserAccount(c *gin.Context) {
 
 func (app *Application) DisableUserAccount(c *gin.Context) {
 	ctx := c.Request.Context()
+	LogInUser, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	User, ok := LogInUser.(*db.User)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
 	acc_id := c.Request.PathValue("acc_id")
 	// validate the acc_id uuid
 	if ok := uuid.Validate(acc_id); ok != nil {
@@ -80,8 +105,24 @@ func (app *Application) DisableUserAccount(c *gin.Context) {
 		return
 	}
 
+	// fetch the user account details
+	acc, err := app.store.TransactionInterface.GetAccount(ctx, acc_id)
+	if err != nil {
+		if err == db.ErrNotFound {
+			c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
+			return
+		}
+		c.JSON(http.StatusInternalServerError, WriteError("server error"))
+		return
+	}
+	// check if the user is the owner of the account
+	if acc.HolderId != User.Id && User.Role != "admin" {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorized request"))
+		return
+	}
+
 	// disable the user account
-	err := app.store.TransactionInterface.DisableAccount(ctx, acc_id)
+	err = app.store.TransactionInterface.DisableAccount(ctx, acc_id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, WriteError("server error"))
 		return
@@ -93,15 +134,41 @@ func (app *Application) DisableUserAccount(c *gin.Context) {
 
 func (app *Application) DeleteUserAccount(c *gin.Context) {
 	ctx := c.Request.Context()
+	// fetch the current user
+	LogInUser, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	User, ok := LogInUser.(*db.User)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
 	acc_id := c.Request.PathValue("acc_id")
 	// validate the acc_id uuid
 	if ok := uuid.Validate(acc_id); ok != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
 		return
 	}
+	// fetch the user account details
+	acc, err := app.store.TransactionInterface.GetAccount(ctx, acc_id)
+	if err != nil {
+		if err == db.ErrNotFound {
+			c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
+			return
+		}
+		c.JSON(http.StatusInternalServerError, WriteError("server error"))
+		return
+	}
+	// check if the user is the owner of the account
+	if acc.HolderId != User.Id && User.Role != "admin" {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorized request"))
+		return
+	}
 
 	// disable the user account
-	err := app.store.TransactionInterface.DeleteAccount(ctx, acc_id)
+	err = app.store.TransactionInterface.DeleteAccount(ctx, acc_id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, WriteError("server error"))
 		return
@@ -113,6 +180,20 @@ func (app *Application) DeleteUserAccount(c *gin.Context) {
 
 func (app *Application) GetAllAccounts(c *gin.Context) {
 	ctx := c.Request.Context()
+	LogInUser, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	User, ok := LogInUser.(*db.User)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	if User.Role != "admin" {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorized request"))
+		return
+	}
 	limit, err := strconv.Atoi(c.Query("limit"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid query"))
