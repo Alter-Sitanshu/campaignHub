@@ -322,16 +322,17 @@ func TestDeleteLinks(t *testing.T) {
 func TestVerifyUser(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
+	uid := uuid.NewString()
 	t.Run("verifying a valid user", func(t *testing.T) {
-		uid := generateCreator(ctx, "0001")
+		uid := generateCreator(ctx, uid)
 		defer destroyCreator(ctx, uid)
-		err := MockUserStore.VerifyUser(ctx, "U", uid)
+		err := MockUserStore.VerifyUser(ctx, "users", uid)
 		if err != nil {
 			t.Fail()
 		}
 	})
 	t.Run("verifying an invalid user", func(t *testing.T) {
-		err := MockUserStore.VerifyUser(ctx, "U", "NA")
+		err := MockUserStore.VerifyUser(ctx, "users", "NA")
 		if err == nil {
 			t.Fail()
 		}
