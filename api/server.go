@@ -82,7 +82,6 @@ func NewApplication(store *db.Store, cfg *Config, PASETO, JWT auth.TokenMaker,
 	// entity should be in ["users", "brands"]
 	router.POST("/:entity/forgot_password/request", app.ForgotPassword)
 	router.POST("/:entity/forgot_password/confirm", app.ResetPassword) // query parameter token
-	router.POST("/admin/login", app.AuthMiddleware(), app.AdminLogin)
 
 	// Users routes
 	users := router.Group("/users", app.AuthMiddleware())

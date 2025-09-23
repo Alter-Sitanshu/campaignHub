@@ -231,3 +231,7 @@ func (app *Application) ResetPassword(c *gin.Context) {
 	// successfully changed the password
 	c.JSON(http.StatusOK, WriteResponse("password changed successfully"))
 }
+
+// func (app *Application) AdminLogin(c *gin.Context) {
+
+// }
