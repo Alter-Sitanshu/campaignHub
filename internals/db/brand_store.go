@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"log"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 type BrandStore struct {
@@ -28,9 +30,42 @@ type Brand struct {
 type BrandUpdatePayload struct {
 	// I wont allow brands to change their names/sector (Prevention measure for frauds)
 	Email   *string `json:"email"`
-	NewPass *string `json:"new_pass"`
 	Website *string `json:"website"`
 	Address *string `json:"address"`
+}
+
+func (b *BrandStore) ChangePassword(ctx context.Context, id, new_pass string) error {
+	var pw PassW
+	if err := uuid.Validate(id); err != nil {
+		return ErrInvalidId
+	}
+	if len(new_pass) < 8 {
+		log.Printf("error: want pass len: %d, got: %d", MinPassLen, len(new_pass))
+		return ErrPasswordTooShort
+	}
+	if err := uuid.Validate(id); err != nil {
+		return ErrInvalidId
+	}
+	if err := pw.Hash(new_pass); err != nil {
+		// logging for debugging
+		log.Printf("error hashing password: %v\n", err.Error())
+		return err
+	}
+	query := `
+		UPDATE brands
+		SET password = $1
+		WHERE id = $2
+	`
+	res, err := b.db.ExecContext(ctx, query, pw.hashed_pass, id)
+	if err != nil {
+		log.Printf("error changing password: %v\n", err.Error())
+		return err
+	}
+	if count, _ := res.RowsAffected(); count == 0 {
+		log.Printf("invalid id: %v\n", id)
+		return ErrInvalidId
+	}
+	return nil
 }
 
 func (b *BrandStore) GetBrandById(ctx context.Context, id string) (*Brand, error) {
@@ -138,6 +173,7 @@ func (b *BrandStore) RegisterBrand(ctx context.Context, new_brand *Brand) error 
 	tx.Commit()
 	return nil
 }
+
 func (b *BrandStore) DeregisterBrand(ctx context.Context, id string) error {
 	tx, err := b.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -186,7 +222,6 @@ func (b *BrandStore) DeregisterBrand(ctx context.Context, id string) error {
 }
 
 func (b *BrandStore) UpdateBrand(ctx context.Context, brand_id string, payload BrandUpdatePayload) error {
-	var p PassW
 	var queryBuilder strings.Builder
 	queryBuilder.WriteString("UPDATE brands SET ")
 	var args []any
@@ -195,12 +230,6 @@ func (b *BrandStore) UpdateBrand(ctx context.Context, brand_id string, payload B
 	if payload.Email != nil {
 		cols = append(cols, fmt.Sprintf("email = $%d", i))
 		args = append(args, *payload.Email)
-		i++
-	}
-	if payload.NewPass != nil {
-		p.Hash(*payload.NewPass)
-		cols = append(cols, fmt.Sprintf("password = $%d", i))
-		args = append(args, p.hashed_pass)
 		i++
 	}
 	if payload.Website != nil {

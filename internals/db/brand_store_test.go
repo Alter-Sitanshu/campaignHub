@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"golang.org/x/crypto/bcrypt"
+	"github.com/google/uuid"
 )
 
 func TestGetBrand(t *testing.T) {
@@ -109,13 +109,11 @@ func TestUpdateBrand(t *testing.T) {
 	// Mock the changes to be made
 	NewEmail := "newmail@gmail.com"
 	NewWebsite := "newwebsite.com"
-	NewPass := "newpass"
 	NewAddress := "newaddress"
 	t.Run("Updating Brand Entity", func(t *testing.T) {
 		payload := BrandUpdatePayload{
 			Email:   &NewEmail,
 			Website: &NewWebsite,
-			NewPass: &NewPass,
 			Address: &NewAddress,
 		}
 		err := MockBrandStore.UpdateBrand(ctx, mockBrand.Id, payload)
@@ -131,11 +129,37 @@ func TestUpdateBrand(t *testing.T) {
 			log.Printf("got: %s, want: %s\n", updatedBrand.Website, NewWebsite)
 			t.Fail()
 		}
-		checkPass := bcrypt.CompareHashAndPassword(updatedBrand.Password.hashed_pass, []byte(NewPass))
-		if checkPass != nil {
-			log.Printf("Passwords did not match\n")
+	})
+	MockBrandStore.DeregisterBrand(ctx, mockBrand.Id)
+}
+
+func TestUpdateBrandPassword(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+
+	// creating a dummy brand
+	bid := uuid.NewString()
+	generateBrand(bid)
+	defer destroyBrand(bid)
+	t.Run("OK", func(t *testing.T) {
+		new_pass := "random_password"
+		err := MockBrandStore.ChangePassword(ctx, bid, new_pass)
+		if err != nil {
 			t.Fail()
 		}
 	})
-	MockBrandStore.DeregisterBrand(ctx, mockBrand.Id)
+	t.Run("Invalid ID", func(t *testing.T) {
+		new_pass := "random_password"
+		err := MockBrandStore.ChangePassword(ctx, "NA", new_pass)
+		if err == nil {
+			t.Fail()
+		}
+	})
+	t.Run("violating minimum password length", func(t *testing.T) {
+		new_pass := "123456" // min length is 8
+		err := MockBrandStore.ChangePassword(ctx, bid, new_pass)
+		if err == nil {
+			t.Fail()
+		}
+	})
 }

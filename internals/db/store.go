@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -34,10 +35,13 @@ const (
 
 // macros for db errors
 var (
-	ErrNotFound     = errors.New("not found")
-	ErrTokenExpired = errors.New("invalid or expired token")
-	ErrDupliMail    = errors.New("email already exists")
-	ErrDupliName    = errors.New("name taken")
+	ErrNotFound         = errors.New("not found")
+	ErrTokenExpired     = errors.New("invalid or expired token")
+	ErrDupliMail        = errors.New("email already exists")
+	ErrDupliName        = errors.New("name taken")
+	ErrInvalidPass      = errors.New("invalid password")
+	ErrInvalidId        = errors.New("invalid id")
+	ErrPasswordTooShort = fmt.Errorf("password should be minimum of length  %d", MinPassLen)
 )
 
 // Differentiating the password struct to handle the hashing of plain_pass
@@ -58,6 +62,10 @@ func (p *PassW) Hash(plain_pass string) error {
 	return nil
 }
 
+func (p *PassW) Compare(plain_pass string) error {
+	return bcrypt.CompareHashAndPassword(p.hashed_pass, []byte(plain_pass))
+}
+
 type Store struct {
 	UserInterface interface {
 		GetUserById(context.Context, string) (*User, error)
@@ -65,7 +73,8 @@ type Store struct {
 		CreateUser(context.Context, *User) error
 		DeleteUser(context.Context, string) error
 		UpdateUser(context.Context, string, UpdatePayload) error
-		VerifyUser(ctx context.Context, typ, email string) error
+		VerifyUser(ctx context.Context, entity, id string) error
+		ChangePassword(ctx context.Context, id, new_pass string) error
 
 		// TODO: Implement the follow/unfollow brand option(AT LAST)
 		// FollowBrand(context.Context, string, string) error
@@ -78,6 +87,7 @@ type Store struct {
 		RegisterBrand(context.Context, *Brand) error
 		DeregisterBrand(context.Context, string) error
 		UpdateBrand(context.Context, string, BrandUpdatePayload) error
+		ChangePassword(ctx context.Context, id, new_pass string) error
 		// ctx, from_id, to_id, type(withdraw/deposit), amount, tx
 		// ExecTransaction(context.Context, string, string, string, float32, sql.Tx) error
 	}

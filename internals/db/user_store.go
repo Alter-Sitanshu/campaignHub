@@ -7,6 +7,12 @@ import (
 	"fmt"
 	"log"
 	"strings"
+
+	"github.com/google/uuid"
+)
+
+const (
+	MinPassLen = 8
 )
 
 // The User Store Implements the interface of a User_store
@@ -35,6 +41,7 @@ type User struct {
 	Age           int     `json:"age"`
 	Role          string  `json:"role"`
 	PlatformLinks []Links `json:"links"`
+	IsVerified    bool    `json:"is_verified"`
 	CreatedAt     string  `json:"created_at"`
 }
 
@@ -44,12 +51,45 @@ type UpdatePayload struct {
 	LastName  *string `json:"last_name"`
 	Email     *string `json:"email"`
 	Gender    *string `json:"gender"`
-	// TODO : Update this to make it more secure
-	NewPass *string `json:"new_pass"`
+}
+
+func (u *UserStore) ChangePassword(ctx context.Context, id, new_pass string) error {
+	var pw PassW
+	if err := uuid.Validate(id); err != nil {
+		return ErrInvalidId
+	}
+	if len(new_pass) < 8 {
+		log.Printf("error: want pass len: %d, got: %d", MinPassLen, len(new_pass))
+		return ErrPasswordTooShort
+	}
+	if err := pw.Hash(new_pass); err != nil {
+		// logging for debugging
+		log.Printf("error hashing password: %v\n", err.Error())
+		return err
+	}
+	query := `
+		UPDATE users
+		SET password = $1
+		WHERE id = $2
+	`
+	res, err := u.db.ExecContext(ctx, query, pw.hashed_pass, id)
+	if err != nil {
+		log.Printf("error changing password: %v\n", err.Error())
+		return err
+	}
+	if count, _ := res.RowsAffected(); count == 0 {
+		log.Printf("invalid id: %v\n", id)
+		return ErrInvalidId
+	}
+	return nil
 }
 
 // Function to mark a user verified
-func (u *UserStore) VerifyUser(ctx context.Context, typ, id string) error {
+func (u *UserStore) VerifyUser(ctx context.Context, entity, id string) error {
+	if err := uuid.Validate(id); err != nil {
+		log.Printf("error invalid id: %v", err.Error())
+		return ErrInvalidId
+	}
 	user_query := `
 		UPDATE users
 		SET is_verified = true
@@ -60,18 +100,24 @@ func (u *UserStore) VerifyUser(ctx context.Context, typ, id string) error {
 		SET is_verified = true
 		WHERE id = $1
 	`
-	switch typ {
-	case "U":
-		_, err := u.db.ExecContext(ctx, user_query, id)
+	switch entity {
+	case "users":
+		res, err := u.db.ExecContext(ctx, user_query, id)
 		if err != nil {
 			log.Printf("invalid user id")
 			return err
 		}
-	case "B":
-		_, err := u.db.ExecContext(ctx, brand_query, id)
+		if count, _ := res.RowsAffected(); count == 0 {
+			return ErrInvalidId
+		}
+	case "brands":
+		res, err := u.db.ExecContext(ctx, brand_query, id)
 		if err != nil {
 			log.Printf("invalid brand id")
 			return err
+		}
+		if count, _ := res.RowsAffected(); count == 0 {
+			return ErrInvalidId
 		}
 	default:
 		return fmt.Errorf("invalid credentials")
@@ -86,7 +132,7 @@ func (u *UserStore) GetUserById(ctx context.Context, id string) (*User, error) {
 	// join the roles table to get the name of the role
 	query := `
 		SELECT u.id, u.first_name, u.last_name, u.email, u.password, u.gender,
-		u.age, r.name, u.created_at
+		u.age, r.name, u.is_verified, u.created_at
 		FROM users u
 		JOIN roles r ON r.id = u.role
 		WHERE u.id = $1
@@ -102,6 +148,7 @@ func (u *UserStore) GetUserById(ctx context.Context, id string) (*User, error) {
 		&user.Gender,
 		&user.Age,
 		&user.Role,
+		&user.IsVerified,
 		&user.CreatedAt,
 	)
 	if err != nil {
@@ -121,7 +168,7 @@ func (u *UserStore) GetUserByEmail(ctx context.Context, email string) (*User, er
 	// filter by email and join the roles table to get the role name
 	query := `
 		SELECT u.id, u.first_name, u.last_name, u.email,
-		u.password, u.gender, u.age, r.name, u.created_at
+		u.password, u.gender, u.age, r.name, u.is_verified, u.created_at
 		FROM users u
 		JOIN roles r ON r.id = u.role
 		WHERE u.email = $1
@@ -137,6 +184,7 @@ func (u *UserStore) GetUserByEmail(ctx context.Context, email string) (*User, er
 		&user.Gender,
 		&user.Age,
 		&user.Role,
+		&user.IsVerified,
 		&user.CreatedAt,
 	)
 
@@ -246,7 +294,6 @@ func (u *UserStore) DeleteUser(ctx context.Context, id string) error {
 }
 
 func (u *UserStore) UpdateUser(ctx context.Context, id string, payload UpdatePayload) error {
-	var p PassW // To hash the new password if given
 	tx, err := u.db.BeginTx(ctx, nil)
 	if err != nil {
 		log.Printf("Error starting a transaction: %v\n", err.Error())
@@ -279,12 +326,6 @@ func (u *UserStore) UpdateUser(ctx context.Context, id string, payload UpdatePay
 	if payload.Gender != nil {
 		setClauses = append(setClauses, fmt.Sprintf("gender = $%d", i))
 		args = append(args, *payload.Gender)
-		i++
-	}
-	if payload.NewPass != nil {
-		p.Hash(*payload.NewPass)
-		setClauses = append(setClauses, fmt.Sprintf("password = $%d", i))
-		args = append(args, p.hashed_pass)
 		i++
 	}
 

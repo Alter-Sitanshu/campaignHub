@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/Alter-Sitanshu/campaignHub/internals"
-	"golang.org/x/crypto/bcrypt"
+	"github.com/google/uuid"
 )
 
 func init() {
@@ -157,7 +157,6 @@ func TestUpdateUser(t *testing.T) {
 	NewLName := "NewLName"
 	NewEmail := "NewMail@gamil.com"
 	NewGender := "O"
-	NewPass := "newpassword"
 	t.Run("updating user", func(t *testing.T) {
 		payload := UpdatePayload{
 			FirstName: &NewFName,
@@ -186,23 +185,6 @@ func TestUpdateUser(t *testing.T) {
 		payload.Gender = &NewGender
 		err = MockUserStore.UpdateUser(ctx, user.Id, payload)
 		if err != nil {
-			t.Fail()
-		}
-		// Only updating Password
-		payload.NewPass = &NewPass
-		err = MockUserStore.UpdateUser(ctx, user.Id, payload)
-		if err != nil {
-			t.Fail()
-		}
-		updatedUser, _ := MockUserStore.GetUserById(ctx, user.Id)
-		if updatedUser.FirstName != NewFName ||
-			updatedUser.LastName != NewLName ||
-			updatedUser.Gender != NewGender ||
-			updatedUser.Email != NewEmail {
-			t.Fail()
-		}
-		gotPass := bcrypt.CompareHashAndPassword(updatedUser.Password.hashed_pass, []byte(NewPass))
-		if gotPass != nil {
 			t.Fail()
 		}
 	})
@@ -332,6 +314,62 @@ func TestDeleteLinks(t *testing.T) {
 	t.Run("deleting valid link", func(t *testing.T) {
 		err := MockLinkStore.DeleteLinks(ctx, uid, links[0].Platform)
 		if err != nil {
+			t.Fail()
+		}
+	})
+}
+
+func TestVerifyUser(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+	t.Run("verifying a valid user", func(t *testing.T) {
+		uid := generateCreator(ctx, "0001")
+		defer destroyCreator(ctx, uid)
+		err := MockUserStore.VerifyUser(ctx, "U", uid)
+		if err != nil {
+			t.Fail()
+		}
+	})
+	t.Run("verifying an invalid user", func(t *testing.T) {
+		err := MockUserStore.VerifyUser(ctx, "U", "NA")
+		if err == nil {
+			t.Fail()
+		}
+	})
+	t.Run("verifying with invalid role", func(t *testing.T) {
+		err := MockUserStore.VerifyUser(ctx, "X", "0001")
+		if err == nil {
+			t.Fail()
+		}
+	})
+}
+
+func TestUpdateUserPassword(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+
+	// creating a dummy brand
+	uid := uuid.NewString()
+	generateCreator(ctx, uid)
+	defer destroyCreator(ctx, uid)
+	t.Run("OK", func(t *testing.T) {
+		new_pass := "random_password"
+		err := MockUserStore.ChangePassword(ctx, uid, new_pass)
+		if err != nil {
+			t.Fail()
+		}
+	})
+	t.Run("Invalid ID", func(t *testing.T) {
+		new_pass := "random_password"
+		err := MockUserStore.ChangePassword(ctx, "NA", new_pass)
+		if err == nil {
+			t.Fail()
+		}
+	})
+	t.Run("violating minimum password length", func(t *testing.T) {
+		new_pass := "123456" // min length is 8
+		err := MockUserStore.ChangePassword(ctx, uid, new_pass)
+		if err == nil {
 			t.Fail()
 		}
 	})
