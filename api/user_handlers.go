@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Alter-Sitanshu/campaignHub/internals/cache"
 	"github.com/Alter-Sitanshu/campaignHub/internals/db"
 	"github.com/Alter-Sitanshu/campaignHub/internals/mailer"
 	"github.com/gin-gonic/gin"
@@ -28,6 +29,7 @@ type UserResponse struct {
 	LastName      string     `json:"last_name" binding:"required"`
 	Email         string     `json:"email" binding:"required"`
 	Gender        string     `json:"gender" binding:"required"`
+	Amount        float64    `json:"amount" binding:"required,min=0"`
 	Age           int        `json:"age" binding:"required"`
 	PlatformLinks []db.Links `json:"links" binding:"required"`
 }
@@ -126,8 +128,7 @@ func (app *Application) GetUserById(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	Entity, ok := LogInUser.(db.AuthenticatedEntity)
-	UserID := Entity.GetID()
+	_, ok = LogInUser.(db.AuthenticatedEntity)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
@@ -137,12 +138,17 @@ func (app *Application) GetUserById(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
 		return
 	}
-	// Authorise the user
-	if ID != UserID {
-		log.Printf("unauthorised access from: %v\n", UserID)
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+
+	var profile cache.UserResponse
+	// pass the pointer to the response var so that the UnMarshal works
+	err := app.cache.GetUserProfile(ctx, ID, &profile)
+	// Cache hit
+	if err == nil {
+		c.JSON(http.StatusOK, WriteResponse(profile))
 		return
 	}
+
+	// In case of a cache miss
 	// fetching the user
 	user, err := app.store.UserInterface.GetUserById(ctx, ID)
 	if err != nil {
@@ -163,10 +169,16 @@ func (app *Application) GetUserById(c *gin.Context) {
 		LastName:      user.LastName,
 		Email:         user.Email,
 		Gender:        user.Gender,
+		Amount:        user.Amount,
 		Age:           user.Age,
 		PlatformLinks: user.PlatformLinks,
 	}
 
+	// set the user profile in the cache
+	err = app.cache.SetUserProfile(ctx, ID, cache.UserResponse(userResponse))
+	if err != nil {
+		log.Printf("error caching the user profile: %s\n", err.Error())
+	}
 	// successfully retreived the user
 	c.JSON(http.StatusOK, WriteResponse(userResponse))
 }
@@ -178,17 +190,23 @@ func (app *Application) GetUserByEmail(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	Entity, ok := LogInUser.(db.AuthenticatedEntity)
+	_, ok = LogInUser.(db.AuthenticatedEntity)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
 	mail := c.Request.PathValue("email")
-	if mail != Entity.GetEmail() {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+
+	var profile cache.UserResponse
+	err := app.cache.GetUserProfileByMail(ctx, mail, &profile)
+	// Cache hit
+	if err == nil {
+		c.JSON(http.StatusOK, WriteResponse(profile))
 		return
 	}
-	user, err := app.store.UserInterface.GetUserById(ctx, Entity.GetID())
+
+	// In case of Cache Miss
+	user, err := app.store.UserInterface.GetUserByEmail(ctx, mail)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
@@ -200,8 +218,15 @@ func (app *Application) GetUserByEmail(c *gin.Context) {
 		LastName:      user.LastName,
 		Email:         user.Email,
 		Gender:        user.Gender,
+		Amount:        user.Amount,
 		Age:           user.Age,
 		PlatformLinks: user.PlatformLinks,
+	}
+
+	// Set the user profile in cache
+	err = app.cache.SetUserProfileByMail(ctx, mail, profile)
+	if err != nil {
+		log.Printf("error caching user profile: %s\n", err.Error())
 	}
 
 	// successfully retreived the user
@@ -246,6 +271,15 @@ func (app *Application) DeleteUser(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, WriteError("server error"))
 		return
 	}
+
+	// invalidate the user cache
+	err = app.cache.InvalidateUserProfile(ctx, ID)
+	if err != nil {
+		log.Printf("error invalidating the user cache: %s\n", err.Error())
+	}
+
+	app.cache.InvalidateCreatorSubmissions(ctx, ID)
+	app.cache.InvalidateUserProfile(ctx, ID)
 
 	// successfully retreived the user
 	c.JSON(http.StatusNoContent, WriteResponse("user deleted"))
@@ -315,9 +349,18 @@ func (app *Application) UpdateUser(c *gin.Context) {
 		LastName:      user.LastName,
 		Email:         user.Email,
 		Gender:        user.Gender,
+		Amount:        user.Amount,
 		Age:           user.Age,
 		PlatformLinks: user.PlatformLinks,
 	}
+
+	// cache the user profile
+	err = app.cache.SetUserProfile(ctx, ID, cache.UserResponse(userResponse))
+	if err != nil {
+		log.Printf("error caching user profile: %s\n", err.Error())
+	}
+	// I dont neeed to set the user balance separately as the profile already
+	// has that information in it.
 
 	// successfully retreived the user
 	c.JSON(http.StatusOK, WriteResponse(userResponse))

@@ -116,6 +116,7 @@ type Store struct {
 		GetUserCampaigns(context.Context, string) ([]Campaign, error)
 		GetCampaign(context.Context, string) (*Campaign, error)
 		DeleteCampaign(context.Context, string) error
+		GetMultipleCampaigns(ctx context.Context, campaignIDs []string) ([]Campaign, error)
 	}
 	TicketInterface interface {
 		OpenTicket(context.Context, *Ticket) error
@@ -129,6 +130,7 @@ type Store struct {
 		DeleteSubmission(context.Context, string) error
 		FindSubmissionById(context.Context, string) (*Submission, error)
 		FindSubmissionsByFilters(context.Context, Filter) ([]Submission, error)
+		FindMySubmissions(ctx context.Context, time_ string, subids []string) ([]Submission, error)
 		UpdateSubmission(context.Context, UpdateSubmission) error
 		ChangeViews(ctx context.Context, delta int, id string) error
 	}

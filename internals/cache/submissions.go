@@ -1,0 +1,142 @@
+package cache
+
+import (
+	"context"
+	"time"
+
+	"github.com/redis/go-redis/v9"
+)
+
+// ==================================
+// View Count Operations
+// ==================================
+
+func (s *Service) SetViewCount(ctx context.Context, submissionID string, count int) error {
+	key := ViewCountKey(submissionID)
+	return s.Set(ctx, key, count, TTLViewCount)
+}
+
+func (s *Service) GetViewCount(ctx context.Context, submissionID string) (int, error) {
+	key := ViewCountKey(submissionID)
+	return s.GetInt(ctx, key)
+}
+
+func (s *Service) IncrementViewCount(ctx context.Context, submissionID string, delta int) error {
+	key := ViewCountKey(submissionID)
+	return s.IncrByFloat(ctx, key, float64(delta))
+}
+
+// Batch get multiple view counts
+func (s *Service) GetMultipleViewCounts(ctx context.Context, submissionIDs []string) (map[string]int, error) {
+	if len(submissionIDs) == 0 {
+		return make(map[string]int), nil
+	}
+
+	pipe := s.client.Pipeline()
+	cmds := make(map[string]*redis.StringCmd)
+
+	for _, id := range submissionIDs {
+		key := ViewCountKey(id)
+		cmds[id] = pipe.Get(ctx, key)
+	}
+
+	_, err := pipe.Exec(ctx)
+	if err != nil && err != redis.Nil {
+		return nil, err
+	}
+
+	results := make(map[string]int)
+	for id, cmd := range cmds {
+		if val, err := cmd.Int(); err == nil {
+			results[id] = val
+		}
+	}
+
+	return results, nil
+}
+
+// ==================================
+// Submission Earnings Operations
+// ==================================
+
+func (s *Service) SetSubmissionEarnings(ctx context.Context, submissionID string, amount float64) error {
+	key := SubmissionEarningsKey(submissionID)
+	return s.Set(ctx, key, amount, TTLEarnings)
+}
+
+func (s *Service) GetSubmissionEarnings(ctx context.Context, submissionID string) (float64, error) {
+	key := SubmissionEarningsKey(submissionID)
+	return s.GetFloat(ctx, key)
+}
+
+func (s *Service) IncrementSubmissionEarnings(ctx context.Context, submissionID string, delta float64) error {
+	key := SubmissionEarningsKey(submissionID)
+	return s.IncrByFloat(ctx, key, delta)
+}
+
+func (s *Service) InvalidateSubmissionEarnings(ctx context.Context, submissionID string) error {
+	key := SubmissionEarningsKey(submissionID)
+	return s.Delete(ctx, key)
+}
+
+// ==================================
+// Submission Status Operations
+// ==================================
+
+func (s *Service) SetSubmissionStatus(ctx context.Context, submissionID string, status int) error {
+	key := SubmissionStatusKey(submissionID)
+	return s.Set(ctx, key, status, 30*time.Minute)
+}
+
+func (s *Service) GetSubmissionStatus(ctx context.Context, submissionID string) (int, error) {
+	key := SubmissionStatusKey(submissionID)
+	return s.GetInt(ctx, key)
+}
+
+func (s *Service) InvalidateSubmissionStatus(ctx context.Context, submissionID string) error {
+	key := SubmissionStatusKey(submissionID)
+	return s.Delete(ctx, key)
+}
+
+// ==================================
+// Creator Submissions List
+// ==================================
+
+func (s *Service) SetCreatorSubmissions(ctx context.Context, creatorID string, submissionIDs []string) error {
+	key := CreatorSubmissionsKey(creatorID)
+
+	// Clear existing set
+	s.Delete(ctx, key)
+
+	if len(submissionIDs) == 0 {
+		return nil
+	}
+
+	// Add all submissions
+	members := make([]interface{}, len(submissionIDs))
+	for i, id := range submissionIDs {
+		members[i] = id
+	}
+
+	if err := s.SAdd(ctx, key, members...); err != nil {
+		return err
+	}
+
+	// Set expiration
+	return s.client.Expire(ctx, key, 15*time.Minute).Err()
+}
+
+func (s *Service) GetCreatorSubmissions(ctx context.Context, creatorID string) ([]string, error) {
+	key := CreatorSubmissionsKey(creatorID)
+	return s.SMembers(ctx, key)
+}
+
+func (s *Service) InvalidateCreatorSubmissions(ctx context.Context, creatorID string) error {
+	key := CreatorSubmissionsKey(creatorID)
+	return s.Delete(ctx, key)
+}
+
+func (s *Service) InvalidateOneCreatorSubmissions(ctx context.Context, creatorID, sub_id string) error {
+	key := CreatorSubmissionsKey(creatorID)
+	return s.client.SRem(ctx, key, []string{sub_id}).Err()
+}

@@ -146,7 +146,7 @@ func (s *SubmissionStore) FindSubmissionsByFilters(
 		month := int(t.Month())
 		year := t.Year()
 		conditions = append(conditions,
-			fmt.Sprintf("EXTRACT(MONTH FROM created_at) = $%d AND EXTRACT(YEAR FROM created_at) = $%d", i, i+1))
+			fmt.Sprintf("EXTRACT(MONTH FROM created_at) > $%d AND EXTRACT(YEAR FROM created_at) > $%d", i, i+1))
 		args = append(args, month, year)
 		i += 2
 	}
@@ -184,6 +184,75 @@ func (s *SubmissionStore) FindSubmissionsByFilters(
 	}
 
 	// successful filtering
+	return output, nil
+}
+
+func (s *SubmissionStore) FindMySubmissions(ctx context.Context, time_ string,
+	subids []string,
+) ([]Submission, error) {
+	query := `
+		SELECT id, creator_id, campaign_id, url, status, views, earnings, created_at,
+		last_synced_at
+		FROM submissions
+		WHERE
+	`
+
+	queryBuilder := strings.Builder{}
+	queryBuilder.WriteString(query)
+
+	var conditions []string
+	var args []any
+	i := 1
+	if time_ != "" {
+		t, err := time.Parse("01-2006", time_) // "MM-YYYY"
+		if err != nil {
+			return nil, fmt.Errorf("invalid time format: %v", err)
+		}
+
+		month := int(t.Month())
+		year := t.Year()
+		conditions = append(conditions,
+			fmt.Sprintf("EXTRACT(MONTH FROM created_at) > $%d AND EXTRACT(YEAR FROM created_at) > $%d", i, i+1))
+		args = append(args, month, year)
+		i += 2
+	}
+	conditions = append(conditions, fmt.Sprintf("id IN $%d", i))
+	args = append(args, subids)
+
+	// building the final query
+	queryBuilder.WriteString(strings.Join(conditions, " AND "))
+	query = queryBuilder.String()
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		// internal server error
+		log.Printf("error filtering submissions: %v", err.Error())
+		return nil, err
+	}
+	defer rows.Close()
+	var output []Submission
+	for rows.Next() {
+		var sub Submission
+		err = rows.Scan(
+			&sub.Id,
+			&sub.CreatorId,
+			&sub.CampaignId,
+			&sub.Url,
+			&sub.Status,
+			&sub.Views,
+			&sub.Earnings,
+			&sub.CreatedAt,
+			&sub.LastSyncedAt,
+		)
+		// append to the output
+		if err != nil {
+			log.Printf("error scanning submission: %v", err.Error())
+			return nil, err
+		}
+		output = append(output, sub)
+	}
+
+	// succesfully fetched the submissions
 	return output, nil
 }
 

@@ -57,6 +57,12 @@ func (app *Application) CreateSubmission(c *gin.Context) {
 		return
 	}
 	submission.CreatedAt = formattedTime
+	// cache the submission
+	app.cache.SetCreatorSubmissions(ctx, Entity.GetID(), []string{submission.Id})
+	app.cache.SetSubmissionEarnings(ctx, submission.Id, submission.Earnings)
+	app.cache.SetSubmissionStatus(ctx, submission.Id, submission.Status)
+	app.cache.SetViewCount(ctx, submission.Id, submission.Views)
+
 	// successfully made the submission
 	c.JSON(http.StatusCreated, WriteResponse(submission))
 }
@@ -105,6 +111,11 @@ func (app *Application) DeleteSubmission(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, WriteError("server error"))
 		return
 	}
+
+	// invalidate the affected caches
+	app.cache.InvalidateSubmissionStatus(ctx, sub_id)
+	app.cache.InvalidateSubmissionEarnings(ctx, sub_id)
+	app.cache.InvalidateOneCreatorSubmissions(ctx, submission.CreatorId, sub_id)
 
 	// delete was successful
 	c.JSON(http.StatusNoContent, WriteResponse("delete was successful"))
@@ -201,6 +212,10 @@ func (app *Application) UpdateSubmission(c *gin.Context) {
 	}
 
 	sub_response, _ := app.store.SubmissionInterface.FindSubmissionById(ctx, sub_id)
+	// cache the submission
+	app.cache.SetSubmissionEarnings(ctx, sub.Id, sub_response.Earnings)
+	app.cache.SetSubmissionStatus(ctx, sub.Id, sub_response.Status)
+
 	// update successful
 	c.JSON(http.StatusOK, WriteResponse(sub_response))
 }
@@ -237,6 +252,19 @@ func (app *Application) GetSubmission(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
+	// get the updated cahed values
+	amt, err := app.cache.GetSubmissionEarnings(ctx, sub.Id)
+	if err == nil {
+		sub.Earnings = amt
+	}
+	status, err := app.cache.GetSubmissionStatus(ctx, sub.Id)
+	if err == nil {
+		sub.Status = status
+	}
+	views, err := app.cache.GetViewCount(ctx, sub.Id)
+	if err == nil {
+		sub.Views = views
+	}
 
 	// successful fetching
 	c.JSON(http.StatusOK, WriteResponse(sub))
@@ -256,21 +284,48 @@ func (app *Application) GetMySubmissions(c *gin.Context) {
 	}
 	UserID := Entity.GetID()
 	time_ := c.Query("time")
-	var filter db.Filter = db.Filter{
-		CreatorId: &UserID,
-	}
-	if time_ != "" {
-		filter.Time = &time_
-	}
 	// check the time format
-	if filter.Time != nil {
-		_, err := time.Parse("01-2006", *filter.Time) // "MM-YYYY"
+	if time_ != "" {
+		_, err := time.Parse("01-2006", time_) // "MM-YYYY"
 		if err != nil {
 			c.JSON(http.StatusBadRequest, WriteError(fmt.Sprintf("invalid time format: %v", err)))
 			return
 		}
 	}
-	// get the filtered submissions
+	// get the user submissions submissions
+	// check cache for the user submissions
+	subids, err := app.cache.GetCreatorSubmissions(ctx, UserID)
+	// Cache Hit
+	if err == nil {
+		output, err := app.store.SubmissionInterface.FindMySubmissions(ctx, time_, subids)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, WriteError("server error"))
+			return
+		}
+		for i := range output {
+			amt, err := app.cache.GetSubmissionEarnings(ctx, output[i].Id)
+			if err == nil {
+				output[i].Earnings = amt
+			}
+			views, err := app.cache.GetViewCount(ctx, output[i].Id)
+			if err == nil {
+				output[i].Views = views
+			}
+			status, err := app.cache.GetSubmissionStatus(ctx, output[i].Id)
+			if err == nil {
+				output[i].Status = status
+			}
+		}
+		// successfully filtered
+		c.JSON(http.StatusOK, WriteResponse(output))
+		return
+	}
+	// in case cache miss
+	filter := db.Filter{
+		CreatorId: &UserID,
+		Time:      &time_,
+	}
+	// Database scan for user submissions
 	output, err := app.store.SubmissionInterface.FindSubmissionsByFilters(ctx, filter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, WriteError("server error"))

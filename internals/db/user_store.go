@@ -38,6 +38,7 @@ type User struct {
 	Email         string  `json:"email"`
 	Password      PassW   `json:"-"`
 	Gender        string  `json:"gender"`
+	Amount        float64 `json:"amount"`
 	Age           int     `json:"age"`
 	Role          string  `json:"role"`
 	PlatformLinks []Links `json:"links"`
@@ -130,10 +131,11 @@ func (u *UserStore) GetUserById(ctx context.Context, id string) (*User, error) {
 	// filter by id
 	// join the roles table to get the name of the role
 	query := `
-		SELECT u.id, u.first_name, u.last_name, u.email, u.password, u.gender,
+		SELECT u.id, u.first_name, u.last_name, u.email, u.password, u.gender, a.amount
 		u.age, r.name, u.is_verified, u.created_at
 		FROM users u
 		JOIN roles r ON r.id = u.role
+		JOIN accounts a ON a.holder_id = u.id
 		WHERE u.id = $1
 	`
 	var user User
@@ -145,6 +147,7 @@ func (u *UserStore) GetUserById(ctx context.Context, id string) (*User, error) {
 		&user.Email,
 		&user.Password.hashed_pass,
 		&user.Gender,
+		&user.Amount,
 		&user.Age,
 		&user.Role,
 		&user.IsVerified,
@@ -167,9 +170,10 @@ func (u *UserStore) GetUserByEmail(ctx context.Context, email string) (*User, er
 	// filter by email and join the roles table to get the role name
 	query := `
 		SELECT u.id, u.first_name, u.last_name, u.email,
-		u.password, u.gender, u.age, r.name, u.is_verified, u.created_at
+		u.password, u.gender, a.amount, u.age, r.name, u.is_verified, u.created_at
 		FROM users u
 		JOIN roles r ON r.id = u.role
+		JOIN accounts a ON a.holder_id = u.id
 		WHERE u.email = $1
 	`
 	// Get the user and scan it into the object
@@ -181,6 +185,7 @@ func (u *UserStore) GetUserByEmail(ctx context.Context, email string) (*User, er
 		&user.Email,
 		&user.Password.hashed_pass,
 		&user.Gender,
+		&user.Amount,
 		&user.Age,
 		&user.Role,
 		&user.IsVerified,

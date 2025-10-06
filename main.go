@@ -7,6 +7,7 @@ import (
 	"github.com/Alter-Sitanshu/campaignHub/api"
 	"github.com/Alter-Sitanshu/campaignHub/env"
 	"github.com/Alter-Sitanshu/campaignHub/internals/auth"
+	"github.com/Alter-Sitanshu/campaignHub/internals/cache"
 	"github.com/Alter-Sitanshu/campaignHub/internals/db"
 	"github.com/Alter-Sitanshu/campaignHub/internals/mailer"
 	"github.com/joho/godotenv"
@@ -43,6 +44,13 @@ func main() {
 			Support:     env.GetString("MAIL_SUPPORT", ""),
 			MailRetries: 5,
 		},
+		// TODO: Change in Production
+		RedisCfg: api.RedisConfig{
+			Addr:     env.GetString("REDIS_ADDR", "localhost:6379"),
+			Protocol: env.GetInt("REDIS_PROTOCOL", 3),
+			Password: env.GetString("REDIS_PASSWORD", ""),
+			DB:       env.GetInt("REDIS_DB", 0),
+		},
 	}
 
 	// Making DB connection
@@ -65,6 +73,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("error making paseto maker: %v\n", err.Error())
 	}
+	// initialising the mailer service
 	mailer := mailer.NewMailService(
 		config.MailCfg.From,
 		config.MailCfg.Host,
@@ -72,14 +81,27 @@ func main() {
 		config.MailCfg.Password,
 		config.MailCfg.Port,
 	)
-	log.Printf("%s: %s\n", mailer.Username, mailer.Password)
+	// initialising the cache layer
+	CacheClient, err := cache.NewClient(
+		config.RedisCfg.Addr,
+		config.RedisCfg.Password,
+		config.RedisCfg.DB,
+	)
+	if err != nil {
+		log.Fatalf("error intialising the cache layer: %v\n", err.Error())
+	}
+
+	// attaching the services to the application
 	appStore := db.NewStore(db_)
+	appCache := cache.NewService(CacheClient)
+
 	app := api.NewApplication(
 		appStore,
 		&config,
 		jwt_Maker,
 		paseto_Maker,
 		mailer,
+		appCache,
 	)
 	app.Run()
 }

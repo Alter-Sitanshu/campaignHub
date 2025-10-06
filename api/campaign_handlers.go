@@ -65,7 +65,11 @@ func (app *Application) CreateCampaign(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, WriteError("server error"))
 		return
 	}
-
+	// cache the campaign
+	err = app.cache.SetCampaign(ctx, campaign.Id, campaign)
+	if err != nil {
+		log.Printf("error caching campaign: %s\n", err.Error())
+	}
 	// campaign launched
 	c.JSON(http.StatusOK, WriteResponse(&campaign))
 }
@@ -120,7 +124,9 @@ func (app *Application) StopCampaign(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, WriteError("internal server error"))
 		return
 	}
-
+	// invalidate the active campaign
+	app.cache.RemoveActiveCampaign(ctx, campaign.Id)
+	// successfully delted the campaign
 	c.JSON(http.StatusNoContent, WriteResponse("campaign ended"))
 }
 
@@ -156,7 +162,11 @@ func (app *Application) DeleteCampaign(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, WriteError("internal server error"))
 		return
 	}
+	// invalidate the affected campaigns
+	app.cache.InvalidateCampaign(ctx, campaign.Id)
+	app.cache.InvalidateOneBrandCampaign(ctx, campaign.BrandId, campaign.Id)
 
+	// successfully deleted the campaign
 	c.JSON(http.StatusNoContent, WriteResponse("campaign ended"))
 }
 
@@ -167,7 +177,7 @@ func (app *Application) GetUserCampaigns(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	Entity, ok := LogInUser.(db.AuthenticatedEntity)
+	_, ok = LogInUser.(db.AuthenticatedEntity)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
@@ -177,16 +187,36 @@ func (app *Application) GetUserCampaigns(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, WriteError("invalid request"))
 		return
 	}
-	// Auhtorise user
-	if UserID != Entity.GetID() && Entity.GetRole() != "admin" {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+
+	// check the cache first
+	res, err := app.cache.GetUserCampaigns(ctx, UserID)
+	if err == nil {
+		// cache hit
+		campaigns, err := app.store.CampaignInterace.GetMultipleCampaigns(ctx, res)
+		if err != nil {
+			// server error
+			c.JSON(http.StatusInternalServerError, WriteError("internal server error"))
+			return
+		}
+		c.JSON(http.StatusOK, WriteResponse(campaigns))
 		return
 	}
+
 	campaigns, err := app.store.CampaignInterace.GetUserCampaigns(ctx, UserID)
 	if err != nil {
 		// server error
 		c.JSON(http.StatusInternalServerError, WriteError("internal server error"))
 		return
+	}
+
+	// cache the user campaigns
+	campaignIDs := make([]string, len(campaigns))
+	for _, v := range campaigns {
+		campaignIDs = append(campaignIDs, v.Id)
+	}
+	err = app.cache.SetUserCampaigns(ctx, UserID, campaignIDs)
+	if err != nil {
+		log.Printf("error caching the user campaigns: %s", err.Error())
 	}
 	// successfully retreived the brand campaign
 	c.JSON(http.StatusOK, WriteResponse(campaigns))
@@ -231,6 +261,11 @@ func (app *Application) UpdateCampaign(c *gin.Context) {
 		return
 	}
 	campaign_response, _ := app.store.CampaignInterace.GetCampaign(ctx, campaign_id)
+	// cache the updated campaigns
+	if err = app.cache.SetCampaign(ctx, campaign_id, campaign_response); err != nil {
+		log.Printf("error caching the campaign: %s", err.Error())
+		app.cache.InvalidateCampaign(ctx, campaign_id)
+	}
 	// successfully updated the campaign
 	c.JSON(http.StatusNoContent, WriteResponse(campaign_response))
 }
@@ -264,7 +299,16 @@ func (app *Application) GetCampaign(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
 		return
 	}
-	campaignResponse, err := app.store.CampaignInterace.GetCampaign(ctx, campaign_id)
+
+	// check cache
+	var campaignResponse *db.Campaign
+	err := app.cache.GetCampaign(ctx, campaign_id, campaignResponse)
+	if err == nil {
+		c.JSON(http.StatusOK, WriteResponse(campaignResponse))
+		return
+	}
+	// cache miss
+	campaignResponse, err = app.store.CampaignInterace.GetCampaign(ctx, campaign_id)
 	if err != nil {
 		if err == db.ErrNotFound {
 			// bad request error
@@ -275,6 +319,10 @@ func (app *Application) GetCampaign(c *gin.Context) {
 		log.Printf("could not find campaign: %v", err.Error()) // log to fix the error
 		c.JSON(http.StatusInternalServerError, WriteError("server error"))
 		return
+	}
+	// cache the campaign
+	if err = app.cache.SetCampaign(ctx, campaign_id, *campaignResponse); err != nil {
+		log.Printf("error caching campaign: %s", err.Error())
 	}
 	// successfully fetched the campaign
 	c.JSON(http.StatusOK, WriteResponse(campaignResponse))

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/Alter-Sitanshu/campaignHub/internals/auth"
+	"github.com/Alter-Sitanshu/campaignHub/internals/cache"
 	"github.com/Alter-Sitanshu/campaignHub/internals/db"
 	"github.com/Alter-Sitanshu/campaignHub/internals/mailer"
 	"github.com/gin-gonic/gin"
@@ -15,6 +16,7 @@ type Application struct {
 	jwtMaker    auth.TokenMaker
 	pasetoMaker auth.TokenMaker
 	mailer      *mailer.MailService
+	cache       *cache.Service
 	cfg         Config
 }
 
@@ -68,7 +70,7 @@ const (
 )
 
 func NewApplication(store *db.Store, cfg *Config, PASETO, JWT auth.TokenMaker,
-	mailer *mailer.MailService,
+	mailer *mailer.MailService, cacheService *cache.Service,
 ) *Application {
 	router := gin.Default()
 	app := Application{
@@ -78,6 +80,7 @@ func NewApplication(store *db.Store, cfg *Config, PASETO, JWT auth.TokenMaker,
 		jwtMaker:    JWT,
 		pasetoMaker: PASETO,
 		mailer:      mailer,
+		cache:       cacheService,
 	}
 
 	// Public routes

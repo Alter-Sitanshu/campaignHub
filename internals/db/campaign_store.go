@@ -262,6 +262,45 @@ func (c *CampaignStore) GetUserCampaigns(ctx context.Context, userid string) ([]
 	return output, nil
 }
 
+func (c *CampaignStore) GetMultipleCampaigns(ctx context.Context, campaignIDs []string,
+) ([]Campaign, error) {
+	query := `
+		SELECT id, brand_id, title, budget, cpm, requirements, platform, doc_link, status, created_at
+		FROM campaigns
+		WHERE id IN $1
+	`
+	rows, err := c.db.QueryContext(ctx, query, campaignIDs)
+	if err != nil {
+		log.Printf("error getting the campaigns: %s\n", err.Error())
+		return nil, err
+	}
+	defer rows.Close()
+	var output []Campaign
+	for rows.Next() {
+		var row Campaign
+		err = rows.Scan(
+			&row.Id,
+			&row.BrandId,
+			&row.Title,
+			&row.Budget,
+			&row.CPM,
+			&row.Req,
+			&row.Platform,
+			&row.DocLink,
+			&row.Status,
+			&row.CreatedAt,
+		)
+		if err != nil {
+			log.Printf("Error scanning campaign: %v\n", err.Error())
+			return nil, err
+		}
+		output = append(output, row)
+	}
+
+	// success
+	return output, nil
+}
+
 func (c *CampaignStore) GetCampaign(ctx context.Context, id string) (*Campaign, error) {
 	query := `
 		SELECT id, brand_id, title, budget, cpm, requirements, platform, doc_link, status, created_at
