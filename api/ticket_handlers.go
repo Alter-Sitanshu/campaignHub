@@ -26,7 +26,7 @@ func (app *Application) RaiseTicket(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	User, ok := LogInUser.(*db.User)
+	Entity, ok := LogInUser.(db.AuthenticatedEntity)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
@@ -38,7 +38,7 @@ func (app *Application) RaiseTicket(c *gin.Context) {
 		return
 	}
 	// check if the user is raising ticket for themselves
-	if User.Id != payload.CustomerId {
+	if Entity.GetID() != payload.CustomerId {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
@@ -92,7 +92,7 @@ func (app *Application) CloseTicket(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	User, ok := LogInUser.(*db.User)
+	Entity, ok := LogInUser.(db.AuthenticatedEntity)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
@@ -103,7 +103,7 @@ func (app *Application) CloseTicket(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
 		return
 	}
-	if User.Role != "admin" {
+	if Entity.GetRole() != "admin" {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
@@ -123,13 +123,13 @@ func (app *Application) GetRecentTickets(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	User, ok := LogInUser.(*db.User)
+	Entity, ok := LogInUser.(db.AuthenticatedEntity)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
 	// Authorise the user
-	if User.Role != "admin" {
+	if Entity.GetRole() != "admin" {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
@@ -156,7 +156,7 @@ func (app *Application) GetRecentTickets(c *gin.Context) {
 		return
 	}
 	// DB call
-	tickets, err := app.store.TicketInterface.FetchRecentTickets(ctx, status, limit, offset)
+	tickets, err := app.store.TicketInterface.GetRecentTickets(ctx, status, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, WriteError("server error"))
 		return
@@ -172,13 +172,13 @@ func (app *Application) DeleteTicket(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	User, ok := LogInUser.(*db.User)
+	Entity, ok := LogInUser.(db.AuthenticatedEntity)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
 	// Authorise the user
-	if User.Role != "admin" {
+	if Entity.GetRole() != "admin" {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
@@ -204,7 +204,7 @@ func (app *Application) GetTicket(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	User, ok := LogInUser.(*db.User)
+	Entity, ok := LogInUser.(db.AuthenticatedEntity)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
@@ -222,7 +222,7 @@ func (app *Application) GetTicket(c *gin.Context) {
 		return
 	}
 	// authorise the user
-	if ticket.CustomerId != User.Id {
+	if ticket.CustomerId != Entity.GetID() {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}

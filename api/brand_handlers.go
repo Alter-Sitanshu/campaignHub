@@ -141,7 +141,12 @@ func (app *Application) GetBrand(c *gin.Context) {
 func (app *Application) DeleteBrand(c *gin.Context) {
 	ctx := c.Request.Context()
 	// fetch the logged in user
-	LogInUser, ok := c.Get("user_id")
+	LogInUser, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	Entity, ok := LogInUser.(db.AuthenticatedEntity)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
@@ -151,12 +156,12 @@ func (app *Application) DeleteBrand(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
 		return
 	}
-	if ID != LogInUser {
-		log.Printf("error: unauthorised access by: %v\n", LogInUser)
+	if ID != Entity.GetID() && Entity.GetRole() != "admin" {
+		log.Printf("error: unauthorised access by: %v\n", Entity.GetID())
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised"))
 		return
 	}
-	// deleting the user
+	// deregistering the brand
 	err := app.store.BrandInterface.DeregisterBrand(ctx, ID)
 	if err != nil {
 		if err == db.ErrNotFound {
@@ -177,14 +182,19 @@ func (app *Application) DeleteBrand(c *gin.Context) {
 func (app *Application) UpdateBrand(c *gin.Context) {
 	ctx := c.Request.Context()
 	// fetching the logged in user
-	LogInUser, ok := c.Get("user_id")
+	LogInUser, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	Entity, ok := LogInUser.(db.AuthenticatedEntity)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
 	brand_id := c.Request.PathValue("brand_id")
-	if brand_id != LogInUser {
-		log.Printf("error: unauthorised access by: %v\n", LogInUser)
+	if brand_id != Entity.GetID() && Entity.GetRole() != "admin" {
+		log.Printf("error: unauthorised access by: %v\n", Entity.GetID())
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised"))
 		return
 	}

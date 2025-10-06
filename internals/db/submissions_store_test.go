@@ -73,19 +73,19 @@ func TestMakeSubmission(t *testing.T) {
 	generateBrand(bid)
 	defer destroyBrand(bid)
 	// mock campaign
-	camp := SeedCampaign(ctx, bid, 1)[0]
+	camp := SeedCampaign(ctx, bid, 1)
 	defer destroyCampaign(ctx, camp)
 	t.Run("mock submission", func(t *testing.T) {
 		sub := Submission{
 			Id:         "0001",
 			CreatorId:  creator,
-			CampaignId: camp,
+			CampaignId: camp[0],
 			Url:        "example.com",
 			Status:     DraftStatus,
 			Views:      100,
 			Earnings:   400.0,
 		}
-		err := MockSubStore.MakeSubmission(ctx, &sub)
+		err := MockSubStore.MakeSubmission(ctx, sub)
 		if err != nil {
 			t.Fail()
 		}
@@ -106,20 +106,20 @@ func TestFindSubmission(t *testing.T) {
 	generateBrand(bid)
 	defer destroyBrand(bid)
 	// mock campaign
-	camp := SeedCampaign(ctx, bid, 1)[0]
+	camp := SeedCampaign(ctx, bid, 1)
 	defer destroyCampaign(ctx, camp)
 
 	// mock submission
 	sub := Submission{
 		Id:         "0001",
 		CreatorId:  creator,
-		CampaignId: camp,
+		CampaignId: camp[0],
 		Url:        "example.com",
 		Status:     DraftStatus,
 		Views:      100,
 		Earnings:   400.0,
 	}
-	MockSubStore.MakeSubmission(ctx, &sub)
+	MockSubStore.MakeSubmission(ctx, sub)
 	defer MockSubStore.DeleteSubmission(ctx, sub.Id)
 	t.Run("finding valid submission", func(t *testing.T) {
 		_, err := MockSubStore.FindSubmissionById(ctx, sub.Id)
@@ -150,7 +150,7 @@ func TestFilteringSubmissions(t *testing.T) {
 	generateBrand(bid)
 	defer destroyBrand(bid)
 	// mock campaign
-	camp := SeedCampaign(ctx, bid, 1)[0]
+	camp := SeedCampaign(ctx, bid, 1)
 	defer destroyCampaign(ctx, camp)
 
 	// mock submissions
@@ -187,7 +187,7 @@ func TestUpdateSubmissions(t *testing.T) {
 	generateBrand(bid)
 	defer destroyBrand(bid)
 	// mock campaign
-	camp := SeedCampaign(ctx, bid, 1)[0]
+	camp := SeedCampaign(ctx, bid, 1)
 	defer destroyCampaign(ctx, camp)
 
 	// mock submissions
@@ -237,23 +237,78 @@ func TestDeleteSub(t *testing.T) {
 	generateBrand(bid)
 	defer destroyBrand(bid)
 	// mock campaign
-	camp := SeedCampaign(ctx, bid, 1)[0]
+	camp := SeedCampaign(ctx, bid, 1)
 	defer destroyCampaign(ctx, camp)
 
 	// mock submission
 	sub := Submission{
 		Id:         "0001",
 		CreatorId:  creator,
-		CampaignId: camp,
+		CampaignId: camp[0],
 		Url:        "example.com",
 		Status:     DraftStatus,
-		Views:      100,
+		Views:      0,
 		Earnings:   400.0,
 	}
-	MockSubStore.MakeSubmission(ctx, &sub)
+	MockSubStore.MakeSubmission(ctx, sub)
 	defer MockSubStore.DeleteSubmission(ctx, sub.Id)
 	t.Run("deleting invalid submission", func(t *testing.T) {
 		err := MockSubStore.DeleteSubmission(ctx, "NA") // not possible
+		if err == nil {
+			t.Fail()
+		}
+	})
+}
+
+func TestChangeViews(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	// create mock creator
+	creator := generateCreator(ctx, "0001")
+	// mock brand
+	bid := uuid.New().String()
+	generateBrand(bid)
+	// mock campaign
+	camp := SeedCampaign(ctx, bid, 1)
+	// mock submission
+	sub := Submission{
+		Id:         "0001",
+		CreatorId:  creator,
+		CampaignId: camp[0],
+		Url:        "example.com",
+		Status:     DraftStatus,
+		Views:      0,
+		Earnings:   400.0,
+	}
+	defer func() {
+		destroyCampaign(ctx, camp)
+		destroyBrand(bid)
+		destroyCreator(ctx, creator)
+		cancel()
+	}()
+
+	t.Run("OK", func(t *testing.T) {
+		MockSubStore.MakeSubmission(ctx, sub)
+		delta := 100
+		err := MockSubStore.ChangeViews(ctx, delta, sub.Id)
+		// require no error
+		if err != nil {
+			t.Fail()
+		}
+		modifiedSub, err := MockSubStore.FindSubmissionById(ctx, sub.Id)
+		if err != nil {
+			log.Printf("could not get the modified submission\n")
+			t.Fail()
+		}
+		if modifiedSub.Views-sub.Views != delta {
+			log.Printf("want: %d, got: %d", delta+sub.Views, modifiedSub.Views)
+			t.Fail()
+		}
+		MockSubStore.DeleteSubmission(ctx, sub.Id)
+	})
+	t.Run("invalid submission id", func(t *testing.T) {
+		delta := 100
+		err := MockSubStore.ChangeViews(ctx, delta, "invalid-id")
+		// require error
 		if err == nil {
 			t.Fail()
 		}

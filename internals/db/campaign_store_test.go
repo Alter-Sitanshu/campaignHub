@@ -56,8 +56,10 @@ func SeedCampaign(ctx context.Context, bid string, num int) []string {
 	return ids
 }
 
-func destroyCampaign(ctx context.Context, id string) {
-	MockCampaignStore.DeleteCampaign(ctx, id)
+func destroyCampaign(ctx context.Context, ids []string) {
+	for _, id := range ids {
+		MockCampaignStore.DeleteCampaign(ctx, id)
+	}
 }
 
 func TestLaunchCampaign(t *testing.T) {
@@ -286,7 +288,7 @@ func TestGetUserCampaigns(t *testing.T) {
 		if err != nil {
 			t.Fail()
 		}
-		user_submission := &Submission{
+		user_submission := Submission{
 			Id:         uuid.New().String(),
 			CreatorId:  userID,
 			CampaignId: campaignID,

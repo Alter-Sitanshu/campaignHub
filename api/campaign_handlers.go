@@ -29,7 +29,11 @@ func (app *Application) CreateCampaign(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	User, ok := LogInUser.(*db.User)
+	Entity, ok := LogInUser.(db.AuthenticatedEntity)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
 	if !ok {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
@@ -39,7 +43,7 @@ func (app *Application) CreateCampaign(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, WriteError("invalid input"))
 		return
 	}
-	if User.Id != payload.BrandId {
+	if Entity.GetID() != payload.BrandId {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
@@ -90,7 +94,7 @@ func (app *Application) StopCampaign(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	User, ok := LogInUser.(*db.User)
+	Entity, ok := LogInUser.(db.AuthenticatedEntity)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
@@ -106,7 +110,7 @@ func (app *Application) StopCampaign(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, WriteError("internal server error"))
 		return
 	}
-	if campaign.BrandId != User.Id && User.Role != "admin" {
+	if campaign.BrandId != Entity.GetID() && Entity.GetRole() != "admin" {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
@@ -127,7 +131,7 @@ func (app *Application) DeleteCampaign(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	User, ok := LogInUser.(*db.User)
+	Entity, ok := LogInUser.(db.AuthenticatedEntity)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
@@ -143,7 +147,7 @@ func (app *Application) DeleteCampaign(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, WriteError("internal server error"))
 		return
 	}
-	if campaign.BrandId != User.Id && User.Role != "admin" {
+	if campaign.BrandId != Entity.GetID() && Entity.GetRole() != "admin" {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
@@ -163,7 +167,7 @@ func (app *Application) GetUserCampaigns(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	User, ok := LogInUser.(*db.User)
+	Entity, ok := LogInUser.(db.AuthenticatedEntity)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
@@ -174,7 +178,7 @@ func (app *Application) GetUserCampaigns(c *gin.Context) {
 		return
 	}
 	// Auhtorise user
-	if UserID != User.Id && User.Role != "admin" {
+	if UserID != Entity.GetID() && Entity.GetRole() != "admin" {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
@@ -195,7 +199,7 @@ func (app *Application) UpdateCampaign(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	User, ok := LogInUser.(*db.User)
+	Entity, ok := LogInUser.(db.AuthenticatedEntity)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
@@ -215,7 +219,7 @@ func (app *Application) UpdateCampaign(c *gin.Context) {
 		return
 	}
 	// Authorise user
-	if campaign.BrandId != User.Id && User.Role != "admin" {
+	if campaign.BrandId != Entity.GetID() && Entity.GetRole() != "admin" {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}

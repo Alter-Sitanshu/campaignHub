@@ -5,8 +5,6 @@ import (
 	"log"
 	"testing"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 func TestGetBrand(t *testing.T) {
@@ -138,7 +136,7 @@ func TestUpdateBrandPassword(t *testing.T) {
 	defer cancel()
 
 	// creating a dummy brand
-	bid := uuid.NewString()
+	bid := "dummy_brand_01"
 	generateBrand(bid)
 	defer destroyBrand(bid)
 	t.Run("OK", func(t *testing.T) {

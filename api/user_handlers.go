@@ -126,7 +126,8 @@ func (app *Application) GetUserById(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	User, ok := LogInUser.(*db.User)
+	Entity, ok := LogInUser.(db.AuthenticatedEntity)
+	UserID := Entity.GetID()
 	if !ok {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
@@ -137,8 +138,8 @@ func (app *Application) GetUserById(c *gin.Context) {
 		return
 	}
 	// Authorise the user
-	if ID != User.Id {
-		log.Printf("unauthorised access from: %v\n", LogInUser)
+	if ID != UserID {
+		log.Printf("unauthorised access from: %v\n", UserID)
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
@@ -177,27 +178,19 @@ func (app *Application) GetUserByEmail(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	User, ok := LogInUser.(*db.User)
+	Entity, ok := LogInUser.(db.AuthenticatedEntity)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
 	mail := c.Request.PathValue("email")
-	if mail != User.Email {
+	if mail != Entity.GetEmail() {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	// fetching the user
-	user, err := app.store.UserInterface.GetUserByEmail(ctx, mail)
+	user, err := app.store.UserInterface.GetUserById(ctx, Entity.GetID())
 	if err != nil {
-		if err == db.ErrNotFound {
-			// bad request error
-			c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
-			return
-		}
-		// server error
-		log.Printf("could not find user: %v", err.Error()) // log to fix the error
-		c.JSON(http.StatusInternalServerError, WriteError("server error"))
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
 	// make the response object
@@ -223,19 +216,20 @@ func (app *Application) DeleteUser(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	User, ok := LogInUser.(*db.User)
+	Entity, ok := LogInUser.(db.AuthenticatedEntity)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
+	UserID := Entity.GetID()
 	ID := c.Request.PathValue("id")
 	if ok := uuid.Validate(ID); ok != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
 		return
 	}
 	// Authorise the user
-	if ID != User.Id {
-		log.Printf("unauthorised access from: %v\n", LogInUser)
+	if ID != UserID {
+		log.Printf("unauthorised access from: %v\n", UserID)
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
@@ -265,18 +259,20 @@ func (app *Application) UpdateUser(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	User, ok := LogInUser.(*db.User)
+	Entity, ok := LogInUser.(db.AuthenticatedEntity)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
+	UserID := Entity.GetID()
+
 	ID := c.Request.PathValue("id")
 	if ok := uuid.Validate(ID); ok != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
 		return
 	}
 	// Authorise the user
-	if ID != User.Id {
+	if ID != UserID {
 		log.Printf("unauthorised access from: %v\n", LogInUser)
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return

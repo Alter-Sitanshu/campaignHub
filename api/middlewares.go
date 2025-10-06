@@ -19,8 +19,8 @@ func (app *Application) AuthMiddleware() gin.HandlerFunc {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, WriteError("error: invalid session token"))
 			return
 		}
-		// set the user in the context for further handlers
-		user, err := app.store.UserInterface.GetUserById(c.Request.Context(), payload.Sub)
+		// set the user/brand in the context for further handlers
+		user, err := app.store.GetEntity(c.Request.Context(), payload.Sub)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, WriteError("server error"))
 			return

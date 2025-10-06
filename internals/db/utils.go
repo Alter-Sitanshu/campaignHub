@@ -8,14 +8,15 @@ import (
 )
 
 var (
-	MockDB            *sql.DB
-	MockUserStore     UserStore
-	MockLinkStore     LinkStore
-	MockTsStore       TransactionStore
-	MockTicketStore   TicketStore
-	MockSubStore      SubmissionStore
-	MockBrandStore    BrandStore
-	MockCampaignStore CampaignStore
+	MockDB               *sql.DB
+	MockUserStore        UserStore
+	MockLinkStore        LinkStore
+	MockTsStore          TransactionStore
+	MockTicketStore      TicketStore
+	MockSubStore         SubmissionStore
+	MockBrandStore       BrandStore
+	MockCampaignStore    CampaignStore
+	MockApplicationStore ApplicationStore
 )
 
 func Init() {
@@ -39,4 +40,5 @@ func Init() {
 	MockTicketStore.db = MockDB
 	MockSubStore.db = MockDB
 	MockCampaignStore.db = MockDB
+	MockApplicationStore.db = MockDB
 }

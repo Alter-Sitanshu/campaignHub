@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"log"
 	"strings"
-
-	"github.com/google/uuid"
 )
 
 type BrandStore struct {
@@ -34,17 +32,13 @@ type BrandUpdatePayload struct {
 	Address *string `json:"address"`
 }
 
+// Function to change the password of a brand
+// Validate the brandid before calling the function
 func (b *BrandStore) ChangePassword(ctx context.Context, id, new_pass string) error {
 	var pw PassW
-	if err := uuid.Validate(id); err != nil {
-		return ErrInvalidId
-	}
 	if len(new_pass) < 8 {
 		log.Printf("error: want pass len: %d, got: %d", MinPassLen, len(new_pass))
 		return ErrPasswordTooShort
-	}
-	if err := uuid.Validate(id); err != nil {
-		return ErrInvalidId
 	}
 	if err := pw.Hash(new_pass); err != nil {
 		// logging for debugging

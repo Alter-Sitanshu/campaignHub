@@ -350,7 +350,7 @@ func TestUpdateUserPassword(t *testing.T) {
 	defer cancel()
 
 	// creating a dummy brand
-	uid := uuid.NewString()
+	uid := "dummy_user_01"
 	generateCreator(ctx, uid)
 	defer destroyCreator(ctx, uid)
 	t.Run("OK", func(t *testing.T) {

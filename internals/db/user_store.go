@@ -53,11 +53,10 @@ type UpdatePayload struct {
 	Gender    *string `json:"gender"`
 }
 
+// Function to change the user password
+// Validate the uuid before calling the function
 func (u *UserStore) ChangePassword(ctx context.Context, id, new_pass string) error {
 	var pw PassW
-	if err := uuid.Validate(id); err != nil {
-		return ErrInvalidId
-	}
 	if len(new_pass) < 8 {
 		log.Printf("error: want pass len: %d, got: %d", MinPassLen, len(new_pass))
 		return ErrPasswordTooShort

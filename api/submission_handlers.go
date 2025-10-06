@@ -24,7 +24,7 @@ func (app *Application) CreateSubmission(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	User, ok := LogInUser.(*db.User)
+	Entity, ok := LogInUser.(db.AuthenticatedEntity)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
@@ -35,7 +35,7 @@ func (app *Application) CreateSubmission(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, WriteError(err.Error()))
 		return
 	}
-	if User.Id != payload.CreatorId {
+	if Entity.GetID() != payload.CreatorId {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
@@ -51,7 +51,7 @@ func (app *Application) CreateSubmission(c *gin.Context) {
 		Status:     payload.Status,
 	}
 
-	err := app.store.SubmissionInterface.MakeSubmission(ctx, &submission)
+	err := app.store.SubmissionInterface.MakeSubmission(ctx, submission)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, WriteError("server error"))
 		return
@@ -68,7 +68,7 @@ func (app *Application) DeleteSubmission(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	User, ok := LogInUser.(*db.User)
+	Entity, ok := LogInUser.(db.AuthenticatedEntity)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
@@ -90,7 +90,7 @@ func (app *Application) DeleteSubmission(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, WriteError("server error"))
 		return
 	}
-	if submission.CreatorId != User.Id {
+	if submission.CreatorId != Entity.GetID() && Entity.GetRole() != "admin" {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
@@ -112,6 +112,21 @@ func (app *Application) DeleteSubmission(c *gin.Context) {
 
 func (app *Application) FilterSubmissions(c *gin.Context) {
 	ctx := c.Request.Context()
+	LogInUser, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	Entity, ok := LogInUser.(db.AuthenticatedEntity)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	if Entity.GetRole() != "admin" {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	// only the admin is allowed
 	creator_id := c.Query("creator_id")
 	campaign_id := c.Query("campaign_id")
 	time_ := c.Query("time")
@@ -146,11 +161,32 @@ func (app *Application) FilterSubmissions(c *gin.Context) {
 
 func (app *Application) UpdateSubmission(c *gin.Context) {
 	ctx := c.Request.Context()
+	LogInUser, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	Entity, ok := LogInUser.(db.AuthenticatedEntity)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
 	sub_id := c.Request.PathValue("sub_id")
 	if ok := uuid.Validate(sub_id); ok != nil {
 		c.JSON(http.StatusInternalServerError, WriteError("invalid credentials"))
 		return
 	}
+	// get the submission
+	sub, err := app.store.SubmissionInterface.FindSubmissionById(ctx, sub_id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, WriteError("invalid filter request"))
+		return
+	}
+	if sub.CreatorId != Entity.GetID() && Entity.GetRole() != "admin" {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	// allowed only if the user is the owner or the admin
 	// get the update payload
 	var payload db.UpdateSubmission
 	if err := c.BindJSON(&payload); err != nil {
@@ -176,7 +212,7 @@ func (app *Application) GetSubmission(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	User, ok := LogInUser.(*db.User)
+	Entity, ok := LogInUser.(db.AuthenticatedEntity)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
@@ -197,11 +233,50 @@ func (app *Application) GetSubmission(c *gin.Context) {
 		}
 		c.JSON(http.StatusInternalServerError, WriteError("server error"))
 	}
-	if sub.CreatorId != User.Id {
+	if sub.CreatorId != Entity.GetID() {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
 
 	// successful fetching
 	c.JSON(http.StatusOK, WriteResponse(sub))
+}
+
+func (app *Application) GetMySubmissions(c *gin.Context) {
+	ctx := c.Request.Context()
+	LogInUser, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	Entity, ok := LogInUser.(db.AuthenticatedEntity)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	UserID := Entity.GetID()
+	time_ := c.Query("time")
+	var filter db.Filter = db.Filter{
+		CreatorId: &UserID,
+	}
+	if time_ != "" {
+		filter.Time = &time_
+	}
+	// check the time format
+	if filter.Time != nil {
+		_, err := time.Parse("01-2006", *filter.Time) // "MM-YYYY"
+		if err != nil {
+			c.JSON(http.StatusBadRequest, WriteError(fmt.Sprintf("invalid time format: %v", err)))
+			return
+		}
+	}
+	// get the filtered submissions
+	output, err := app.store.SubmissionInterface.FindSubmissionsByFilters(ctx, filter)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, WriteError("server error"))
+		return
+	}
+
+	// successfully filtered
+	c.JSON(http.StatusOK, WriteResponse(output))
 }

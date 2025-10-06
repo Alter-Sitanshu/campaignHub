@@ -113,7 +113,7 @@ func (ts *TicketStore) ResolveTicket(ctx context.Context, id string) error {
 	return nil
 }
 
-func (ts *TicketStore) FetchRecentTickets(ctx context.Context, status, limit, offset int) ([]Ticket, error) {
+func (ts *TicketStore) GetRecentTickets(ctx context.Context, status, limit, offset int) ([]Ticket, error) {
 	query := `
 		SELECT id, customer_id, type, subject, message, status, created_at
 		FROM support_tickets

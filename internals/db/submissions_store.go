@@ -15,14 +15,16 @@ type SubmissionStore struct {
 }
 
 type Submission struct {
-	Id         string  `json:"id"`
-	CreatorId  string  `json:"creator_id"`
-	CampaignId string  `json:"campaign_id"`
-	Url        string  `json:"url"`
-	Status     int     `json:"status"`
-	Views      int     `json:"views"`
-	Earnings   float64 `json:"earnings"`
-	CreatedAt  string  `json:"created_at"`
+	Id            string  `json:"id"`
+	CreatorId     string  `json:"creator_id"`
+	CampaignId    string  `json:"campaign_id"`
+	Url           string  `json:"url"`
+	Status        int     `json:"status"`
+	Views         int     `json:"views"`
+	SyncFrequency int     `json:"sync_frequency,omitempty"`
+	Earnings      float64 `json:"earnings"`
+	CreatedAt     string  `json:"created_at"`
+	LastSyncedAt  string  `json:"last_synced_at"`
 }
 
 type UpdateSubmission struct {
@@ -39,7 +41,7 @@ type Filter struct {
 	Time       *string `json:"time"`
 }
 
-func (s *SubmissionStore) MakeSubmission(ctx context.Context, sub *Submission) error {
+func (s *SubmissionStore) MakeSubmission(ctx context.Context, sub Submission) error {
 	query := `
 		INSERT INTO submissions (id, creator_id, campaign_id, url, status)
 		VALUES ($1, $2, $3, $4, $5)
@@ -79,7 +81,8 @@ func (s *SubmissionStore) DeleteSubmission(ctx context.Context, id string) error
 
 func (s *SubmissionStore) FindSubmissionById(ctx context.Context, id string) (*Submission, error) {
 	query := `
-		SELECT id, creator_id, campaign_id, url, status, views, earnings, created_at
+		SELECT id, creator_id, campaign_id, url, status, views,
+		earnings, created_at, last_synced_at
 		FROM submissions
 		WHERE id = $1
 	`
@@ -93,6 +96,7 @@ func (s *SubmissionStore) FindSubmissionById(ctx context.Context, id string) (*S
 		&sub.Views,
 		&sub.Earnings,
 		&sub.CreatedAt,
+		&sub.LastSyncedAt,
 	)
 	if err != nil {
 		// internal server error/ invalid query
@@ -111,7 +115,8 @@ func (s *SubmissionStore) FindSubmissionsByFilters(
 ) {
 	var output []Submission
 	query := `
-		SELECT id, creator_id, campaign_id, url, status, views, earnings, created_at
+		SELECT id, creator_id, campaign_id, url, status, views, earnings, created_at,
+		last_synced_at
 		FROM submissions
 		WHERE 
 	`
@@ -168,6 +173,7 @@ func (s *SubmissionStore) FindSubmissionsByFilters(
 			&sub.Views,
 			&sub.Earnings,
 			&sub.CreatedAt,
+			&sub.LastSyncedAt,
 		)
 		// append to the output
 		if err != nil {
@@ -224,5 +230,31 @@ func (s *SubmissionStore) UpdateSubmission(ctx context.Context, payload UpdateSu
 	}
 
 	// successfully updated submission details
+	return nil
+}
+
+func (s *SubmissionStore) ChangeViews(ctx context.Context, delta int, id string) error {
+	// update the views count and the last_synced_at
+	query := `
+		UPDATE submissions
+		SET views = views + $1, last_synced_at = now()
+		WHERE id = $2
+	`
+	res, err := s.db.ExecContext(ctx, query, delta, id)
+	if err != nil {
+		log.Printf("error updating views for id = %s: %v\n", id, err)
+		return err
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		// This can fail with drivers that don’t support it
+		log.Printf("could not determine rows affected: %v\n", err)
+		return fmt.Errorf("rows affected: %w", err)
+	}
+
+	if count == 0 {
+		log.Printf("no submission found with id = %q\n", id)
+		return sql.ErrNoRows
+	}
 	return nil
 }

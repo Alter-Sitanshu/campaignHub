@@ -82,7 +82,7 @@ func TestFetchTicket(t *testing.T) {
 	defer cancel()
 	GenIds := seedTickets(ctx, 10)
 	// limit = 10, offset = 0
-	got, err := MockTicketStore.FetchRecentTickets(ctx, OpenTicket, 10, 0)
+	got, err := MockTicketStore.GetRecentTickets(ctx, OpenTicket, 10, 0)
 	if err != nil {
 		log.Printf("Fetching error in tickets feed: %v", err.Error())
 		t.Fail()

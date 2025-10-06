@@ -35,12 +35,14 @@ const (
 
 // macros for db errors
 var (
+	ErrServer           = errors.New("internal server error")
 	ErrNotFound         = errors.New("not found")
 	ErrTokenExpired     = errors.New("invalid or expired token")
 	ErrDupliMail        = errors.New("email already exists")
 	ErrDupliName        = errors.New("name taken")
 	ErrInvalidPass      = errors.New("invalid password")
 	ErrInvalidId        = errors.New("invalid id")
+	ErrInvalidStatus    = errors.New("invalid application status")
 	ErrPasswordTooShort = fmt.Errorf("password should be minimum of length  %d", MinPassLen)
 )
 
@@ -65,6 +67,20 @@ func (p *PassW) Hash(plain_pass string) error {
 func (p *PassW) Compare(plain_pass string) error {
 	return bcrypt.CompareHashAndPassword(p.hashed_pass, []byte(plain_pass))
 }
+
+type AuthenticatedEntity interface {
+	GetID() string
+	GetEntityType() EntityType
+	GetEmail() string
+	GetRole() string
+}
+
+type EntityType string
+
+const (
+	EntityTypeUser  EntityType = "user"
+	EntityTypeBrand EntityType = "brand"
+)
 
 type Store struct {
 	UserInterface interface {
@@ -106,14 +122,15 @@ type Store struct {
 		ResolveTicket(context.Context, string) error
 		FindTicket(context.Context, string) (*Ticket, error)
 		DeleteTicket(context.Context, string) error
-		FetchRecentTickets(context.Context, int, int, int) ([]Ticket, error)
+		GetRecentTickets(context.Context, int, int, int) ([]Ticket, error)
 	}
 	SubmissionInterface interface {
-		MakeSubmission(context.Context, *Submission) error
+		MakeSubmission(context.Context, Submission) error
 		DeleteSubmission(context.Context, string) error
 		FindSubmissionById(context.Context, string) (*Submission, error)
 		FindSubmissionsByFilters(context.Context, Filter) ([]Submission, error)
 		UpdateSubmission(context.Context, UpdateSubmission) error
+		ChangeViews(ctx context.Context, delta int, id string) error
 	}
 	LinkInterface interface {
 		AddLinks(context.Context, string, []Links) error
@@ -129,6 +146,14 @@ type Store struct {
 		DeleteAccount(context.Context, string) error
 		GetAccount(context.Context, string) (*Account, error)
 		GetAllAccounts(context.Context, int, int) ([]Account, error)
+	}
+	ApplicationInterface interface {
+		GetApplicationByID(ctx context.Context, appl_id string) (ApplicationResponse, error)
+		GetCreatorApplications(ctx context.Context, creator_id string, offset, limit int) ([]ApplicationResponse, error)
+		GetCampaignApplications(ctx context.Context, campaign_id string, offset, limit int) ([]ApplicationResponse, error)
+		CreateApplication(ctx context.Context, appl CampaignApplication) error
+		SetApplicationStatus(ctx context.Context, appl_id string, status int) error
+		DeleteApplication(ctx context.Context, appl_id string) error
 	}
 }
 
@@ -155,7 +180,22 @@ func NewStore(db *sql.DB) *Store {
 		TransactionInterface: &TransactionStore{
 			db: db,
 		},
+		ApplicationInterface: &ApplicationStore{
+			db: db,
+		},
 	}
+}
+
+func (s *Store) GetEntity(ctx context.Context, id string) (AuthenticatedEntity, error) {
+	u, err := s.UserInterface.GetUserById(ctx, id)
+	if err == nil {
+		return u, nil
+	}
+	b, err := s.BrandInterface.GetBrandById(ctx, id)
+	if err == nil {
+		return b, nil
+	}
+	return nil, ErrInvalidId
 }
 
 func Mount(addr string, MaxConns, MaxIdleConn, MaxIdleTime int) (*sql.DB, error) {
@@ -182,6 +222,39 @@ func Mount(addr string, MaxConns, MaxIdleConn, MaxIdleTime int) (*sql.DB, error)
 	}
 
 	return db, nil
+}
+
+// Authorised Entity implementation
+func (user User) GetID() string {
+	return user.Id
+}
+
+func (user User) GetEntityType() EntityType {
+	return EntityTypeUser
+}
+
+func (user User) GetEmail() string {
+	return user.Email
+}
+
+func (user User) GetRole() string {
+	return user.Role
+}
+
+func (brand Brand) GetID() string {
+	return brand.Id
+}
+
+func (brand Brand) GetEntityType() EntityType {
+	return EntityTypeBrand
+}
+
+func (brand Brand) GetEmail() string {
+	return brand.Email
+}
+
+func (brand Brand) GetRole() string {
+	return "brand"
 }
 
 // Implement this ATLAST To modularise

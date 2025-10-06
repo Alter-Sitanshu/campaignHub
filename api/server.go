@@ -25,6 +25,14 @@ type Config struct {
 	TokenCfg TokenConfig
 	Addr     string
 	MailCfg  MailConfig
+	RedisCfg RedisConfig
+}
+
+type RedisConfig struct {
+	Addr     string //localhost:6379
+	Protocol int    // default: 3 RESPv3
+	DB       int    // default: 0 In-Memory Database
+	Password string // default: ""
 }
 
 type MailConfig struct {
@@ -115,6 +123,16 @@ func NewApplication(store *db.Store, cfg *Config, PASETO, JWT auth.TokenMaker,
 		campaigns.PATCH("/:campaign_id", app.UpdateCampaign)
 	}
 
+	applications := router.Group("/applications", app.AuthMiddleware())
+	{
+		applications.GET(":application_id", app.GetApplication)
+		applications.GET("/campaigns/:campaign_id", app.GetCampaignApplications)
+		applications.GET("/my-applications", app.GetCreatorApplications)        // query: offset, limit
+		applications.PATCH("/status/:application_id", app.SetApplicationStatus) // query: status
+		applications.DELETE("/delete/:application_id", app.DeleteApplication)
+		applications.POST("", app.CreateApplication)
+	}
+
 	// tickets routes
 	tickets := router.Group("/tickets", app.AuthMiddleware())
 	{
@@ -128,7 +146,8 @@ func NewApplication(store *db.Store, cfg *Config, PASETO, JWT auth.TokenMaker,
 	// submissions routes
 	submission := router.Group("/submissions", app.AuthMiddleware())
 	{
-		submission.GET("", app.FilterSubmissions) // query: creator_id, campaign_id, time
+		submission.GET("", app.FilterSubmissions)               // query: creator_id, campaign_id, time
+		submission.GET("/my-submissions", app.GetMySubmissions) // query: time
 		submission.GET("/:sub_id", app.GetSubmission)
 		submission.POST("", app.CreateSubmission)
 		submission.DELETE("/:sub_id", app.DeleteSubmission)
