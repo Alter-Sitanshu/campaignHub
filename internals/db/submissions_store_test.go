@@ -37,11 +37,18 @@ func SeedSubmissions(ctx context.Context, num int) []string {
 	for i < num {
 		id := fmt.Sprintf("001%d", i)
 		query := `
-			INSERT INTO submissions (id, creator_id, campaign_id, url, status)
-			VALUES ($1, $2, $3, $4, $5)
+			INSERT INTO submissions 
+			(
+				id, creator_id, campaign_id, url, status, video_title, video_platform,
+				platform_video_id, thumbnail_url, views, like_count, video_status, earnings,
+				sync_frequency
+			)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 		`
 		args := []any{
 			id, "0001", "0100", "mock_url", DraftStatus,
+			"Test_Title", "youtube", "testvid001", "example.com", 1000, 100,
+			"available", 0.0, 5,
 		}
 		_, err := tx.ExecContext(ctx, query, args...)
 		if err != nil {

@@ -1,4 +1,4 @@
-CREATE TABLE appl_status(
+CREATE TABLE IF NOT EXISTS appl_status(
     id INT PRIMARY KEY,
     name VARCHAR(10) NOT NULL
 );
