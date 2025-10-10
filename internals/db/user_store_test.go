@@ -268,13 +268,16 @@ func destroyLinks(ctx context.Context, uid string, links []Links) {
 
 func TestAddLink(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
+
 	// make a mock creator
 	uid := generateCreator(ctx, "0001")
-	defer destroyCreator(ctx, uid)
 
 	links := seedLinks(10)
-	defer destroyLinks(ctx, uid, links)
+	defer func() {
+		destroyLinks(ctx, uid, links)
+		destroyCreator(ctx, uid)
+		cancel()
+	}()
 	t.Run("adding valid links", func(t *testing.T) {
 		err := MockLinkStore.AddLinks(ctx, uid, links)
 		if err != nil {
@@ -285,13 +288,15 @@ func TestAddLink(t *testing.T) {
 
 func TestDeleteLinks(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
 
 	uid := generateCreator(ctx, "0001")
-	defer destroyCreator(ctx, uid)
 
 	links := seedLinks(1)
-	defer destroyLinks(ctx, uid, links)
+	defer func() {
+		destroyLinks(ctx, uid, links)
+		destroyCreator(ctx, uid)
+		cancel()
+	}()
 
 	t.Run("blank input for uid and platform", func(t *testing.T) {
 		err := MockLinkStore.DeleteLinks(ctx, "", "")
@@ -347,12 +352,14 @@ func TestVerifyUser(t *testing.T) {
 
 func TestUpdateUserPassword(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
 
 	// creating a dummy brand
 	uid := "dummy_user_01"
 	generateCreator(ctx, uid)
-	defer destroyCreator(ctx, uid)
+	defer func() {
+		destroyCreator(ctx, uid)
+		cancel()
+	}()
 	t.Run("OK", func(t *testing.T) {
 		new_pass := "random_password"
 		err := MockUserStore.ChangePassword(ctx, uid, new_pass)

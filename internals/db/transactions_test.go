@@ -41,22 +41,24 @@ func destroyAllTransactions() {
 
 func TestPayout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
 	const amount float64 = 1000.0
 	// create mock creator
 	uid := "user1"
 	generateCreator(ctx, uid)
-	defer destroyCreator(ctx, uid)
 
 	// create a mock brand
 	bid := uuid.New().String()
 	generateBrand(bid)
-	defer destroyBrand(bid)
 
 	// Create their accounts
 	user_acc := generateAccounts(ctx, uid, "user")
 	brand_acc := generateAccounts(ctx, bid, "brand")
-	defer destroyAccounts(ctx, user_acc.Id, brand_acc.Id)
+	defer func() {
+		destroyAccounts(ctx, user_acc.Id, brand_acc.Id)
+		destroyBrand(bid)
+		destroyCreator(ctx, uid)
+		cancel()
+	}()
 
 	// track the updated balances
 	user_last_amount := user_acc.Amount
@@ -178,22 +180,25 @@ func TestPayout(t *testing.T) {
 
 func TestConcurrentTx(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
+
 	const amount float64 = 1000.0
 	// create mock creator
 	uid := uuid.New().String()
 	generateCreator(ctx, uid)
-	defer destroyCreator(ctx, uid)
 
 	// create a mock brand
 	bid := uuid.New().String()
 	generateBrand(bid)
-	defer destroyBrand(bid)
 
 	// Create their accounts
 	user_acc := generateAccounts(ctx, uid, "user")
 	brand_acc := generateAccounts(ctx, bid, "brand")
-	defer destroyAccounts(ctx, user_acc.Id, brand_acc.Id)
+	defer func() {
+		destroyAccounts(ctx, user_acc.Id, brand_acc.Id)
+		destroyBrand(bid)
+		destroyCreator(ctx, uid)
+		cancel()
+	}()
 
 	// track the updated balances
 	user_last_amount := user_acc.Amount
@@ -280,17 +285,19 @@ func TestConcurrentTx(t *testing.T) {
 
 func TestDeposit(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
 	const amount float64 = 1000.0
 	// create mock creator
 	uid := uuid.New().String()
 	generateCreator(ctx, uid)
-	defer destroyCreator(ctx, uid)
 
 	// Create their accounts
 	user_acc := generateAccounts(ctx, uid, "user")
 	prevAmt := user_acc.Amount
-	defer destroyAccounts(ctx, user_acc.Id)
+	defer func() {
+		destroyAccounts(ctx, user_acc.Id)
+		destroyCreator(ctx, uid)
+		cancel()
+	}()
 	t.Run("mock deposit", func(t *testing.T) {
 		defer destroyAllTransactions()
 		invoice := Transaction{
@@ -318,18 +325,22 @@ func TestDeposit(t *testing.T) {
 
 func TestWithdraw(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
+
 	const amount float64 = 1000.0
 	// create mock creator
 	uid := uuid.New().String()
 	generateCreator(ctx, uid)
-	defer destroyCreator(ctx, uid)
 
 	// Create their accounts
 	user_acc := generateAccounts(ctx, uid, "user")
 	prevAmt := user_acc.Amount
-	defer destroyAccounts(ctx, user_acc.Id)
-	defer destroyAllTransactions()
+
+	defer func() {
+		destroyAllTransactions()
+		destroyAccounts(ctx, user_acc.Id)
+		destroyCreator(ctx, uid)
+		cancel()
+	}()
 	t.Run("mock withdraw", func(t *testing.T) {
 		invoice := Transaction{
 			Id:     uuid.New().String(),
@@ -371,15 +382,18 @@ func TestWithdraw(t *testing.T) {
 
 func TestDisableAccount(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
+
 	// create mock creator
 	uid := uuid.New().String()
 	generateCreator(ctx, uid)
-	defer destroyCreator(ctx, uid)
 
 	// Create their accounts
 	user_acc := generateAccounts(ctx, uid, "user")
-	defer destroyAccounts(ctx, user_acc.Id)
+	defer func() {
+		destroyAccounts(ctx, user_acc.Id)
+		destroyCreator(ctx, uid)
+		cancel()
+	}()
 	t.Run("disabling an account", func(t *testing.T) {
 		err := MockTsStore.DisableAccount(ctx, user_acc.Id)
 		if err != nil {
@@ -390,14 +404,18 @@ func TestDisableAccount(t *testing.T) {
 
 func TestGetAllAccounts(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
+
 	// create mock creator
 	uid := uuid.New().String()
 	generateCreator(ctx, uid)
-	defer destroyCreator(ctx, uid)
+
 	// Create their accounts
 	user_acc := generateAccounts(ctx, uid, "user")
-	defer destroyAccounts(ctx, user_acc.Id)
+	defer func() {
+		destroyAccounts(ctx, user_acc.Id)
+		destroyCreator(ctx, uid)
+		cancel()
+	}()
 	t.Run("fetching all accounts", func(t *testing.T) {
 		log.Printf("fetching accounts\n")
 		accounts, err := MockTsStore.GetAllAccounts(ctx, 0, 10)

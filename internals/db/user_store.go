@@ -131,11 +131,11 @@ func (u *UserStore) GetUserById(ctx context.Context, id string) (*User, error) {
 	// filter by id
 	// join the roles table to get the name of the role
 	query := `
-		SELECT u.id, u.first_name, u.last_name, u.email, u.password, u.gender, a.amount
-		u.age, r.name, u.is_verified, u.created_at
+		SELECT u.id, u.first_name, u.last_name, u.email, u.password, u.gender, 
+		COALESCE(a.amount, 0), u.age, r.name, u.is_verified, u.created_at
 		FROM users u
 		JOIN roles r ON r.id = u.role
-		JOIN accounts a ON a.holder_id = u.id
+		LEFT  JOIN accounts a ON a.holder_id = u.id
 		WHERE u.id = $1
 	`
 	var user User
@@ -170,10 +170,10 @@ func (u *UserStore) GetUserByEmail(ctx context.Context, email string) (*User, er
 	// filter by email and join the roles table to get the role name
 	query := `
 		SELECT u.id, u.first_name, u.last_name, u.email,
-		u.password, u.gender, a.amount, u.age, r.name, u.is_verified, u.created_at
+		u.password, u.gender, COALESCE(a.amount, 0), u.age, r.name, u.is_verified, u.created_at
 		FROM users u
 		JOIN roles r ON r.id = u.role
-		JOIN accounts a ON a.holder_id = u.id
+		LEFT JOIN accounts a ON a.holder_id = u.id
 		WHERE u.email = $1
 	`
 	// Get the user and scan it into the object

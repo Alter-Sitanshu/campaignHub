@@ -15,16 +15,24 @@ type SubmissionStore struct {
 }
 
 type Submission struct {
-	Id            string  `json:"id"`
-	CreatorId     string  `json:"creator_id"`
-	CampaignId    string  `json:"campaign_id"`
-	Url           string  `json:"url"`
-	Status        int     `json:"status"`
+	Id         string `json:"id"`
+	CreatorId  string `json:"creator_id"`
+	CampaignId string `json:"campaign_id"`
+	Url        string `json:"url"`
+	Status     int    `json:"status"`
+	// Meta data for the Video submission
+	VideoTitle    string  `json:"video_title"`
+	VideoPlatform string  `json:"video_platform"`
+	VideoID       string  `json:"platform_video_id"`
+	ThumbnailURL  string  `json:"thumbnail_url"`
 	Views         int     `json:"views"`
-	SyncFrequency int     `json:"sync_frequency,omitempty"`
+	LikeCount     int     `json:"like_count"`
+	VideoStatus   string  `json:"video_status"`
 	Earnings      float64 `json:"earnings"`
-	CreatedAt     string  `json:"created_at"`
 	LastSyncedAt  string  `json:"last_synced_at"`
+	// -------- x ----------
+	SyncFrequency int    `json:"sync_frequency,omitempty"`
+	CreatedAt     string `json:"created_at"`
 }
 
 type UpdateSubmission struct {
@@ -43,11 +51,19 @@ type Filter struct {
 
 func (s *SubmissionStore) MakeSubmission(ctx context.Context, sub Submission) error {
 	query := `
-		INSERT INTO submissions (id, creator_id, campaign_id, url, status)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO submissions
+		(
+			id, creator_id, campaign_id, url, status, video_title, video_platform,
+			platform_video_id, thumbnail_url, views, like_count, video_status, earnings,
+			sync_frequency
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 	`
 	_, err := s.db.ExecContext(ctx, query,
-		sub.Id, sub.CreatorId, sub.CampaignId, sub.Url, sub.Status)
+		sub.Id, sub.CreatorId, sub.CampaignId, sub.Url, sub.Status,
+		sub.VideoTitle, sub.VideoPlatform, sub.VideoID, sub.ThumbnailURL,
+		sub.Views, sub.LikeCount, sub.VideoStatus, sub.Earnings, sub.SyncFrequency,
+	)
 	if err != nil {
 		// internal server error
 		log.Printf("error making submission: %v\n", err.Error())
@@ -81,8 +97,9 @@ func (s *SubmissionStore) DeleteSubmission(ctx context.Context, id string) error
 
 func (s *SubmissionStore) FindSubmissionById(ctx context.Context, id string) (*Submission, error) {
 	query := `
-		SELECT id, creator_id, campaign_id, url, status, views,
-		earnings, created_at, last_synced_at
+		SELECT id, creator_id, campaign_id, url, status, video_title, video_platform,
+			platform_video_id, thumbnail_url, views, like_count, video_status, earnings,
+			sync_frequency, created_at, last_synced_at
 		FROM submissions
 		WHERE id = $1
 	`
@@ -93,8 +110,10 @@ func (s *SubmissionStore) FindSubmissionById(ctx context.Context, id string) (*S
 		&sub.CampaignId,
 		&sub.Url,
 		&sub.Status,
-		&sub.Views,
+		&sub.VideoTitle, &sub.VideoPlatform, &sub.VideoID,
+		&sub.ThumbnailURL, &sub.Views, &sub.LikeCount, &sub.VideoStatus,
 		&sub.Earnings,
+		&sub.SyncFrequency,
 		&sub.CreatedAt,
 		&sub.LastSyncedAt,
 	)
@@ -111,12 +130,13 @@ func (s *SubmissionStore) FindSubmissionById(ctx context.Context, id string) (*S
 // This function filters submissions using filter struct
 // It accepts the Time in format "MM-YYYY"
 func (s *SubmissionStore) FindSubmissionsByFilters(
-	ctx context.Context, filter Filter) ([]Submission, error,
+	ctx context.Context, filter Filter, limit, offset int) ([]Submission, error,
 ) {
 	var output []Submission
 	query := `
-		SELECT id, creator_id, campaign_id, url, status, views, earnings, created_at,
-		last_synced_at
+		SELECT id, creator_id, campaign_id, url, status, video_title, video_platform,
+			platform_video_id, thumbnail_url, views, like_count, video_status, earnings,
+			sync_frequency, created_at, last_synced_at
 		FROM submissions
 		WHERE 
 	`
@@ -146,7 +166,7 @@ func (s *SubmissionStore) FindSubmissionsByFilters(
 		month := int(t.Month())
 		year := t.Year()
 		conditions = append(conditions,
-			fmt.Sprintf("EXTRACT(MONTH FROM created_at) > $%d AND EXTRACT(YEAR FROM created_at) > $%d", i, i+1))
+			fmt.Sprintf("EXTRACT(MONTH FROM created_at) >= $%d AND EXTRACT(YEAR FROM created_at) >= $%d", i, i+1))
 		args = append(args, month, year)
 		i += 2
 	}
@@ -170,8 +190,10 @@ func (s *SubmissionStore) FindSubmissionsByFilters(
 			&sub.CampaignId,
 			&sub.Url,
 			&sub.Status,
-			&sub.Views,
+			&sub.VideoTitle, &sub.VideoPlatform, &sub.VideoID,
+			&sub.ThumbnailURL, &sub.Views, &sub.LikeCount, &sub.VideoStatus,
 			&sub.Earnings,
+			&sub.SyncFrequency,
 			&sub.CreatedAt,
 			&sub.LastSyncedAt,
 		)
@@ -188,11 +210,12 @@ func (s *SubmissionStore) FindSubmissionsByFilters(
 }
 
 func (s *SubmissionStore) FindMySubmissions(ctx context.Context, time_ string,
-	subids []string,
+	subids []string, limit, offset int,
 ) ([]Submission, error) {
 	query := `
-		SELECT id, creator_id, campaign_id, url, status, views, earnings, created_at,
-		last_synced_at
+		SELECT id, creator_id, campaign_id, url, status, video_title, video_platform,
+			platform_video_id, thumbnail_url, views, like_count, video_status, earnings,
+			sync_frequency, created_at, last_synced_at
 		FROM submissions
 		WHERE
 	`
@@ -212,7 +235,7 @@ func (s *SubmissionStore) FindMySubmissions(ctx context.Context, time_ string,
 		month := int(t.Month())
 		year := t.Year()
 		conditions = append(conditions,
-			fmt.Sprintf("EXTRACT(MONTH FROM created_at) > $%d AND EXTRACT(YEAR FROM created_at) > $%d", i, i+1))
+			fmt.Sprintf("EXTRACT(MONTH FROM created_at) >= $%d AND EXTRACT(YEAR FROM created_at) >= $%d", i, i+1))
 		args = append(args, month, year)
 		i += 2
 	}
@@ -239,8 +262,10 @@ func (s *SubmissionStore) FindMySubmissions(ctx context.Context, time_ string,
 			&sub.CampaignId,
 			&sub.Url,
 			&sub.Status,
-			&sub.Views,
+			&sub.VideoTitle, &sub.VideoPlatform, &sub.VideoID,
+			&sub.ThumbnailURL, &sub.Views, &sub.LikeCount, &sub.VideoStatus,
 			&sub.Earnings,
+			&sub.SyncFrequency,
 			&sub.CreatedAt,
 			&sub.LastSyncedAt,
 		)

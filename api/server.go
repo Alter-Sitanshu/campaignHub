@@ -7,6 +7,7 @@ import (
 	"github.com/Alter-Sitanshu/campaignHub/internals/cache"
 	"github.com/Alter-Sitanshu/campaignHub/internals/db"
 	"github.com/Alter-Sitanshu/campaignHub/internals/mailer"
+	"github.com/Alter-Sitanshu/campaignHub/internals/platform"
 	"github.com/gin-gonic/gin"
 )
 
@@ -18,16 +19,23 @@ type Application struct {
 	mailer      *mailer.MailService
 	cache       *cache.Service
 	cfg         Config
+	factory     *platform.Factory
 }
 
 type Config struct {
-	ISS      string
-	AUD      string
-	DbCfg    DBConfig
-	TokenCfg TokenConfig
-	Addr     string
-	MailCfg  MailConfig
-	RedisCfg RedisConfig
+	ISS        string
+	AUD        string
+	DbCfg      DBConfig
+	TokenCfg   TokenConfig
+	Addr       string
+	MailCfg    MailConfig
+	RedisCfg   RedisConfig
+	FactoryCfg FactoryConfig
+}
+
+type FactoryConfig struct {
+	YouTubeAPIKey string
+	MetaToken     string
 }
 
 type RedisConfig struct {
@@ -63,14 +71,15 @@ type TokenConfig struct {
 }
 
 const (
-	defaultUserLVL   = "LVL1"
-	SessionTimeout   = time.Hour * 24 * 7 // Timeout of 7 Days
-	CookieExp        = 3600 * 24 * 7      // 7 Days
-	ResetTokenExpiry = time.Minute * 15   // 15 Minutes
+	defaultUserLVL       = "LVL1"
+	SessionTimeout       = time.Hour * 24 * 7 // Timeout of 7 Days
+	CookieExp            = 3600 * 24 * 7      // 7 Days
+	ResetTokenExpiry     = time.Minute * 15   // 15 Minutes
+	DefaultSyncFrequency = 5                  // in minutes
 )
 
 func NewApplication(store *db.Store, cfg *Config, PASETO, JWT auth.TokenMaker,
-	mailer *mailer.MailService, cacheService *cache.Service,
+	mailer *mailer.MailService, cacheService *cache.Service, factory *platform.Factory,
 ) *Application {
 	router := gin.Default()
 	app := Application{
@@ -81,6 +90,7 @@ func NewApplication(store *db.Store, cfg *Config, PASETO, JWT auth.TokenMaker,
 		pasetoMaker: PASETO,
 		mailer:      mailer,
 		cache:       cacheService,
+		factory:     factory,
 	}
 
 	// Public routes

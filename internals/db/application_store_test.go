@@ -40,22 +40,25 @@ func SeedApplications(ctx context.Context, campIDs []string, uid string) []strin
 
 func TestCreateApplications(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
+
 	uid := "dummy_user_01"
 	bid := "dummy_brand_01"
 	appl_id := "dummy_application_01"
 
 	// create a dummy creator
 	generateCreator(ctx, uid)
-	defer destroyCreator(ctx, uid)
 
 	// create a dummy brand
 	generateBrand(bid)
-	defer destroyBrand(bid)
 
 	// launch a dummy campaign
 	camp := SeedCampaign(ctx, bid, 1)
-	defer destroyCampaign(ctx, camp)
+	defer func() {
+		destroyCampaign(ctx, camp)
+		destroyBrand(bid)
+		destroyCreator(ctx, uid)
+		cancel()
+	}()
 
 	t.Run("OK", func(t *testing.T) {
 		appl := CampaignApplication{
@@ -104,7 +107,7 @@ func TestCreateApplications(t *testing.T) {
 
 func TestGetCreatorApplications(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
+
 	uid := "dummy_user_01"
 	bid := "dummy_brand_01"
 
@@ -122,6 +125,7 @@ func TestGetCreatorApplications(t *testing.T) {
 		destroyCampaign(ctx, campIDs)
 		destroyCreator(ctx, uid)
 		destroyBrand(bid)
+		cancel()
 	}()
 	t.Run("OK", func(t *testing.T) {
 		appls, err := MockApplicationStore.GetCreatorApplications(ctx, uid, 0, 10)
@@ -158,7 +162,7 @@ func TestGetCreatorApplications(t *testing.T) {
 
 func TestGetCampaignApplications(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
+
 	uid := "dummy_user_01"
 	bid := "dummy_brand_01"
 
@@ -176,6 +180,7 @@ func TestGetCampaignApplications(t *testing.T) {
 		destroyCampaign(ctx, campIDs)
 		destroyCreator(ctx, uid)
 		destroyBrand(bid)
+		cancel()
 	}()
 	t.Run("OK", func(t *testing.T) {
 		appls, err := MockApplicationStore.GetCampaignApplications(ctx, campIDs[0], 0, 10)

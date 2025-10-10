@@ -64,10 +64,10 @@ func destroyCampaign(ctx context.Context, ids []string) {
 
 func TestLaunchCampaign(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
+
 	bid := uuid.New().String()
 	generateBrand(bid)
-	defer destroyBrand(bid)
+
 	temp_camp := Campaign{
 		Id:       "0001",
 		BrandId:  bid,
@@ -79,21 +79,25 @@ func TestLaunchCampaign(t *testing.T) {
 		DocLink:  "mock_link",
 		Status:   0,
 	}
+	defer func() {
+		MockCampaignStore.DeleteCampaign(ctx, temp_camp.Id)
+		destroyBrand(bid)
+		cancel()
+	}()
 	t.Run("creating a new campaign", func(t *testing.T) {
 		err := MockCampaignStore.LaunchCampaign(ctx, &temp_camp)
 		if err != nil {
 			t.Fail()
 		}
 	})
-	MockCampaignStore.DeleteCampaign(ctx, temp_camp.Id)
 }
 
 func TestGetCampaign(t *testing.T) {
 	bid := uuid.New().String()
 	generateBrand(bid)
-	defer destroyBrand(bid)
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
+
 	temp_camp := Campaign{
 		Id:       "0001",
 		BrandId:  bid,
@@ -106,6 +110,11 @@ func TestGetCampaign(t *testing.T) {
 		Status:   0,
 	}
 	MockCampaignStore.LaunchCampaign(ctx, &temp_camp)
+	defer func() {
+		MockCampaignStore.DeleteCampaign(ctx, temp_camp.Id)
+		destroyBrand(bid)
+		cancel()
+	}()
 	t.Run("fetching valid campaign", func(t *testing.T) {
 		_, err := MockCampaignStore.GetCampaign(ctx, temp_camp.Id)
 		if err != nil {
@@ -119,15 +128,17 @@ func TestGetCampaign(t *testing.T) {
 			t.Fail()
 		}
 	})
-	MockCampaignStore.DeleteCampaign(ctx, temp_camp.Id)
 }
 
 func TestGetRecentCampaigns(t *testing.T) {
 	bid := uuid.New().String()
 	generateBrand(bid)
-	defer destroyBrand(bid)
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
+	defer func() {
+		destroyBrand(bid)
+		cancel()
+	}()
 	GenIds := SeedCampaign(ctx, bid, 10)
 	got, err := MockCampaignStore.GetRecentCampaigns(ctx, 0, 10)
 	if err != nil {
@@ -151,9 +162,8 @@ func TestGetRecentCampaigns(t *testing.T) {
 func TestEndCampaign(t *testing.T) {
 	bid := uuid.New().String()
 	generateBrand(bid)
-	defer destroyBrand(bid)
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
 	temp_camp := Campaign{
 		Id:       "0001",
 		BrandId:  bid,
@@ -165,6 +175,11 @@ func TestEndCampaign(t *testing.T) {
 		DocLink:  "mock_link",
 		Status:   0,
 	}
+	defer func() {
+		MockCampaignStore.DeleteCampaign(ctx, temp_camp.Id)
+		destroyBrand(bid)
+		cancel()
+	}()
 	MockCampaignStore.LaunchCampaign(ctx, &temp_camp)
 	t.Run("ending a campaign", func(t *testing.T) {
 		err := MockCampaignStore.EndCampaign(ctx, temp_camp.Id)
@@ -172,15 +187,14 @@ func TestEndCampaign(t *testing.T) {
 			t.Fail()
 		}
 	})
-	MockCampaignStore.DeleteCampaign(ctx, temp_camp.Id)
+
 }
 
 func TestUpdateCampaign(t *testing.T) {
 	bid := uuid.New().String()
 	generateBrand(bid)
-	defer destroyBrand(bid)
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
 	temp_camp := Campaign{
 		Id:       "0001",
 		BrandId:  bid,
@@ -192,6 +206,11 @@ func TestUpdateCampaign(t *testing.T) {
 		DocLink:  "mock_link",
 		Status:   0,
 	}
+	defer func() {
+		MockCampaignStore.DeleteCampaign(ctx, temp_camp.Id)
+		destroyBrand(bid)
+		cancel()
+	}()
 	MockCampaignStore.LaunchCampaign(ctx, &temp_camp)
 	NewTitle := "new_title"
 	NewBudget := 1000.01
@@ -220,16 +239,19 @@ func TestUpdateCampaign(t *testing.T) {
 			log.Printf("got: %v, want: %v", updatedCampaign.DocLink, NewDocLink)
 			t.Fail()
 		}
-		MockCampaignStore.DeleteCampaign(ctx, temp_camp.Id)
+
 	})
 }
 
 func TestGetBrandCampaigns(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
+
 	brandID := uuid.New().String()
 	generateBrand(brandID)
-	defer destroyBrand(brandID)
+	defer func() {
+		destroyBrand(brandID)
+		cancel()
+	}()
 	t.Run("fetching brand campaigns", func(t *testing.T) {
 		campaign := &Campaign{
 			Id:        uuid.New().String(),
@@ -260,16 +282,20 @@ func TestGetBrandCampaigns(t *testing.T) {
 
 func TestGetUserCampaigns(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
+
 	// create the user
 	userID := uuid.New().String()
 	creator := generateCreator(ctx, userID)
-	defer destroyCreator(ctx, creator)
+
 	// create the brand
 	brandID := uuid.New().String()
 	generateBrand(brandID)
-	defer destroyBrand(brandID)
 	campaignID := uuid.New().String()
+	defer func() {
+		destroyBrand(brandID)
+		destroyCreator(ctx, creator)
+		cancel()
+	}()
 	t.Run("fetching user campaigns", func(t *testing.T) {
 		// Insert campaign
 		campaign := &Campaign{

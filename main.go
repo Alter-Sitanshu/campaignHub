@@ -10,6 +10,7 @@ import (
 	"github.com/Alter-Sitanshu/campaignHub/internals/cache"
 	"github.com/Alter-Sitanshu/campaignHub/internals/db"
 	"github.com/Alter-Sitanshu/campaignHub/internals/mailer"
+	"github.com/Alter-Sitanshu/campaignHub/internals/platform"
 	"github.com/joho/godotenv"
 )
 
@@ -51,6 +52,10 @@ func main() {
 			Password: env.GetString("REDIS_PASSWORD", ""),
 			DB:       env.GetInt("REDIS_DB", 0),
 		},
+		FactoryCfg: api.FactoryConfig{
+			YouTubeAPIKey: env.GetString("YTAPIKEY", ""),
+			MetaToken:     env.GetString("METAKEY", ""),
+		},
 	}
 
 	// Making DB connection
@@ -90,6 +95,14 @@ func main() {
 	if err != nil {
 		log.Fatalf("error intialising the cache layer: %v\n", err.Error())
 	}
+	// initialising the Media Factory
+	factory, err := platform.NewFactory(
+		config.FactoryCfg.YouTubeAPIKey,
+		config.FactoryCfg.MetaToken,
+	)
+	if err != nil {
+		log.Fatalf("error making media factory: %v\n", err.Error())
+	}
 
 	// attaching the services to the application
 	appStore := db.NewStore(db_)
@@ -102,6 +115,7 @@ func main() {
 		paseto_Maker,
 		mailer,
 		appCache,
+		factory,
 	)
 	app.Run()
 }

@@ -64,17 +64,22 @@ func destroySubmissions(ctx context.Context, ids []string) {
 
 func TestMakeSubmission(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
+
 	// create mock creator
 	creator := generateCreator(ctx, "0001")
-	defer destroyCreator(ctx, creator)
+
 	// mock brand
 	bid := uuid.New().String()
 	generateBrand(bid)
-	defer destroyBrand(bid)
+
 	// mock campaign
 	camp := SeedCampaign(ctx, bid, 1)
-	defer destroyCampaign(ctx, camp)
+	defer func() {
+		destroyCampaign(ctx, camp)
+		destroyBrand(bid)
+		destroyCreator(ctx, creator)
+		cancel()
+	}()
 	t.Run("mock submission", func(t *testing.T) {
 		sub := Submission{
 			Id:         "0001",
@@ -97,17 +102,16 @@ func TestMakeSubmission(t *testing.T) {
 
 func TestFindSubmission(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
+
 	// create mock creator
 	creator := generateCreator(ctx, "0001")
-	defer destroyCreator(ctx, creator)
+
 	// mock brand
 	bid := uuid.New().String()
 	generateBrand(bid)
-	defer destroyBrand(bid)
+
 	// mock campaign
 	camp := SeedCampaign(ctx, bid, 1)
-	defer destroyCampaign(ctx, camp)
 
 	// mock submission
 	sub := Submission{
@@ -120,7 +124,13 @@ func TestFindSubmission(t *testing.T) {
 		Earnings:   400.0,
 	}
 	MockSubStore.MakeSubmission(ctx, sub)
-	defer MockSubStore.DeleteSubmission(ctx, sub.Id)
+	defer func() {
+		MockSubStore.DeleteSubmission(ctx, sub.Id)
+		destroyCampaign(ctx, camp)
+		destroyBrand(bid)
+		destroyCreator(ctx, creator)
+		cancel()
+	}()
 	t.Run("finding valid submission", func(t *testing.T) {
 		_, err := MockSubStore.FindSubmissionById(ctx, sub.Id)
 		if err != nil {
@@ -141,22 +151,27 @@ func TestFindSubmission(t *testing.T) {
 
 func TestFilteringSubmissions(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
+
 	// create mock creator
 	creator := generateCreator(ctx, "0001")
-	defer destroyCreator(ctx, creator)
+
 	// mock brand
 	bid := uuid.New().String()
 	generateBrand(bid)
-	defer destroyBrand(bid)
+
 	// mock campaign
 	camp := SeedCampaign(ctx, bid, 1)
-	defer destroyCampaign(ctx, camp)
 
 	// mock submissions
 	ids := SeedSubmissions(ctx, 10)
 	log.Printf("%d", len(ids))
-	defer destroySubmissions(ctx, ids)
+	defer func() {
+		destroySubmissions(ctx, ids)
+		destroyCampaign(ctx, camp)
+		destroyBrand(bid)
+		destroyCreator(ctx, creator)
+		cancel()
+	}()
 
 	t.Run("filtering submisisons", func(t *testing.T) {
 		time_filter := fmt.Sprintf("%02d-%d", int(time.Now().UTC().Month()), time.Now().UTC().Year())
@@ -164,6 +179,8 @@ func TestFilteringSubmissions(t *testing.T) {
 			Filter{
 				Time: &time_filter,
 			},
+			10, // limit
+			0,  //offset
 		)
 
 		if err != nil {
@@ -178,21 +195,26 @@ func TestFilteringSubmissions(t *testing.T) {
 
 func TestUpdateSubmissions(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
+
 	// create mock creator
 	creator := generateCreator(ctx, "0001")
-	defer destroyCreator(ctx, creator)
+
 	// mock brand
 	bid := uuid.New().String()
 	generateBrand(bid)
-	defer destroyBrand(bid)
+
 	// mock campaign
 	camp := SeedCampaign(ctx, bid, 1)
-	defer destroyCampaign(ctx, camp)
 
 	// mock submissions
 	ids := SeedSubmissions(ctx, 1)
-	defer destroySubmissions(ctx, ids)
+	defer func() {
+		destroySubmissions(ctx, ids)
+		destroyCampaign(ctx, camp)
+		destroyBrand(bid)
+		destroyCreator(ctx, creator)
+		cancel()
+	}()
 	new_stat := 3
 	new_url := "new_url.com"
 	new_views := 1000
@@ -228,17 +250,16 @@ func TestUpdateSubmissions(t *testing.T) {
 
 func TestDeleteSub(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
+
 	// create mock creator
 	creator := generateCreator(ctx, "0001")
-	defer destroyCreator(ctx, creator)
+
 	// mock brand
 	bid := uuid.New().String()
 	generateBrand(bid)
-	defer destroyBrand(bid)
+
 	// mock campaign
 	camp := SeedCampaign(ctx, bid, 1)
-	defer destroyCampaign(ctx, camp)
 
 	// mock submission
 	sub := Submission{
@@ -251,7 +272,14 @@ func TestDeleteSub(t *testing.T) {
 		Earnings:   400.0,
 	}
 	MockSubStore.MakeSubmission(ctx, sub)
-	defer MockSubStore.DeleteSubmission(ctx, sub.Id)
+
+	defer func() {
+		MockSubStore.DeleteSubmission(ctx, sub.Id)
+		destroyCampaign(ctx, camp)
+		destroyBrand(bid)
+		destroyCreator(ctx, creator)
+		cancel()
+	}()
 	t.Run("deleting invalid submission", func(t *testing.T) {
 		err := MockSubStore.DeleteSubmission(ctx, "NA") // not possible
 		if err == nil {

@@ -4,7 +4,6 @@ import "fmt"
 
 // Key patterns for different data types
 const (
-	keyViewCount           = "views:%s"
 	keySubmissionEarnings  = "earnings:%s"
 	keyCampaignBudget      = "budget:%s"
 	keyCampaign            = "campaign:%s"
@@ -16,11 +15,12 @@ const (
 	keyUserProfile         = "user:%s"
 	keySubmissionStatus    = "status:%s"
 	keyPendingApplications = "applications:pending:%s"
+	keyVideoMetaData       = "video:metadata:%s"
 )
 
 // Key builders
-func ViewCountKey(submissionID string) string {
-	return fmt.Sprintf(keyViewCount, submissionID)
+func VideoMetadataKey(submissionID string) string {
+	return fmt.Sprintf(keyVideoMetaData, submissionID)
 }
 
 func SubmissionEarningsKey(submissionID string) string {

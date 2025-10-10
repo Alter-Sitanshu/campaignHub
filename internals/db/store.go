@@ -129,8 +129,8 @@ type Store struct {
 		MakeSubmission(context.Context, Submission) error
 		DeleteSubmission(context.Context, string) error
 		FindSubmissionById(context.Context, string) (*Submission, error)
-		FindSubmissionsByFilters(context.Context, Filter) ([]Submission, error)
-		FindMySubmissions(ctx context.Context, time_ string, subids []string) ([]Submission, error)
+		FindSubmissionsByFilters(context.Context, Filter, int, int) ([]Submission, error)
+		FindMySubmissions(ctx context.Context, time_ string, subids []string, limit, offset int) ([]Submission, error)
 		UpdateSubmission(context.Context, UpdateSubmission) error
 		ChangeViews(ctx context.Context, delta int, id string) error
 	}

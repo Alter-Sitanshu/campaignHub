@@ -133,12 +133,14 @@ func TestUpdateBrand(t *testing.T) {
 
 func TestUpdateBrandPassword(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
 
 	// creating a dummy brand
 	bid := "dummy_brand_01"
 	generateBrand(bid)
-	defer destroyBrand(bid)
+	defer func() {
+		destroyBrand(bid)
+		cancel()
+	}()
 	t.Run("OK", func(t *testing.T) {
 		new_pass := "random_password"
 		err := MockBrandStore.ChangePassword(ctx, bid, new_pass)

@@ -3,57 +3,7 @@ package cache
 import (
 	"context"
 	"time"
-
-	"github.com/redis/go-redis/v9"
 )
-
-// ==================================
-// View Count Operations
-// ==================================
-
-func (s *Service) SetViewCount(ctx context.Context, submissionID string, count int) error {
-	key := ViewCountKey(submissionID)
-	return s.Set(ctx, key, count, TTLViewCount)
-}
-
-func (s *Service) GetViewCount(ctx context.Context, submissionID string) (int, error) {
-	key := ViewCountKey(submissionID)
-	return s.GetInt(ctx, key)
-}
-
-func (s *Service) IncrementViewCount(ctx context.Context, submissionID string, delta int) error {
-	key := ViewCountKey(submissionID)
-	return s.IncrByFloat(ctx, key, float64(delta))
-}
-
-// Batch get multiple view counts
-func (s *Service) GetMultipleViewCounts(ctx context.Context, submissionIDs []string) (map[string]int, error) {
-	if len(submissionIDs) == 0 {
-		return make(map[string]int), nil
-	}
-
-	pipe := s.client.Pipeline()
-	cmds := make(map[string]*redis.StringCmd)
-
-	for _, id := range submissionIDs {
-		key := ViewCountKey(id)
-		cmds[id] = pipe.Get(ctx, key)
-	}
-
-	_, err := pipe.Exec(ctx)
-	if err != nil && err != redis.Nil {
-		return nil, err
-	}
-
-	results := make(map[string]int)
-	for id, cmd := range cmds {
-		if val, err := cmd.Int(); err == nil {
-			results[id] = val
-		}
-	}
-
-	return results, nil
-}
 
 // ==================================
 // Submission Earnings Operations

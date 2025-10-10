@@ -10,12 +10,12 @@ import (
 
 // Default TTLs
 const (
-	TTLViewCount   = 10 * time.Minute
-	TTLEarnings    = 10 * time.Minute
-	TTLCampaign    = 30 * time.Minute
-	TTLUserProfile = 1 * time.Hour
-	TTLBalance     = 5 * time.Minute
-	TTLActiveCamps = 5 * time.Minute
+	TTLEarnings      = 10 * time.Minute
+	TTLCampaign      = 30 * time.Minute
+	TTLUserProfile   = 1 * time.Hour
+	TTLBalance       = 5 * time.Minute
+	TTLActiveCamps   = 5 * time.Minute
+	TTLVideoMetadata = 10 * time.Minute
 )
 
 type Service struct {
