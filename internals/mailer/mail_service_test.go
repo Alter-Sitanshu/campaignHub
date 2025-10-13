@@ -18,7 +18,7 @@ func TestPushMail(t *testing.T) {
 		req := EmailRequest{
 			To:      "test_subject@gmail.com",
 			Subject: "Test_Subject",
-			Body:    InviteBody("test_subject@gmail.com", "example_token"),
+			Body:    InviteBody("test_subject@gmail.com", "users", "example_token"),
 		}
 		err := mailer.PushMail(req)
 		if err != nil {
@@ -36,7 +36,7 @@ func TestPushMail(t *testing.T) {
 		req := EmailRequest{
 			To:      "",
 			Subject: "Test_Subject",
-			Body:    InviteBody("test_subject@gmail.com", "example_token"),
+			Body:    InviteBody("test_subject@gmail.com", "users", "example_token"),
 		}
 		err := mailer.PushMail(req)
 		if err == nil {
