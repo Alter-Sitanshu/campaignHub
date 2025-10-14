@@ -50,74 +50,6 @@
 
 ---
 
-## 🗄️ Database Models
-
-### 🧍 Users
-| Field | Type | Notes |
-|--------|------|-------|
-| id | varchar(36) | Primary key |
-| first_name / last_name | varchar |  |
-| email | citext | unique |
-| password | bytea | hashed |
-| gender | char(1) | M/F/O |
-| age | int |  |
-| role | varchar(5) | user / brand / admin |
-| is_verified | boolean |  |
-| created_at | timestamptz |  |
-
-### 🏢 Brands
-| Field | Type | Notes |
-|--------|------|-------|
-| id | varchar(36) | Primary key |
-| name / email / sector / website / address | text |  |
-| campaigns | int | number of active campaigns |
-| is_verified | boolean |  |
-
-### 🎯 Campaigns
-| Field | Type | Notes |
-|--------|------|-------|
-| id | varchar(36) | Primary key |
-| brand_id | varchar(36) | FK → brands |
-| title | varchar(100) |  |
-| budget | numeric |  |
-| cpm | float | cost per 1000 views |
-| requirements | text | campaign instructions |
-| platform | varchar(20) | youtube / instagram |
-| doc_link | varchar(255) | reference file |
-| status | int | 1: active, 0: draft |
-| created_at | timestamptz |  |
-
-### 🎥 Submissions
-| Field | Type | Notes |
-|--------|------|-------|
-| id | varchar(36) | Primary key |
-| creator_id | varchar(36) | FK → users |
-| campaign_id | varchar(36) | FK → campaigns |
-| url | varchar(255) | submitted video |
-| views / like_count / earnings | numeric | tracked metrics |
-| status | int | 1: approved, 0: pending |
-| created_at | timestamptz |  |
-
-### 💳 Accounts
-| Field | Type | Notes |
-|--------|------|-------|
-| id | varchar(36) | Primary key |
-| holder_id | varchar(36) | FK → users/brands |
-| holder_type | varchar(10) | "brand" or "creator" |
-| amount | numeric | wallet balance |
-| active | boolean |  |
-
-### 📨 Support Tickets
-| Field | Type | Notes |
-|--------|------|-------|
-| id | varchar(36) | Primary key |
-| customer_id | varchar(36) | FK → users/brands |
-| subject / message | text |  |
-| status | int | open / closed |
-| created_at | timestamptz |  |
-
----
-
 ## 🔌 API Endpoints (from `server.go`)
 
 ### 🧭 Auth & Verification
@@ -201,9 +133,9 @@
 
 - **Backend:** Go (Gin Framework)
 - **Database:** PostgreSQL  
-- **Auth:** JWT + Middleware  
-- **Cache:** Redis (planned for real-time updates)  
-- **Email:** SMTP (password reset, admin notifications)  
+- **Auth:** JWT + Paesto + Middleware  
+- **Cache:** Redis (for real-time updates)  
+- **Email:** SMTP (user verification, password reset, admin notifications)  
 - **Hosting:** Docker + Cloud Deployment (planned)
 
 ---
