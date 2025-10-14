@@ -22,7 +22,7 @@ func TestYoutubeAPI(t *testing.T) {
 	t.Run("OK", func(t *testing.T) {
 
 		// Random video URL from the Internet
-		ExampleVideo, err := ParseVideoURL("https://www.youtube.com/watch?v=7FrDEqNnERs")
+		ExampleVideo, err := ParseVideoURL("https://www.youtube.com/watch?v=mXZJQHnKmy0")
 		if err != nil {
 			t.Fail()
 		}
