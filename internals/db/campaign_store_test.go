@@ -41,7 +41,7 @@ func SeedCampaign(ctx context.Context, bid string, num int) []string {
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		`
 		args := []any{
-			id, bid, fmt.Sprintf("title_%d", i), 1000.0, 101.0, "", "youtube", "", 0,
+			id, bid, fmt.Sprintf("title_%d", i), 1000.0, 101.0, "", "youtube", "", DraftStatus,
 		}
 		_, err := tx.ExecContext(ctx, query, args...)
 		if err != nil {
@@ -77,7 +77,7 @@ func TestLaunchCampaign(t *testing.T) {
 		Req:      "mock_requirements",
 		Platform: "youtube",
 		DocLink:  "mock_link",
-		Status:   0,
+		Status:   DraftStatus,
 	}
 	defer func() {
 		MockCampaignStore.DeleteCampaign(ctx, temp_camp.Id)

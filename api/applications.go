@@ -27,7 +27,7 @@ func (app *Application) GetApplication(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	ID := c.Request.PathValue("application_id")
+	ID := c.Param("application_id")
 	if ok := uuid.Validate(ID); ok != nil {
 		log.Printf("invalid application id requested\n")
 		c.JSON(http.StatusBadRequest, WriteError("invalid application"))
@@ -73,7 +73,7 @@ func (app *Application) CreateApplication(c *gin.Context) {
 	}
 
 	// Get the campaign_id from the Path
-	CampaignId := c.Request.PathValue("campaign_id")
+	CampaignId := c.Param("campaign_id")
 
 	appl := db.CampaignApplication{
 		Id:         uuid.New().String(),
@@ -111,7 +111,7 @@ func (app *Application) GetCampaignApplications(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	campaignID := c.Request.PathValue("campaign_id")
+	campaignID := c.Param("campaign_id")
 	// verify this campaign belongs to this brand
 	camp, err := app.store.CampaignInterace.GetCampaign(ctx, campaignID)
 	if err != nil {
@@ -201,7 +201,7 @@ func (app *Application) SetApplicationStatus(c *gin.Context) {
 		return
 	}
 
-	applID := c.Request.PathValue("application_id")
+	applID := c.Param("application_id")
 	if ok := uuid.Validate(applID); ok != nil {
 		log.Printf("error: invalid application access: %v", applID)
 		c.JSON(http.StatusBadRequest, WriteError("application does not exist"))
@@ -258,7 +258,7 @@ func (app *Application) DeleteApplication(c *gin.Context) {
 		return
 	}
 	// get the application id
-	applID := c.Request.PathValue("application_id")
+	applID := c.Param("application_id")
 	if ok := uuid.Validate(applID); ok != nil {
 		log.Printf("error: invalid application access: %v", applID)
 		c.JSON(http.StatusBadRequest, WriteError("application does not exist"))

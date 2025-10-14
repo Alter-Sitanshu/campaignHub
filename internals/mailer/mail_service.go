@@ -63,7 +63,7 @@ func (m *MailService) PushMail(req EmailRequest) error {
 
 // Invitation mail payload needs the token to be verified
 // TODO: CHANGE THE VERIFICATION ROUTE and email of user
-func InviteBody(email, token string) []byte {
+func InviteBody(email, entity, token string) []byte {
 	return []byte("From: CampaignHub Team <no-reply@campaignhub.com>\r\n" +
 		"To: " + email + "\r\n" +
 		"Subject: Verify your account\r\n" +
@@ -84,7 +84,7 @@ func InviteBody(email, token string) []byte {
 		"      <p>Hi there,</p>" +
 		"      <p>Thanks for signing up! Please verify your account by clicking the button below:</p>" +
 		"      <p style='text-align:center;margin:30px 0;'>" +
-		"        <a href='" + fmt.Sprintf("http://localhost:8080/verify?token=%s", token) + "' " +
+		"        <a href='" + fmt.Sprintf("http://localhost:8080/verify/%s?token=%s", entity, token) + "' " +
 		"           style='display:inline-block;padding:14px 28px;font-size:16px;font-weight:bold;color:#ffffff;" +
 		"           text-decoration:none;background-color:#4CAF50;border-radius:6px;'>Verify Account</a>" +
 		"      </p>" +

@@ -49,9 +49,7 @@ func (app *Application) CreateSubmission(c *gin.Context) {
 		return
 	}
 	// making the submission object
-	unixTimestamp := time.Now().Unix()
-	t := time.Unix(unixTimestamp, 0)                 // Convert Unix timestamp to time.Time object
-	formattedTime := t.Format("2006-01-02 15:04:05") // Format using a reference time
+	formattedTime := time.Now().Format("2006-01-02 15:04:05-07:00") // Format using a reference time
 	submission := db.Submission{
 		Id:         uuid.New().String(),
 		CreatorId:  payload.CreatorId,
@@ -109,7 +107,7 @@ func (app *Application) CreateSubmission(c *gin.Context) {
 	app.cache.SetCreatorSubmissions(ctx, Entity.GetID(), []string{submission.Id})
 	app.cache.SetSubmissionEarnings(ctx, submission.Id, submission.Earnings)
 	app.cache.SetSubmissionStatus(ctx, submission.Id, submission.Status)
-	app.cache.SetVideoMetadata(ctx, submission.Id, metaData)
+	app.cache.SetVideoMetadata(ctx, submission.Id, &metaData)
 
 	// successfully made the submission
 	resp := SubmissionResponse{
@@ -131,7 +129,7 @@ func (app *Application) DeleteSubmission(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	sub_id := c.Request.PathValue("sub_id")
+	sub_id := c.Param("sub_id")
 	// validate the submission id
 	if ok := uuid.Validate(sub_id); ok != nil {
 		c.JSON(http.StatusInternalServerError, WriteError("invalid credentials"))
@@ -260,7 +258,7 @@ func (app *Application) UpdateSubmission(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	sub_id := c.Request.PathValue("sub_id")
+	sub_id := c.Param("sub_id")
 	if ok := uuid.Validate(sub_id); ok != nil {
 		c.JSON(http.StatusInternalServerError, WriteError("invalid credentials"))
 		return
@@ -319,7 +317,7 @@ func (app *Application) GetSubmission(c *gin.Context) {
 		return
 	}
 
-	sub_id := c.Request.PathValue("sub_id")
+	sub_id := c.Param("sub_id")
 	if ok := uuid.Validate(sub_id); ok != nil {
 		c.JSON(http.StatusInternalServerError, WriteError("invalid credentials"))
 		return

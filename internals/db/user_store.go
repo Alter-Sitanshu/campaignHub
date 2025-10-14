@@ -204,17 +204,11 @@ func (u *UserStore) GetUserByEmail(ctx context.Context, email string) (*User, er
 
 // Function to create a new user
 func (u *UserStore) CreateUser(ctx context.Context, user *User) error {
-	tx, err := u.db.BeginTx(ctx, nil)
-	if err != nil {
-		log.Printf("Error Beginning transaction: %v\n", err.Error())
-		return err
-	}
-	defer tx.Rollback()
 	query := `
 		INSERT INTO users (id, first_name, last_name, email, password, gender, age, role)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
-	_, err = tx.ExecContext(ctx, query,
+	_, err := u.db.ExecContext(ctx, query,
 		user.Id,
 		user.FirstName,
 		user.LastName,
@@ -240,7 +234,6 @@ func (u *UserStore) CreateUser(ctx context.Context, user *User) error {
 			return err
 		}
 	}
-	tx.Commit()
 	return nil
 }
 

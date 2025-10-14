@@ -8,6 +8,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/Alter-Sitanshu/campaignHub/internals"
 	_ "github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -26,7 +27,7 @@ const (
 	CloseTicket int = 0
 )
 
-// macros for status
+// macros for campaign status
 const (
 	ActiveStatus  int = 1
 	DraftStatus   int = 0
@@ -133,6 +134,8 @@ type Store struct {
 		FindMySubmissions(ctx context.Context, time_ string, subids []string, limit, offset int) ([]Submission, error)
 		UpdateSubmission(context.Context, UpdateSubmission) error
 		ChangeViews(ctx context.Context, delta int, id string) error
+		GetSubmissionsForSync(ctx context.Context) ([]PollingSubmission, error)
+		UpdateSyncFrequency(ctx context.Context, id string, freq int) error
 	}
 	LinkInterface interface {
 		AddLinks(context.Context, string, []Links) error
@@ -156,6 +159,11 @@ type Store struct {
 		CreateApplication(ctx context.Context, appl CampaignApplication) error
 		SetApplicationStatus(ctx context.Context, appl_id string, status int) error
 		DeleteApplication(ctx context.Context, appl_id string) error
+	}
+	BatchInterface interface {
+		BatchUpdateCampaignBudgets(ctx context.Context, updates map[string]float64) error
+		BatchUpdateCreatorBalances(ctx context.Context, updates map[string]float64) error
+		BatchUpdateSubmissions(ctx context.Context, updates []*internals.BatchUpdate) error
 	}
 }
 
@@ -183,6 +191,9 @@ func NewStore(db *sql.DB) *Store {
 			db: db,
 		},
 		ApplicationInterface: &ApplicationStore{
+			db: db,
+		},
+		BatchInterface: &BatchRepository{
 			db: db,
 		},
 	}

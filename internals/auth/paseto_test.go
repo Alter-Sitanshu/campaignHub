@@ -23,8 +23,8 @@ func TestPaseto(t *testing.T) {
 		Issuer:    "admin",
 		Audience:  "admin",
 		Sub:       "useremail.com",
-		IssuedAt:  time.Unix(time.Now().Unix(), 0),
-		ExpiredAt: time.Unix(time.Now().Add(time.Minute*5).Unix(), 0),
+		IssuedAt:  time.Now(),
+		ExpiredAt: time.Now().Add(time.Minute * 5),
 	}
 	t.Run("generating a valid PASETO Token", func(t *testing.T) {
 		maker, err := NewPASETOMaker([]byte(secretKey))
@@ -61,8 +61,8 @@ func TestPasetoExpiredToken(t *testing.T) {
 		Issuer:    "admin",
 		Audience:  "admin",
 		Sub:       "useremail.com",
-		IssuedAt:  time.Unix(time.Now().Unix(), 0),
-		ExpiredAt: time.Unix(time.Now().Add(-time.Minute*5).Unix(), 0),
+		IssuedAt:  time.Now(),
+		ExpiredAt: time.Now().Add(-time.Minute * 5),
 	}
 	randomCreds(payload)
 	t.Run("generating an expired PASETO Token", func(t *testing.T) {
@@ -91,8 +91,8 @@ func TestPasetoInvalidToken(t *testing.T) {
 	secretKey := internals.RandString(32)
 	payload := &Payload{
 		Sub:       "useremail.com",
-		IssuedAt:  time.Unix(time.Now().Unix(), 0),
-		ExpiredAt: time.Unix(time.Now().Add(time.Minute*5).Unix(), 0),
+		IssuedAt:  time.Now(),
+		ExpiredAt: time.Now().Add(time.Minute * 5),
 	}
 	t.Run("generating an invalid PASETO Token", func(t *testing.T) {
 		maker, err := NewPASETOMaker([]byte(secretKey))

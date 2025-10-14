@@ -19,10 +19,10 @@ func (app *Application) HealthCheck(c *gin.Context) {
 // Account verification route handler
 func (app *Application) Verification(c *gin.Context) {
 	ctx := c.Request.Context()
-	entity := c.Request.PathValue("entity")
+	entity := c.Param("entity")
 	// check if the entity parameter is valid
 	if entity != "users" && entity != "brands" {
-		c.JSON(http.StatusUnauthorized, WriteError("bad request"))
+		c.JSON(http.StatusBadRequest, WriteError("bad request"))
 		return
 	}
 	// extract the token from the query
@@ -131,7 +131,7 @@ func (app *Application) Login(c *gin.Context) {
 
 func (app *Application) ForgotPassword(c *gin.Context) {
 	ctx := c.Request.Context()
-	entity := c.Request.PathValue("entity")
+	entity := c.Param("entity")
 	// check if the entity parameter is valid
 	if entity != "users" && entity != "brands" {
 		c.JSON(http.StatusUnauthorized, WriteError("bad request"))
@@ -188,7 +188,7 @@ func (app *Application) ForgotPassword(c *gin.Context) {
 
 func (app *Application) ResetPassword(c *gin.Context) {
 	ctx := c.Request.Context()
-	entity := c.Request.PathValue("entity")
+	entity := c.Param("entity")
 	// check if the entity parameter is valid
 	if entity != "users" && entity != "brands" {
 		c.JSON(http.StatusUnauthorized, WriteError("bad request"))

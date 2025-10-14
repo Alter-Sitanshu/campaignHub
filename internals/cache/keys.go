@@ -16,6 +16,7 @@ const (
 	keySubmissionStatus    = "status:%s"
 	keyPendingApplications = "applications:pending:%s"
 	keyVideoMetaData       = "video:metadata:%s"
+	batchQueueKey          = "queue:batch:updates"
 )
 
 // Key builders
