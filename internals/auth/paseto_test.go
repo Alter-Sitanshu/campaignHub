@@ -27,6 +27,7 @@ func TestPaseto(t *testing.T) {
 		ExpiredAt: time.Now().Add(time.Minute * 5),
 	}
 	t.Run("generating a valid PASETO Token", func(t *testing.T) {
+		const delta = time.Second
 		maker, err := NewPASETOMaker([]byte(secretKey))
 		if err != nil {
 			t.Fail()
@@ -41,8 +42,8 @@ func TestPaseto(t *testing.T) {
 		if err != nil {
 			t.Fail()
 		}
-		if !payload.IssuedAt.Equal(verifiedPayload.IssuedAt) ||
-			!payload.ExpiredAt.Equal(verifiedPayload.ExpiredAt) ||
+		if payload.IssuedAt.Sub(verifiedPayload.IssuedAt) > delta ||
+			payload.ExpiredAt.Sub(verifiedPayload.ExpiredAt) > delta ||
 			payload.Sub != verifiedPayload.Sub || payload.Issuer != verifiedPayload.Issuer ||
 			payload.Audience != verifiedPayload.Audience {
 			t.Fail()

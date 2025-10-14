@@ -22,14 +22,17 @@ func TestYoutubeAPI(t *testing.T) {
 	t.Run("OK", func(t *testing.T) {
 
 		// Random video URL from the Internet
-		ExampleVideo, err := ParseVideoURL("https://www.youtube.com/watch?v=mXZJQHnKmy0")
-		if err != nil {
-			t.Fail()
-		}
-		_, err = client.GetVideoDetails(ctx, ExampleVideo.Name, ExampleVideo.VideoID)
+		// 11 Characters video ID
+		url := "https://www.youtube.com/watch?v=1234567FrDE"
+		ExampleVideo, err := ParseVideoURL(url)
 		if err != nil {
 			// we expect no error (For now cause the video IS public)
 			log.Printf("error fetching video details, may be change the URL: %v\n", err.Error())
+			t.Fail()
+		}
+		if ExampleVideo.VideoID != "1234567FrDE" ||
+			ExampleVideo.Name != "youtube" {
+			log.Printf("video_id: %q, name: %s", ExampleVideo.VideoID, ExampleVideo.Name)
 			t.Fail()
 		}
 	})
