@@ -30,7 +30,7 @@ func destroyCreator(ctx context.Context, id string) {
 	MockUserStore.db.ExecContext(ctx, query, id)
 }
 
-func SeedSubmissions(ctx context.Context, num int) []string {
+func SeedSubmissions(ctx context.Context, num, status int) []string {
 	i := 0
 	var ids []string
 	tx, _ := MockSubStore.db.BeginTx(ctx, nil)
@@ -46,7 +46,7 @@ func SeedSubmissions(ctx context.Context, num int) []string {
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 		`
 		args := []any{
-			id, "0001", "0100", "mock_url", DraftStatus,
+			id, "0001", "0100", "mock_url", status,
 			"Test_Title", "youtube", "testvid001", "example.com", 1000, 100,
 			"available", 0.0, 5,
 		}
@@ -170,7 +170,7 @@ func TestFilteringSubmissions(t *testing.T) {
 	camp := SeedCampaign(ctx, bid, 1)
 
 	// mock submissions
-	ids := SeedSubmissions(ctx, 10)
+	ids := SeedSubmissions(ctx, 10, DraftStatus)
 	log.Printf("%d", len(ids))
 	defer func() {
 		destroySubmissions(ctx, ids)
@@ -214,7 +214,7 @@ func TestUpdateSubmissions(t *testing.T) {
 	camp := SeedCampaign(ctx, bid, 1)
 
 	// mock submissions
-	ids := SeedSubmissions(ctx, 1)
+	ids := SeedSubmissions(ctx, 1, DraftStatus)
 	defer func() {
 		destroySubmissions(ctx, ids)
 		destroyCampaign(ctx, camp)
@@ -347,5 +347,101 @@ func TestChangeViews(t *testing.T) {
 		if err == nil {
 			t.Fail()
 		}
+	})
+}
+
+func TestGetSubmissionsForSync(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeout)
+
+	// user generation
+	uid := "0001"
+	generateCreator(ctx, uid)
+
+	// brand genration
+	bid := "dummy_brand_id_001"
+	generateBrand(bid)
+
+	// launch a campaign
+	campaignIds := SeedCampaign(ctx, bid, 1)
+
+	// cleanup
+	defer func() {
+		destroyCampaign(ctx, campaignIds)
+		destroyBrand(bid)
+		destroyCreator(ctx, uid)
+		cancel()
+	}()
+
+	t.Run("Time before sync_frequency", func(t *testing.T) {
+		// submissions created
+		SubsCount := 10
+		submissionIds := SeedSubmissions(ctx, SubsCount, ActiveStatus)
+		polling_subs, err := MockSubStore.GetSubmissionsForSync(ctx)
+		if err != nil {
+			log.Printf("could not get submissions for polling\n")
+			t.Fail()
+		}
+
+		if len(polling_subs) > 0 {
+			log.Printf("wanted: %d, got: %d\n", 0, len(polling_subs))
+			t.Fail()
+		}
+
+		// clean up
+		destroySubmissions(ctx, submissionIds)
+	})
+
+	t.Run("OK", func(t *testing.T) {
+		// submissions created
+		SubsCount := 1
+		sub := Submission{
+			Id:         "0001",
+			CreatorId:  uid,
+			CampaignId: campaignIds[0],
+			Url:        "example.com",
+			Status:     ActiveStatus,
+			Views:      10000, // dummy values
+			Earnings:   400.0, // dummy values
+			// shift the created time back by 10 min
+			// now the DB will see this as valid to be synced submission
+			// as this will by default have sync_frequency 5 min
+			LastSyncedAt: time.Now().Add(-time.Minute * 10).Format("2006-01-02 15:04:05-07:00"),
+			CreatedAt:    time.Now().Add(-time.Minute * 10).Format("2006-01-02 15:04:05-07:00"),
+		}
+
+		query := `
+        INSERT INTO submissions
+        (
+            id, creator_id, campaign_id, url, status, video_title, video_platform,
+            platform_video_id, thumbnail_url, views, like_count, video_status, earnings,
+            created_at, last_synced_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+    `
+		_, err := MockSubStore.db.ExecContext(ctx, query,
+			sub.Id, sub.CreatorId, sub.CampaignId, sub.Url, sub.Status,
+			sub.VideoTitle, sub.VideoPlatform, sub.VideoID, sub.ThumbnailURL,
+			sub.Views, sub.LikeCount, sub.VideoStatus, sub.Earnings, sub.CreatedAt,
+			sub.LastSyncedAt,
+		)
+		if err != nil {
+			// internal server error
+			log.Printf("error making submission: %v\n", err.Error())
+			t.Fail()
+		}
+
+		polling_subs, err := MockSubStore.GetSubmissionsForSync(ctx)
+		if err != nil {
+			log.Printf("could not get submissions for polling\n")
+			t.Fail()
+		}
+
+		if len(polling_subs) != SubsCount {
+			log.Printf("wanted: %d, got: %d\n", 1, len(polling_subs))
+			t.Fail()
+		}
+
+		// clean up
+		destroySubmissions(ctx, []string{sub.Id})
 	})
 }

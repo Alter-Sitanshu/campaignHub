@@ -103,7 +103,7 @@ func (app *Application) StopCampaign(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	ID := c.Request.PathValue("campaign_id")
+	ID := c.Param("campaign_id")
 	if ok := uuid.Validate(ID); ok != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid request"))
 		return
@@ -142,7 +142,7 @@ func (app *Application) DeleteCampaign(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	ID := c.Request.PathValue("campaign_id")
+	ID := c.Param("campaign_id")
 	if ok := uuid.Validate(ID); ok != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid request"))
 		return
@@ -234,7 +234,7 @@ func (app *Application) UpdateCampaign(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	campaign_id := c.Request.PathValue("campaign_id")
+	campaign_id := c.Param("campaign_id")
 	var payload db.UpdateCampaign
 	// checking the parameters entered
 	if err := c.ShouldBindJSON(&payload); err != nil {
@@ -294,7 +294,7 @@ func (app *Application) GetCampaignFeed(c *gin.Context) {
 
 func (app *Application) GetCampaign(c *gin.Context) {
 	ctx := c.Request.Context()
-	campaign_id := c.Request.PathValue("campaign_id")
+	campaign_id := c.Param("campaign_id")
 	if ok := uuid.Validate(campaign_id); ok != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
 		return

@@ -16,6 +16,7 @@ const (
 	TTLBalance       = 5 * time.Minute
 	TTLActiveCamps   = 5 * time.Minute
 	TTLVideoMetadata = 10 * time.Minute
+	TTLBatchQueue    = 30 * time.Minute
 )
 
 type Service struct {

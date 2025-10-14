@@ -99,7 +99,7 @@ func (app *Application) CreateUser(c *gin.Context) {
 	InvitationReq := mailer.EmailRequest{
 		To:      user.Email,
 		Subject: "Verify your account",
-		Body:    mailer.InviteBody(user.Email, token),
+		Body:    mailer.InviteBody(user.Email, "users", token),
 	}
 	// Implementing a retry fallback
 	tries := 1
@@ -133,7 +133,7 @@ func (app *Application) GetUserById(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	ID := c.Request.PathValue("id")
+	ID := c.Param("id")
 	if ok := uuid.Validate(ID); ok != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
 		return
@@ -195,7 +195,7 @@ func (app *Application) GetUserByEmail(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	mail := c.Request.PathValue("email")
+	mail := c.Param("email")
 
 	var profile cache.UserResponse
 	err := app.cache.GetUserProfileByMail(ctx, mail, &profile)
@@ -247,7 +247,7 @@ func (app *Application) DeleteUser(c *gin.Context) {
 		return
 	}
 	UserID := Entity.GetID()
-	ID := c.Request.PathValue("id")
+	ID := c.Param("id")
 	if ok := uuid.Validate(ID); ok != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
 		return
@@ -300,7 +300,7 @@ func (app *Application) UpdateUser(c *gin.Context) {
 	}
 	UserID := Entity.GetID()
 
-	ID := c.Request.PathValue("id")
+	ID := c.Param("id")
 	if ok := uuid.Validate(ID); ok != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
 		return

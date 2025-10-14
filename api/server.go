@@ -96,13 +96,13 @@ func NewApplication(store *db.Store, cfg *Config, PASETO, JWT auth.TokenMaker,
 	// Public routes
 	router.GET("/", app.HealthCheck)
 	// query parameter: token | entity should be in ["users", "brands"]
-	router.GET("/:entity/verify", app.Verification)
+	router.GET("/verify/:entity", app.Verification)
 	router.POST("/login", app.Login)
 	router.POST("/users/signup", app.CreateUser)
 	router.POST("/brands/signup", app.CreateBrand)
 	// entity should be in ["users", "brands"]
-	router.POST("/:entity/forgot_password/request", app.ForgotPassword)
-	router.POST("/:entity/forgot_password/confirm", app.ResetPassword) // query parameter token
+	router.POST("/forgot_password/request/:entity", app.ForgotPassword)
+	router.POST("/forgot_password/confirm/:entity", app.ResetPassword) // query parameter token
 
 	// Users routes
 	users := router.Group("/users", app.AuthMiddleware())

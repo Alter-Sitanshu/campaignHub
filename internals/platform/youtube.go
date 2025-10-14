@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 )
@@ -74,6 +75,10 @@ func NewYTClient(key string) *YTClient {
 }
 
 func (yt *YTClient) GetVideoDetails(ctx context.Context, VideoID string) (any, error) {
+	if VideoID == "" || VideoID == " " {
+		log.Printf("error: video id invalid %q\n", VideoID)
+		return nil, fmt.Errorf("invalid video id")
+	}
 	url := fmt.Sprintf(
 		"https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=%s&key=%s",
 		VideoID, yt.APIKey,
@@ -81,11 +86,13 @@ func (yt *YTClient) GetVideoDetails(ctx context.Context, VideoID string) (any, e
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
+		log.Printf("error: %v", err.Error())
 		return nil, err
 	}
 
 	resp, err := yt.httpClient.Do(req)
 	if err != nil {
+		log.Printf("error: %v", err.Error())
 		return nil, err
 	}
 	defer resp.Body.Close()
@@ -95,10 +102,12 @@ func (yt *YTClient) GetVideoDetails(ctx context.Context, VideoID string) (any, e
 	}
 	var data YoutubeResponse
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		log.Printf("error: %v", err.Error())
 		return nil, err
 	}
 
 	if len(data.Items) == 0 {
+		log.Printf("error: %v", "invalid video id")
 		return nil, fmt.Errorf("video not found")
 	}
 

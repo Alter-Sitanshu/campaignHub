@@ -3,8 +3,13 @@ package db
 import (
 	"database/sql"
 	"log"
+	"time"
 
 	"github.com/Alter-Sitanshu/campaignHub/env"
+)
+
+const (
+	TestTimeout = time.Second * 5
 )
 
 var (

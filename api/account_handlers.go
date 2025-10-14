@@ -28,9 +28,8 @@ func (app *Application) CreateAccount(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
 		return
 	}
-	unixTimestamp := time.Now().Unix()
-	t := time.Unix(unixTimestamp, 0) // Convert Unix timestamp to time.Time object
-	formattedTime := t.Format("2006-01-02 15:04:05")
+
+	formattedTime := time.Now().Format("2006-01-02 15:04:05-07:00")
 	acc := db.Account{
 		Id:       uuid.New().String(),
 		HolderId: payload.HolderId,
@@ -60,7 +59,7 @@ func (app *Application) GetUserAccount(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	acc_id := c.Request.PathValue("acc_id")
+	acc_id := c.Param("acc_id")
 	if ok := uuid.Validate(acc_id); ok != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
 		return
@@ -98,7 +97,7 @@ func (app *Application) DisableUserAccount(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	acc_id := c.Request.PathValue("acc_id")
+	acc_id := c.Param("acc_id")
 	// validate the acc_id uuid
 	if ok := uuid.Validate(acc_id); ok != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
@@ -145,7 +144,7 @@ func (app *Application) DeleteUserAccount(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	acc_id := c.Request.PathValue("acc_id")
+	acc_id := c.Param("acc_id")
 	// validate the acc_id uuid
 	if ok := uuid.Validate(acc_id); ok != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))

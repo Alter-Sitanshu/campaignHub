@@ -25,7 +25,7 @@ type VideoMetadata struct {
 // Video Metadata Operations
 // ==================================
 
-func (s *Service) SetVideoMetadata(ctx context.Context, submissionID string, metadata VideoMetadata) error {
+func (s *Service) SetVideoMetadata(ctx context.Context, submissionID string, metadata *VideoMetadata) error {
 	key := VideoMetadataKey(submissionID)
 	return s.SetJSON(ctx, key, metadata, TTLVideoMetadata)
 }

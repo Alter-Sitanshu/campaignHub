@@ -50,8 +50,8 @@ func NewPayload(iss, aud, email string, dur time.Duration) (*Payload, error) {
 		Sub:       email,
 		Issuer:    iss,
 		Audience:  aud,
-		IssuedAt:  time.Unix(time.Now().Unix(), 0),
-		ExpiredAt: time.Unix(time.Now().Add(dur).Unix(), 0),
+		IssuedAt:  time.Now(),
+		ExpiredAt: time.Now().Add(dur),
 	}, nil
 }
 

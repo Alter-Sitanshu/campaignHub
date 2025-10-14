@@ -97,7 +97,7 @@ func (app *Application) CloseTicket(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	ticket_id := c.Request.PathValue("ticket_id")
+	ticket_id := c.Param("ticket_id")
 	// validating the uuid
 	if ok := uuid.Validate(ticket_id); ok != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
@@ -182,7 +182,7 @@ func (app *Application) DeleteTicket(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	ticket_id := c.Request.PathValue("ticket_id")
+	ticket_id := c.Param("ticket_id")
 	// validating the uuid
 	if ok := uuid.Validate(ticket_id); ok != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
@@ -209,7 +209,7 @@ func (app *Application) GetTicket(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	ticket_id := c.Request.PathValue("ticket_id")
+	ticket_id := c.Param("ticket_id")
 	// validating the uuid
 	if ok := uuid.Validate(ticket_id); ok != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))

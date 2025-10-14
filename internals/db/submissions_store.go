@@ -35,6 +35,19 @@ type Submission struct {
 	CreatedAt     string `json:"created_at"`
 }
 
+// custom struct for the polling worker
+// reduces the overhead by 50% changing from Submission -> PollingSubmission
+type PollingSubmission struct {
+	Id            string `json:"id"`
+	CreatorId     string `json:"creator_id"`
+	CampaignId    string `json:"campaign_id"`
+	Url           string `json:"url"`
+	Views         int    `json:"views"`
+	LastSyncedAt  string `json:"last_synced_at"`
+	SyncFrequency int    `json:"sync_frequency,omitempty"`
+	CreatedAt     string `json:"created_at"`
+}
+
 type UpdateSubmission struct {
 	Id       string   `json:"id"`
 	Status   *int     `json:"status"`
@@ -335,6 +348,86 @@ func (s *SubmissionStore) ChangeViews(ctx context.Context, delta int, id string)
 		WHERE id = $2
 	`
 	res, err := s.db.ExecContext(ctx, query, delta, id)
+	if err != nil {
+		log.Printf("error updating views for id = %s: %v\n", id, err)
+		return err
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		// This can fail with drivers that don’t support it
+		log.Printf("could not determine rows affected: %v\n", err)
+		return fmt.Errorf("rows affected: %w", err)
+	}
+
+	if count == 0 {
+		log.Printf("no submission found with id = %q\n", id)
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
+func (s *SubmissionStore) GetSubmissionsForSync(ctx context.Context) ([]PollingSubmission, error) {
+	// filter out the active submissions
+	// select the submissions which have there sync frequency
+	// less than the interval passed from last_sync
+	query := `
+        SELECT 
+            s.id, 
+            s.url, 
+            s.views,
+            s.sync_frequency,
+            s.last_synced_at,
+            s.creator_id,
+            s.campaign_id,
+			s.created_at
+        FROM submissions s
+        JOIN status st ON s.status = st.id
+        WHERE st.name = 'active'
+		AND s.last_synced_at <= NOW() - (s.sync_frequency::text || ' minutes')::INTERVAL
+        ORDER BY s.last_synced_at ASC
+        LIMIT 500;
+    `
+	rows, err := s.db.QueryContext(ctx, query)
+	if err != nil {
+		log.Printf("error while fetching submissions to sync: %s\n", err.Error())
+		return nil, ErrServer
+	}
+	defer rows.Close()
+
+	// output slice for all the submissions
+	var output []PollingSubmission
+
+	for rows.Next() {
+		var sub PollingSubmission
+		err = rows.Scan(
+			&sub.Id,
+			&sub.Url,
+			&sub.Views,
+			&sub.SyncFrequency,
+			&sub.LastSyncedAt,
+			&sub.CreatorId,
+			&sub.CampaignId,
+			&sub.CreatorId,
+		)
+		if err != nil {
+			log.Printf("error scanning polling submissions: %s\n", err.Error())
+			return nil, err
+		}
+		output = append(output, sub)
+	}
+
+	// no error in submission fetching
+	// success
+	return output, nil
+}
+
+func (s *SubmissionStore) UpdateSyncFrequency(ctx context.Context, id string, freq int) error {
+	query := `
+		UPDATE submissions
+		SET sync_frequency = $1
+		WHERE id = $2
+	`
+	res, err := s.db.ExecContext(ctx, query, freq, id)
 	if err != nil {
 		log.Printf("error updating views for id = %s: %v\n", id, err)
 		return err

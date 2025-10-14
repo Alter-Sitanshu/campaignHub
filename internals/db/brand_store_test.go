@@ -4,11 +4,10 @@ import (
 	"context"
 	"log"
 	"testing"
-	"time"
 )
 
 func TestGetBrand(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeout)
 	defer cancel()
 	mockBrand := &Brand{
 		Id:        "0001",
@@ -89,7 +88,7 @@ func TestCreateBrand(t *testing.T) {
 }
 
 func TestUpdateBrand(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeout)
 	defer cancel()
 	// creating a mock entity
 	mockBrand := &Brand{
@@ -132,7 +131,7 @@ func TestUpdateBrand(t *testing.T) {
 }
 
 func TestUpdateBrandPassword(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeout)
 
 	// creating a dummy brand
 	bid := "dummy_brand_01"
@@ -161,5 +160,46 @@ func TestUpdateBrandPassword(t *testing.T) {
 		if err == nil {
 			t.Fail()
 		}
+	})
+}
+
+func TestDeleteBrand(t *testing.T) {
+	// context
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeout)
+
+	// generate a dummy brand
+	bid := "dummy_brand_01"
+	generateBrand(bid)
+
+	defer func() {
+		cancel()
+		destroyBrand(bid)
+	}()
+
+	t.Run("Delete brand with an active campaign", func(t *testing.T) {
+		campaign := Campaign{
+			Id:       "dummy_campaign_001",
+			BrandId:  bid,
+			Title:    "mock_title",
+			Budget:   1000.0,
+			CPM:      101.0,
+			Req:      "mock_requirements",
+			Platform: "youtube",
+			DocLink:  "mock_link",
+			Status:   ActiveStatus,
+		}
+		err := MockCampaignStore.LaunchCampaign(ctx, &campaign)
+		if err != nil {
+			// could not create a campaign
+			t.FailNow()
+		}
+		err = MockBrandStore.DeregisterBrand(ctx, bid)
+		if err == nil {
+			// we should not be able to deregister
+			// a brand with an active campaign
+			t.Fail()
+		}
+		// clean up
+		MockCampaignStore.DeleteCampaign(ctx, campaign.Id)
 	})
 }

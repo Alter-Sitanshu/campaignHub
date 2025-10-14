@@ -84,7 +84,7 @@ func (app *Application) CreateBrand(c *gin.Context) {
 	InvitationReq := mailer.EmailRequest{
 		To:      brand.Email,
 		Subject: "Verify your account",
-		Body:    mailer.InviteBody(brand.Email, token),
+		Body:    mailer.InviteBody(brand.Email, "brands", token),
 	}
 	// Implementing a retry fallback
 	tries := 1
@@ -106,7 +106,7 @@ func (app *Application) CreateBrand(c *gin.Context) {
 
 func (app *Application) GetBrand(c *gin.Context) {
 	ctx := c.Request.Context()
-	ID := c.Request.PathValue("brand_id")
+	ID := c.Param("brand_id")
 
 	ok := uuid.Validate(ID) // validate the brand id
 	if ok != nil {
@@ -151,7 +151,7 @@ func (app *Application) DeleteBrand(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	ID := c.Request.PathValue("brand_id")
+	ID := c.Param("brand_id")
 	if ok := uuid.Validate(ID); ok != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
 		return
@@ -192,7 +192,7 @@ func (app *Application) UpdateBrand(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	brand_id := c.Request.PathValue("brand_id")
+	brand_id := c.Param("brand_id")
 	if brand_id != Entity.GetID() && Entity.GetRole() != "admin" {
 		log.Printf("error: unauthorised access by: %v\n", Entity.GetID())
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised"))

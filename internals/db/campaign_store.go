@@ -337,7 +337,7 @@ func (c *CampaignStore) DeleteCampaign(ctx context.Context, id string) error {
 	`
 	_, err := c.db.ExecContext(ctx, query, id)
 	if err != nil {
-		log.Printf("Error deleting campaign")
+		log.Printf("Error deleting campaign: %s\n", err.Error())
 		return err
 	}
 

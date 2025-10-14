@@ -28,8 +28,8 @@ func TestJWT(t *testing.T) {
 		Issuer:    "admin",
 		Audience:  "admin",
 		Sub:       "useremail.com",
-		IssuedAt:  time.Unix(time.Now().Unix(), 0),
-		ExpiredAt: time.Unix(time.Now().Add(time.Minute*5).Unix(), 0),
+		IssuedAt:  time.Now(),
+		ExpiredAt: time.Now().Add(time.Minute * 5),
 	}
 	t.Run("generating a valid JWT Token", func(t *testing.T) {
 		maker, err := NewJWTMaker(secretKey)
@@ -66,8 +66,8 @@ func TestExpiredToken(t *testing.T) {
 		Issuer:    "admin",
 		Audience:  "admin",
 		Sub:       "useremail.com",
-		IssuedAt:  time.Unix(time.Now().Unix(), 0),
-		ExpiredAt: time.Unix(time.Now().Add(-time.Minute*5).Unix(), 0),
+		IssuedAt:  time.Now(),
+		ExpiredAt: time.Now().Add(-time.Minute * 5),
 	}
 	randomCreds(payload)
 	t.Run("generating an expired JWT Token", func(t *testing.T) {
@@ -96,8 +96,8 @@ func TestInvalidToken(t *testing.T) {
 	secretKey := internals.RandString(32)
 	payload := &Payload{
 		Sub:       "useremail.com",
-		IssuedAt:  time.Unix(time.Now().Unix(), 0),
-		ExpiredAt: time.Unix(time.Now().Add(time.Minute*5).Unix(), 0),
+		IssuedAt:  time.Now(),
+		ExpiredAt: time.Now().Add(time.Minute * 5),
 	}
 	t.Run("generating an invalid JWT Token", func(t *testing.T) {
 		maker, err := NewJWTMaker(secretKey)
