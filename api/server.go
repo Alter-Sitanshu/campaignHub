@@ -1,6 +1,8 @@
 package api
 
 import (
+	"context"
+	"net/http"
 	"time"
 
 	"github.com/Alter-Sitanshu/campaignHub/internals/auth"
@@ -13,7 +15,7 @@ import (
 
 type Application struct {
 	store       *db.Store
-	router      *gin.Engine
+	server      *http.Server
 	jwtMaker    auth.TokenMaker
 	pasetoMaker auth.TokenMaker
 	mailer      *mailer.MailService
@@ -78,13 +80,16 @@ const (
 	DefaultSyncFrequency = 5                  // in minutes
 )
 
-func NewApplication(store *db.Store, cfg *Config, PASETO, JWT auth.TokenMaker,
+func NewApplication(addr string, store *db.Store, cfg *Config, PASETO, JWT auth.TokenMaker,
 	mailer *mailer.MailService, cacheService *cache.Service, factory *platform.Factory,
 ) *Application {
 	router := gin.Default()
 	app := Application{
-		store:       store,
-		router:      router,
+		store: store,
+		server: &http.Server{
+			Addr:    addr,             // address the server listens on
+			Handler: router.Handler(), // HTTP handler to invoke, in this case, the Gin router
+		},
 		cfg:         *cfg,
 		jwtMaker:    JWT,
 		pasetoMaker: PASETO,
@@ -195,5 +200,9 @@ func WriteError(err string) gin.H {
 }
 
 func (app *Application) Run() error {
-	return app.router.Run(app.cfg.Addr)
+	return app.server.ListenAndServe()
+}
+
+func (app *Application) Shutdown(ctx context.Context) error {
+	return app.server.Shutdown(ctx)
 }
