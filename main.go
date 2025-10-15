@@ -1,8 +1,15 @@
 package main
 
 import (
+	"context"
 	"encoding/base64"
+	"errors"
 	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/Alter-Sitanshu/campaignHub/api"
 	"github.com/Alter-Sitanshu/campaignHub/env"
@@ -12,6 +19,10 @@ import (
 	"github.com/Alter-Sitanshu/campaignHub/internals/mailer"
 	"github.com/Alter-Sitanshu/campaignHub/internals/platform"
 	"github.com/joho/godotenv"
+)
+
+const (
+	ShutdownDelta time.Duration = 1 * time.Minute
 )
 
 func main() {
@@ -109,6 +120,7 @@ func main() {
 	appCache := cache.NewService(CacheClient)
 
 	app := api.NewApplication(
+		config.Addr,
 		appStore,
 		&config,
 		jwt_Maker,
@@ -117,5 +129,35 @@ func main() {
 		appCache,
 		factory,
 	)
-	app.Run()
+
+	// Graceful Shutdown
+	shutdown := make(chan error)
+	go func() {
+		quit := make(chan os.Signal, 1)
+		signal.Notify(quit, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+		sig := <-quit // wait for the interrupt signal
+
+		// log the signal for debug
+		log.Printf("captured %v signal, shutting down\n", sig)
+		ctx, cancel := context.WithTimeout(context.Background(), ShutdownDelta)
+		defer cancel()
+
+		// trigger the shutdown
+		shutdown <- app.Shutdown(ctx)
+	}()
+
+	err = app.Run()
+	// check if there is an error while booting up
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Printf("error starting the server: %v\n", err.Error())
+	}
+
+	// wait for the shutdown to complete
+	err = <-shutdown
+	if err != nil {
+		log.Printf("error during shutdown: %v\n", err.Error())
+	}
+
+	// shutdown successful
+	log.Printf("Server Shutdown Successfully\n")
 }
