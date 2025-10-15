@@ -158,6 +158,12 @@ docker run -d --name <your-redis-container-name> -p 6379:6379 redis:latest
 
 # download golang-migrate and run the Database migrations
 go install github.com/golang-migrate/migrate/cmd/migrate@latest
+
+# if you want to use Makefile commands install chocoLatey (search it up online)
+# use choco to install make
+choco install make
+
+# run the migrations
 make migrateup
 
 # run server
