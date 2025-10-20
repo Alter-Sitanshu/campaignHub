@@ -234,6 +234,7 @@ func Mount(addr string, MaxConns, MaxIdleConn, MaxIdleTime int) (*sql.DB, error)
 		return nil, err
 	}
 
+	log.Println("Database mounted...")
 	return db, nil
 }
 
