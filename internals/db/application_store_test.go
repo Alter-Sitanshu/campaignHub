@@ -41,7 +41,7 @@ func SeedApplications(ctx context.Context, campIDs []string, uid string) []strin
 func TestCreateApplications(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 
-	uid := "dummy_user_01"
+	uid := "dummy_application_user_01"
 	bid := "dummy_brand_01"
 	appl_id := "dummy_application_01"
 
