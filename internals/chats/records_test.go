@@ -43,7 +43,7 @@ func TestLoadFollowedBrands(t *testing.T) {
 		for _, id := range bids {
 			err := MockHub.store.FollowBrand(creatorID, id)
 			if err != nil {
-				log.Printf("failed at creation of follow\n")
+				log.Printf("failed at creation of follow: %q\n", err.Error())
 				t.Fatal()
 			}
 		}
@@ -134,8 +134,8 @@ func TestFollowUnfollow(t *testing.T) {
 		for i := range bids {
 			err := MockHub.store.FollowBrand(creator, bids[i])
 			if err != nil {
-				log.Printf("failed at creation of follow\n")
-				t.Fail()
+				log.Printf("failed at creation of follow: %q\n", err.Error())
+				t.FailNow()
 			}
 		}
 		listBefore, _ := MockHub.store.LoadFollowedBrands(ctx, creator)

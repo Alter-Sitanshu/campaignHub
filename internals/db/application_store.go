@@ -163,8 +163,8 @@ func (s *ApplicationStore) CreateApplication(
 	)
 	/// error occured while creating application
 	if err != nil {
-		log.Printf("error while creating appication\ncampaign: %s, creator: %s\n",
-			appl.CampaignId, appl.CreatorId)
+		log.Printf("error while creating appication\ncampaign: %s, creator: %s: %q\n",
+			appl.CampaignId, appl.CreatorId, err.Error())
 		return err
 	}
 	// successfully submitted application
