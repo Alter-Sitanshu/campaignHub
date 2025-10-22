@@ -15,6 +15,7 @@ import (
 	"github.com/Alter-Sitanshu/campaignHub/env"
 	"github.com/Alter-Sitanshu/campaignHub/internals/auth"
 	"github.com/Alter-Sitanshu/campaignHub/internals/cache"
+	"github.com/Alter-Sitanshu/campaignHub/internals/chats"
 	"github.com/Alter-Sitanshu/campaignHub/internals/db"
 	"github.com/Alter-Sitanshu/campaignHub/internals/mailer"
 	"github.com/Alter-Sitanshu/campaignHub/internals/platform"
@@ -118,6 +119,7 @@ func main() {
 	// attaching the services to the application
 	appStore := db.NewStore(db_)
 	appCache := cache.NewService(CacheClient)
+	appHub := chats.NewHub(db_, appCache)
 
 	app := api.NewApplication(
 		config.Addr,
@@ -128,6 +130,7 @@ func main() {
 		mailer,
 		appCache,
 		factory,
+		appHub,
 	)
 
 	// Graceful Shutdown

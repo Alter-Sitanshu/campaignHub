@@ -26,6 +26,7 @@ CREATE TABLE accounts (
   holder_id varchar(36) NOT NULL,
   holder_type varchar(10) NOT NULL CHECK (holder_type IN ('user','brand')),
   amount numeric(12,2) NOT NULL DEFAULT 0 CHECK (amount >= 0),
+  currency varchar(3) NOT NULL DEFAULT 'inr' CHECK( currency IN ('inr', 'usd', 'yen')),
   active boolean DEFAULT TRUE,
   created_at timestamptz DEFAULT now(),
   UNIQUE (holder_id, holder_type)
@@ -41,6 +42,7 @@ CREATE TABLE transactions (
   from_id varchar(36) NOT NULL,
   to_id varchar(36) NOT NULL,
   amount numeric(12,2) NOT NULL CHECK (amount > 0),
+  currency varchar(3) NOT NULL DEFAULT 'inr' CHECK( currency IN ('inr', 'usd', 'yen')),
   status int NOT NULL,
   type varchar(20) NOT NULL CHECK (type IN ('withdraw', 'payout', 'deposit')),
   created_at timestamptz DEFAULT now(),
@@ -60,6 +62,7 @@ CREATE TABLE brands (
   password BYTEA NOT NULL,
   website varchar(255) NOT NULL,
   address text NOT NULL,
+  created_at timestamptz DEFAULT now(),
   campaigns int NOT NULL DEFAULT 0
 );
 

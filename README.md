@@ -137,6 +137,7 @@
 - **Cache:** Redis (for real-time updates)  
 - **Email:** SMTP (user verification, password reset, admin notifications)  
 - **Hosting:** Docker + Cloud Deployment (planned)
+- **Chats:** Gorilla WebSockets
 
 ---
 
@@ -150,6 +151,20 @@ cd campaignHub
 # configure environment
 cp .env.example .env
 # fill DB_URL, JWT_SECRET, SMTP credentials
+
+# create a docker container for postgres and redis
+docker run -d --name <your-db-continer-name> -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=campaignhub -v campaignhub_pgdata:/var/lib/postgresql/data -p 5432:5432 postgres:12-alpine
+docker run -d --name <your-redis-container-name> -p 6379:6379 redis:latest
+
+# download golang-migrate and run the Database migrations
+go install github.com/golang-migrate/migrate/cmd/migrate@latest
+
+# if you want to use Makefile commands install chocoLatey (search it up online)
+# use choco to install make
+choco install make
+
+# run the migrations
+make migrateup
 
 # run server
 go run main.go

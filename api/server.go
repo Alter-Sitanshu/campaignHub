@@ -7,6 +7,7 @@ import (
 
 	"github.com/Alter-Sitanshu/campaignHub/internals/auth"
 	"github.com/Alter-Sitanshu/campaignHub/internals/cache"
+	"github.com/Alter-Sitanshu/campaignHub/internals/chats"
 	"github.com/Alter-Sitanshu/campaignHub/internals/db"
 	"github.com/Alter-Sitanshu/campaignHub/internals/mailer"
 	"github.com/Alter-Sitanshu/campaignHub/internals/platform"
@@ -22,6 +23,7 @@ type Application struct {
 	cache       *cache.Service
 	cfg         Config
 	factory     *platform.Factory
+	msgHub      *chats.Hub
 }
 
 type Config struct {
@@ -82,7 +84,9 @@ const (
 
 func NewApplication(addr string, store *db.Store, cfg *Config, PASETO, JWT auth.TokenMaker,
 	mailer *mailer.MailService, cacheService *cache.Service, factory *platform.Factory,
+	appHub *chats.Hub,
 ) *Application {
+	gin.SetMode(gin.DebugMode) // TODO: change to release mode in production
 	router := gin.Default()
 	app := Application{
 		store: store,
@@ -96,6 +100,7 @@ func NewApplication(addr string, store *db.Store, cfg *Config, PASETO, JWT auth.
 		mailer:      mailer,
 		cache:       cacheService,
 		factory:     factory,
+		msgHub:      appHub,
 	}
 
 	// Public routes
@@ -112,6 +117,7 @@ func NewApplication(addr string, store *db.Store, cfg *Config, PASETO, JWT auth.
 	// Users routes
 	users := router.Group("/users", app.AuthMiddleware())
 	{
+		users.GET("/me", app.GetCurrentUser)
 		users.GET("/:id", app.GetUserById)
 		users.GET("/email/:email", app.GetUserByEmail)
 		users.DELETE("/:id", app.DeleteUser)
@@ -200,9 +206,13 @@ func WriteError(err string) gin.H {
 }
 
 func (app *Application) Run() error {
+	// Start the Sockets Hub in a go routine
+	go app.msgHub.Run()
 	return app.server.ListenAndServe()
 }
 
 func (app *Application) Shutdown(ctx context.Context) error {
+	// closing the sockets routine
+	app.msgHub.Stop()
 	return app.server.Shutdown(ctx)
 }

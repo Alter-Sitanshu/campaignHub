@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"log"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -25,6 +26,7 @@ func NewClient(addr, password string, db int) (*redis.Client, error) {
 		return nil, err
 	}
 
+	log.Println("Redis Cache Logged in")
 	return rdb, nil
 }
 

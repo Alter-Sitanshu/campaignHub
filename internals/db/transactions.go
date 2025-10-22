@@ -20,6 +20,7 @@ type Account struct {
 	HolderId  string  `json:"holder_id"`
 	Type      string  `json:"type"` // either creator or brand
 	Amount    float64 `json:"amount"`
+	Currency  string  `json:"currency"` // Allowed 'inr', 'usd', 'yen'
 	Active    bool    `json:"active"`
 	CreatedAt string  `json:"created_at"`
 }
@@ -29,6 +30,7 @@ type Transaction struct {
 	FromId    string  `json:"from_id"`
 	ToId      string  `json:"to_id"`
 	Amount    float64 `json:"amount"`
+	Currency  string  `json:"currency"` // Allowed 'inr', 'usd', 'yen'
 	Status    int     `json:"status"`
 	Type      string  `json:"type"`
 	CretaedAt string  `json:"created_at"`

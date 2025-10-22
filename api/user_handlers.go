@@ -28,6 +28,7 @@ type UserResponse struct {
 	FirstName     string     `json:"first_name" binding:"required"`
 	LastName      string     `json:"last_name" binding:"required"`
 	Email         string     `json:"email" binding:"required"`
+	IsVerified    bool       `json:"is_verified" binding:"required"`
 	Gender        string     `json:"gender" binding:"required"`
 	Amount        float64    `json:"amount" binding:"required,min=0"`
 	Age           int        `json:"age" binding:"required"`
@@ -117,6 +118,7 @@ func (app *Application) CreateUser(c *gin.Context) {
 	}
 
 	// successfully user created with is_verified = false
+	user.CreatedAt = time.Now().String()[:19]
 	c.JSON(http.StatusCreated, WriteResponse(user))
 }
 
@@ -217,6 +219,7 @@ func (app *Application) GetUserByEmail(c *gin.Context) {
 		FirstName:     user.FirstName,
 		LastName:      user.LastName,
 		Email:         user.Email,
+		IsVerified:    user.IsVerified,
 		Gender:        user.Gender,
 		Amount:        user.Amount,
 		Age:           user.Age,
@@ -224,7 +227,7 @@ func (app *Application) GetUserByEmail(c *gin.Context) {
 	}
 
 	// Set the user profile in cache
-	err = app.cache.SetUserProfileByMail(ctx, mail, profile)
+	err = app.cache.SetUserProfileByMail(ctx, mail, cache.UserResponse(userResponse))
 	if err != nil {
 		log.Printf("error caching user profile: %s\n", err.Error())
 	}
@@ -362,6 +365,63 @@ func (app *Application) UpdateUser(c *gin.Context) {
 	// I dont neeed to set the user balance separately as the profile already
 	// has that information in it.
 
+	// successfully retreived the user
+	c.JSON(http.StatusOK, WriteResponse(userResponse))
+}
+
+func (app *Application) GetCurrentUser(c *gin.Context) {
+	ctx := c.Request.Context()
+	// Fetching the logged in user
+	LogInUser, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	Entity, ok := LogInUser.(db.AuthenticatedEntity)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	UserID := Entity.GetID()
+	var profile cache.UserResponse
+	// pass the pointer to the response var so that the UnMarshal works
+	err := app.cache.GetUserProfile(ctx, UserID, &profile)
+	// Cache hit
+	if err == nil {
+		c.JSON(http.StatusOK, WriteResponse(profile))
+		return
+	}
+	// In case of a cache miss
+	// fetching the user
+	user, err := app.store.UserInterface.GetUserById(ctx, UserID)
+	if err != nil {
+		if err == db.ErrNotFound {
+			// bad request error
+			c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
+			return
+		}
+		// server error
+		log.Printf("could not find user: %v", err.Error()) // log to fix the error
+		c.JSON(http.StatusInternalServerError, WriteError("server error"))
+		return
+	}
+	// make the response object
+	userResponse := UserResponse{
+		Id:            user.Id,
+		FirstName:     user.FirstName,
+		LastName:      user.LastName,
+		Email:         user.Email,
+		Gender:        user.Gender,
+		Amount:        user.Amount,
+		Age:           user.Age,
+		IsVerified:    user.IsVerified,
+		PlatformLinks: user.PlatformLinks,
+	}
+	// set the user profile in the cache
+	err = app.cache.SetUserProfile(ctx, UserID, cache.UserResponse(userResponse))
+	if err != nil {
+		log.Printf("error caching the user profile: %s\n", err.Error())
+	}
 	// successfully retreived the user
 	c.JSON(http.StatusOK, WriteResponse(userResponse))
 }
