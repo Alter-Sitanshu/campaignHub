@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS messages (
     is_read boolean DEFAULT FALSE,
     created_at timestamptz DEFAULT now(),
 
-    CONSTRAINT fk_conversation_id FOREIGN KEY (conversation_id) REFERENCES conversations(id);
+    CONSTRAINT fk_conversation_id FOREIGN KEY (conversation_id) REFERENCES conversations(id)
 );
 
 -- Populate the status table for conversations
