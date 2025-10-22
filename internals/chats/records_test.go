@@ -25,7 +25,7 @@ func TestLoadFollowedBrands(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), QueryTimeOut)
 	numBrands := 10
 	// create a user to follow brands
-	creatorID := "mock_user_001"
+	creatorID := "mock_follow_user_001"
 	GenerateCreator(ctx, creatorID)
 
 	// Seed brands to follow
@@ -115,7 +115,7 @@ func TestFollowUnfollow(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), QueryTimeOut)
 
 	// creating a mock creator
-	creator := "mock_user_001"
+	creator := "mock_follow_user_001"
 	GenerateCreator(ctx, creator)
 
 	// brands to follow for the user
