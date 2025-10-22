@@ -19,6 +19,7 @@ var (
 	ErrLastMessageUpdate    = errors.New("failed to update conversation last message timestamp")
 	ErrMarkReadFailed       = errors.New("failed to mark messages as read")
 	ErrMessageDropped       = errors.New("message dropped due to blocked client channel")
+	ErrInvalidId            = errors.New("invalid id entered")
 )
 
 const (
@@ -30,6 +31,7 @@ type ServerMessage struct {
 	Message string `json:"message"`
 }
 
+// Run the hub instance in a separate go routine
 func (h *Hub) Run() {
 	log.Println("WebSocket Hub started")
 
@@ -49,8 +51,22 @@ func (h *Hub) Run() {
 			if err != nil {
 				log.Printf("error in broadcast: %s", err.Error())
 			}
+		case <-h.stop:
+			log.Printf("Stopping the Hub instance...\n")
+			h.clientsMU.Lock()
+			defer h.clientsMU.Unlock()
+			for id, c := range h.clients {
+				close(c.Send)
+				delete(h.clients, id)
+			}
+			return
 		}
 	}
+}
+
+// Closes the hub routine
+func (h *Hub) Stop() {
+	h.stopOnce.Do(func() { close(h.stop) })
 }
 
 // Adds the new client connection to the hub
@@ -209,8 +225,8 @@ func (h *Hub) handleChatMessage(ctx context.Context, req *MessageRequest) error 
 	msg.CreatedAt = time.Now().String()[:19] // Simplified timestamp
 
 	log.Printf(
-		"Message from %s to %s in conversation %s: %v\n",
-		req.Client.ID, recipientID, conv.ID, msg.Content,
+		"Message from %s to %s in conversation %s\n",
+		req.Client.ID, recipientID, conv.ID,
 	)
 	// Send to recipient using DIRECT broadcast
 	h.broadcast <- &BroadcastMessage{
@@ -297,6 +313,10 @@ func (h *Hub) handleTyping(ctx context.Context, req *MessageRequest) error {
 }
 
 // Broadcast Handler
+// The broadcast handler currently uses the in-memory list of concurrent users
+// TODO: Upgrade to a redis Pub/Sub architecture to handle horizontal scaling of servers
+// One brand's broadcast from a server can be Published to a redis channel and the other Subscribed
+// Clients can then pull this message concurrently
 func (h *Hub) handleBroadcast(msg *BroadcastMessage) error {
 	data, err := json.Marshal(msg)
 	if err != nil {
@@ -322,7 +342,7 @@ func (h *Hub) handleBroadcast(msg *BroadcastMessage) error {
 			// If the send channel is blocked, drop the message broadcast to this client
 			// We know the client is online but their channel is blocked
 			// So we log it for debugging purposes
-			log.Printf("Dropping message to client: %s due to blocked channel\n", recipientClient.ID)
+			log.Printf("Dropping direct message to client: %s due to blocked channel\n", recipientClient.ID)
 			return ErrMessageDropped
 		}
 		log.Printf("Direct message sent to client: %s\n", msg.UserID)
@@ -377,7 +397,10 @@ func (h *Hub) handleFollowBrand(req *MessageRequest) {
 	req.Client.FollowedBrands[brandID] = true
 	h.followersMu.Unlock()
 	log.Printf("Client %s followed brand %s\n", req.Client.ID, brandID)
-
+	err := h.store.FollowBrand(req.Client.ID, brandID)
+	if err != nil {
+		log.Printf("error writing follow: %s\n", err.Error())
+	}
 }
 
 // Handle unfollow brand

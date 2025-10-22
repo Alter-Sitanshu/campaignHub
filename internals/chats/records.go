@@ -3,6 +3,7 @@ package chats
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"log"
 )
 
@@ -13,10 +14,15 @@ type HubStore struct {
 type HubStoreInterface interface {
 	// making map[brandID]bool for easy lookup
 	LoadFollowedBrands(userID string) (map[string]bool, error)
-	GetConversationByID(conversationID string) (*Conversation, error)
+	GetConversationByID(ctx context.Context, conversationID string) (*Conversation, error)
+	DeleteConversation(ctx context.Context, conversationID string) error
+	CreateConversation(ctx context.Context, conv *Conversation) error
 	SaveMessage(msg *Message) error
+	GetConversationMessages(ctx context.Context, conversationID string, offset, limit int) ([]Message, error)
 	UpdateLastMessageAt(ctx context.Context, conversationID string) error
 	MarkMessagesAsRead(ctx context.Context, conversationID string, userID string) error
+	UnfollowBrand(user, brand string) error
+	FollowBrand(user, brand string) error
 }
 
 // making map[brandID]bool for easy lookup
@@ -27,6 +33,9 @@ func (hs *HubStore) LoadFollowedBrands(ctx context.Context, userID string) (map[
 	var output = make(map[string]bool)
 	rows, err := hs.db.QueryContext(ctx, query, userID)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return output, nil
+		}
 		log.Printf("error getting bands: %s", err.Error())
 		return nil, err
 	}
@@ -46,6 +55,9 @@ func (hs *HubStore) LoadFollowedBrands(ctx context.Context, userID string) (map[
 }
 
 func (hs *HubStore) GetConversationByID(ctx context.Context, conversationID string) (*Conversation, error) {
+	if conversationID == "" {
+		return nil, ErrInvalidId
+	}
 	query := `
 		SELECT id, participant_one, participant_two, type, campaign_id, status, created_at,
 		last_message_at
@@ -68,6 +80,77 @@ func (hs *HubStore) GetConversationByID(ctx context.Context, conversationID stri
 		return nil, err
 	}
 	return &conv, nil
+}
+
+func (hs *HubStore) GetConversationMessages(ctx context.Context, conversationID string, offset, limit int) ([]Message, error) {
+	query := `
+		SELECT id, conversation_id, sender_id, message_type, content, is_read, created_at
+		FROM messages
+		WHERE conversation_id = $1
+		ORDER BY created_at DESC
+		LIMIT $2 OFFSET $3
+	`
+	rows, err := hs.db.QueryContext(ctx, query, conversationID, limit, offset)
+	if err != nil {
+		log.Printf("error messages of conv: %s\n", err.Error())
+		return nil, err
+	}
+	defer rows.Close()
+	var output []Message
+	for rows.Next() {
+		var msg Message
+		if err := rows.Scan(
+			&msg.ID,
+			&msg.ConversationID,
+			&msg.SenderID,
+			&msg.MessageType,
+			&msg.Content,
+			&msg.IsRead,
+			&msg.CreatedAt,
+		); err != nil {
+			log.Printf("error scanning: %s\n", err.Error())
+			return nil, err
+		}
+		output = append(output, msg)
+	}
+
+	return output, nil
+}
+
+func (hs *HubStore) CreateConversation(ctx context.Context, conv *Conversation) error {
+	query := `
+		INSERT INTO conversations
+		(id, participant_one, participant_two, type, campaign_id)
+		VALUES ($1, $2, $3, $4, $5)
+	`
+	_, err := hs.db.ExecContext(ctx, query,
+		conv.ID,
+		conv.ParticipantOne,
+		conv.ParticipantTwo,
+		conv.Type,
+		conv.CampaignID,
+	)
+	if err != nil {
+		log.Printf("error entering conversation: %s", err.Error())
+		return err
+	}
+	return nil
+}
+
+func (hs *HubStore) DeleteConversation(ctx context.Context, ConvID string) error {
+	query := `
+		DELETE FROM conversations
+		WHERE id = $1
+	`
+	rows, err := hs.db.ExecContext(ctx, query, ConvID)
+	if count, _ := rows.RowsAffected(); count == 0 {
+		return nil
+	}
+	if err != nil {
+		log.Printf("error: %s", err.Error())
+		return err
+	}
+	return nil
 }
 
 func (hs *HubStore) SaveMessage(ctx context.Context, msg *Message) error {
@@ -118,5 +201,31 @@ func (hs *HubStore) MarkMessagesAsRead(ctx context.Context, conversationID strin
 		log.Printf("error marking messages as read: %s", err.Error())
 		return err
 	}
+	return nil
+}
+
+func (hs *HubStore) FollowBrand(user, brand string) error {
+	query := `
+		INSERT INTO following_list (user_id, brand_id)
+		VALUES ($1, $2)
+	`
+	_, err := hs.db.Exec(query, user, brand)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (hs *HubStore) UnfollowBrand(user, brand string) error {
+	query := `
+		DELETE FROM following_list
+		WHERE user_id = $1 AND brand_id = $2
+	`
+	_, err := hs.db.Exec(query, user, brand)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

@@ -9,9 +9,11 @@ CREATE TABLE IF NOT EXISTS messages (
     sender_id varchar(36) not null,
     -- I know the tags will always be 3 chars only
     message_type varchar(3) not null check (message_type IN ('txt', 'pdf', 'img')),
-    content text,
+    content text not null,
     is_read boolean DEFAULT FALSE,
-    created_at timestamptz DEFAULT now()
+    created_at timestamptz DEFAULT now(),
+
+    CONSTRAINT fk_conversation_id FOREIGN KEY (conversation_id) REFERENCES conversations(id)
 );
 
 CREATE TABLE IF NOT EXISTS conversations (
@@ -24,7 +26,6 @@ CREATE TABLE IF NOT EXISTS conversations (
     created_at timestamptz DEFAULT now(),
     last_message_at timestamptz DEFAULT now(),
 
-    CONSTRAINT fk_campaign_id FOREIGN KEY (campaign_id) REFERENCES campaigns (id),
     CONSTRAINT fk_conv_status FOREIGN KEY (status) REFERENCES conv_status (id)
 );
 

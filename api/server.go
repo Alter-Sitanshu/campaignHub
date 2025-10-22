@@ -206,9 +206,13 @@ func WriteError(err string) gin.H {
 }
 
 func (app *Application) Run() error {
+	// Start the Sockets Hub in a go routine
+	go app.msgHub.Run()
 	return app.server.ListenAndServe()
 }
 
 func (app *Application) Shutdown(ctx context.Context) error {
+	// closing the sockets routine
+	app.msgHub.Stop()
 	return app.server.Shutdown(ctx)
 }

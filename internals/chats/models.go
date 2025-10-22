@@ -10,6 +10,10 @@ import (
 
 const (
 	TextMessageType = 1
+	OpenConvStatus  = 1
+	CloseConvStatus = 0
+	Direct          = "direct"
+	CamapignBroad   = "campaign"
 )
 
 type Client struct {
@@ -96,6 +100,8 @@ type Hub struct {
 	broadcast      chan *BroadcastMessage // Outgoing messages
 	store          *HubStore              // Database store
 	cache          *cache.Service         // Simple REDIS instance
+	stopOnce       sync.Once              // Guard against multiple close attempts concurrently
+	stop           chan struct{}          // signalling to stop the Hub instance
 }
 
 func NewHub(db *sql.DB, appCache *cache.Service) *Hub {
@@ -108,5 +114,6 @@ func NewHub(db *sql.DB, appCache *cache.Service) *Hub {
 		broadcast:      make(chan *BroadcastMessage, 256),
 		store:          &HubStore{db: db},
 		cache:          appCache,
+		stop:           make(chan struct{}),
 	}
 }

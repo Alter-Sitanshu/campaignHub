@@ -23,6 +23,7 @@ type Brand struct {
 	Website   string `json:"website"`
 	Address   string `json:"address"`
 	Campaigns int    `json:"campaign_count"`
+	CreatedAt string `json:"created_at"`
 }
 
 type BrandUpdatePayload struct {
@@ -64,7 +65,7 @@ func (b *BrandStore) ChangePassword(ctx context.Context, id, new_pass string) er
 
 func (b *BrandStore) GetBrandById(ctx context.Context, id string) (*Brand, error) {
 	query := `
-		SELECT id, name, email, password, sector, website, address, campaigns
+		SELECT id, name, email, password, sector, website, address, campaigns, created_at
 		FROM brands
 		WHERE id = $1
 	`
@@ -79,6 +80,7 @@ func (b *BrandStore) GetBrandById(ctx context.Context, id string) (*Brand, error
 		&brand.Website,
 		&brand.Address,
 		&brand.Campaigns,
+		&brand.CreatedAt,
 	)
 	if err != nil {
 		// Loggging error
@@ -104,7 +106,7 @@ func (b *BrandStore) GetBrandsByFilter(ctx context.Context, filter_type string, 
 		return nil, errors.New("filter not allowed")
 	}
 
-	query := "SELECT id, name, email, sector, website, address, campaigns FROM brands " + condition
+	query := "SELECT id, name, email, sector, website, address, campaigns, created_at FROM brands " + condition
 	rows, err := b.db.QueryContext(ctx, query, arg)
 	if err != nil {
 		log.Printf("Filtering brand error: %v\n", err.Error())
@@ -122,6 +124,7 @@ func (b *BrandStore) GetBrandsByFilter(ctx context.Context, filter_type string, 
 			&brand.Website,
 			&brand.Address,
 			&brand.Campaigns,
+			&brand.CreatedAt,
 		)
 		if err != nil {
 			log.Printf("Error while scanning filered brands: %v\n", err.Error())

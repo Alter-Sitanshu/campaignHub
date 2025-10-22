@@ -1,7 +1,7 @@
 -include .env
 MIGRATION_PATH = database/migrations
 
-.PHONY: startdb migratedown migrateup migration server test
+.PHONY: startdb migratedown migrateup migrateforce migration server test
 startdb:
 	docker run project
 
@@ -10,6 +10,9 @@ migrateup:
 
 migratedown:
 	@migrate -path $(MIGRATION_PATH) -database $(MAKEDB) -verbose down
+
+migrateforce:
+	@migrate -path ${MIGRATION_PATH} -database ${MAKEDB} force $(filter-out $@, $(MAKECMDGOALS))
 
 migration:
 	@migrate create -seq -ext sql -dir $(MIGRATION_PATH) $(filter-out $@, $(MAKECMDGOALS))
@@ -20,3 +23,5 @@ test:
 server:
 	go run main.go
 
+%:
+	@:
