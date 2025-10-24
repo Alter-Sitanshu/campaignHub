@@ -1,0 +1,384 @@
+package db
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"testing"
+	"time"
+
+	"github.com/Alter-Sitanshu/campaignHub/internals"
+	"github.com/google/uuid"
+)
+
+func init() {
+	MockUserStore = UserStore{
+		db: MockDB,
+	}
+	MockLinkStore.db = MockDB
+}
+
+func TestGetUsers(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	user := User{
+		Id:            "0001",
+		FirstName:     "Croc",
+		LastName:      "Singh",
+		Email:         "sitanshu5@gmail.com",
+		Gender:        "M",
+		Age:           20,
+		Role:          "LVL1",
+		PlatformLinks: []Links{},
+	}
+	if err := user.Password.Hash("random_pass"); err != nil {
+		log.Printf("Hashing error: %v\n", err.Error())
+		t.Fail()
+	}
+	if err := MockUserStore.CreateUser(ctx, &user); err != nil {
+		t.Fail()
+	}
+	t.Run("Getting user by id", func(t *testing.T) {
+		_, err := MockUserStore.GetUserById(ctx, "0001") // This is a given id that will always exist
+		if err != nil {
+			t.Fail()
+		}
+	})
+	t.Run("Getting user by mail", func(t *testing.T) {
+		_, err := MockUserStore.GetUserByEmail(ctx, "sitanshu5@gmail.com") // This is a given mail that will always exist
+		if err != nil {
+			t.Fail()
+		}
+	})
+	t.Run("Fetching Invalid user id", func(t *testing.T) {
+		_, err := MockUserStore.GetUserById(ctx, "NA") // Some random id
+		if err == nil {
+			t.Fail()
+		}
+		_, err = MockUserStore.GetUserById(ctx, "")
+		if err == nil {
+			// We expect an occur to occur
+			t.Fail()
+		}
+		_, err = MockUserStore.GetUserByEmail(ctx, "")
+		if err == nil {
+			// We expect an occur to occur
+			t.Fail()
+		}
+	})
+	MockUserStore.DeleteUser(ctx, user.Id)
+}
+
+func TestCreateUser(t *testing.T) {
+	ctx := t.Context()
+	t.Run("Creating a valid user", func(t *testing.T) {
+		user := User{
+			Id:            "0002",
+			FirstName:     "Croc",
+			LastName:      "Singh",
+			Email:         "crocs2@gmail.com",
+			Gender:        "M",
+			Age:           20,
+			Role:          "LVL1",
+			PlatformLinks: []Links{},
+		}
+		if err := user.Password.Hash("random_pass"); err != nil {
+			log.Printf("Hashing error: %v\n", err.Error())
+			t.Fail()
+		}
+		if err := MockUserStore.CreateUser(ctx, &user); err != nil {
+			t.Fail()
+		}
+		MockUserStore.DeleteUser(ctx, user.Id)
+	})
+	t.Run("Checking age range", func(t *testing.T) {
+		user := User{
+			Id:            "0003",
+			FirstName:     "Croc",
+			LastName:      "Singh",
+			Email:         "crocs3@gmail.com",
+			Gender:        "M",
+			Age:           0,
+			Role:          "LVL1",
+			PlatformLinks: []Links{},
+		}
+		if err := user.Password.Hash("random_pass"); err != nil {
+			t.Fail()
+		}
+		if err := MockUserStore.CreateUser(ctx, &user); err == nil {
+			// We expect an occur to occur
+			t.Fail()
+		}
+	})
+	t.Run("Checking age range", func(t *testing.T) {
+		user := User{
+			Id:            "0004",
+			FirstName:     "Croc",
+			LastName:      "Singh",
+			Email:         "crocs4@gmail.com",
+			Gender:        "M",
+			Age:           100,
+			Role:          "LVL1",
+			PlatformLinks: []Links{},
+		}
+		if err := user.Password.Hash("random_pass"); err != nil {
+			log.Printf("Hashing error: %v\n", err.Error())
+			t.Fail()
+		}
+		if err := MockUserStore.CreateUser(ctx, &user); err == nil {
+			// We expect an occur to occur
+			t.Fail()
+		}
+	})
+}
+
+func TestUpdateUser(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	user := User{
+		Id:            "0002",
+		FirstName:     "Croc",
+		LastName:      "Singh",
+		Email:         "crocs2@gmail.com",
+		Gender:        "M",
+		Age:           20,
+		Role:          "LVL1",
+		PlatformLinks: []Links{},
+	}
+	if err := user.Password.Hash("random_pass"); err != nil {
+		log.Printf("Hashing error: %v\n", err.Error())
+		t.Fail()
+	}
+	if err := MockUserStore.CreateUser(ctx, &user); err != nil {
+		t.Fail()
+	}
+	NewFName := "NewFName"
+	NewLName := "NewLName"
+	NewEmail := "NewMail@gamil.com"
+	NewGender := "O"
+	t.Run("updating user", func(t *testing.T) {
+		payload := UpdatePayload{
+			FirstName: &NewFName,
+		}
+		// Only updating FirstName
+		err := MockUserStore.UpdateUser(ctx, user.Id, payload)
+		if err != nil {
+			t.Fail()
+		}
+		// Only updating LastName
+		payload.FirstName = nil
+		payload.LastName = &NewLName
+		err = MockUserStore.UpdateUser(ctx, user.Id, payload)
+		if err != nil {
+			t.Fail()
+		}
+		// Only updating Email
+		payload.LastName = nil
+		payload.Email = &NewEmail
+		err = MockUserStore.UpdateUser(ctx, user.Id, payload)
+		if err != nil {
+			t.Fail()
+		}
+		// Only updating Gender
+		payload.Email = nil
+		payload.Gender = &NewGender
+		err = MockUserStore.UpdateUser(ctx, user.Id, payload)
+		if err != nil {
+			t.Fail()
+		}
+	})
+	NewGender = "N" // Not Possible
+	t.Run("Invalid Gender type", func(t *testing.T) {
+		payload := UpdatePayload{
+			Gender: &NewGender,
+		}
+
+		err := MockUserStore.UpdateUser(ctx, user.Id, payload)
+		if err == nil {
+			t.Fail()
+		}
+	})
+	t.Run("No fields to update", func(t *testing.T) {
+		payload := UpdatePayload{}
+
+		err := MockUserStore.UpdateUser(ctx, user.Id, payload)
+		if err == nil {
+			t.Fail()
+		}
+	})
+	MockUserStore.DeleteUser(ctx, user.Id)
+}
+
+func TestDeleteUsers(t *testing.T) {
+	ctx := t.Context()
+	t.Run("Delete a valid user", func(t *testing.T) {
+		// Creating the user to be deleted
+		user := User{
+			Id:            "0002",
+			FirstName:     "Croc",
+			LastName:      "Singh",
+			Email:         "crocs2@gmail.com",
+			Gender:        "M",
+			Age:           20,
+			Role:          "LVL1",
+			PlatformLinks: []Links{},
+		}
+		if err := user.Password.Hash("random_pass"); err != nil {
+			log.Printf("Hashing error: %v\n", err.Error())
+			t.Fail()
+		}
+		if err := MockUserStore.CreateUser(ctx, &user); err != nil {
+			t.Fail()
+		}
+		// Deleting the newly created user
+		err := MockUserStore.DeleteUser(ctx, "0002")
+		if err != nil {
+			t.Fail()
+		}
+	})
+	t.Run("Deleting an invalid user", func(t *testing.T) {
+		err := MockUserStore.DeleteUser(ctx, "NA") // Impossible to occur in DB
+		if err == nil {
+			// We expect an error to occur
+			t.Fail()
+		}
+	})
+}
+
+// ----------- LinkStore Tests ---------------
+
+func seedLinks(num int) []Links {
+	var output []Links
+	for i := range num {
+		link := Links{
+			Platform: internals.RandString(7),
+			Url:      fmt.Sprintf("example_%d.com", i),
+		}
+		output = append(output, link)
+	}
+	return output
+}
+
+func destroyLinks(ctx context.Context, uid string, links []Links) {
+	for _, v := range links {
+		MockLinkStore.DeleteLinks(ctx, uid, v.Platform)
+	}
+}
+
+func TestAddLink(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+
+	// make a mock creator
+	uid := generateCreator(ctx, "0001")
+
+	links := seedLinks(10)
+	defer func() {
+		destroyLinks(ctx, uid, links)
+		destroyCreator(ctx, uid)
+		cancel()
+	}()
+	t.Run("adding valid links", func(t *testing.T) {
+		err := MockLinkStore.AddLinks(ctx, uid, links)
+		if err != nil {
+			t.Fail()
+		}
+	})
+}
+
+func TestDeleteLinks(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+
+	uid := generateCreator(ctx, "0001")
+
+	links := seedLinks(1)
+	defer func() {
+		destroyLinks(ctx, uid, links)
+		destroyCreator(ctx, uid)
+		cancel()
+	}()
+
+	t.Run("blank input for uid and platform", func(t *testing.T) {
+		err := MockLinkStore.DeleteLinks(ctx, "", "")
+		if err == nil {
+			t.Fail()
+		}
+	})
+	t.Run("with blank uid and valid platform", func(t *testing.T) {
+		err := MockLinkStore.DeleteLinks(ctx, "", links[0].Platform)
+		if err == nil {
+			t.Fail()
+		}
+	})
+	t.Run("empty invalid input for platform parameter", func(t *testing.T) {
+		err := MockLinkStore.DeleteLinks(ctx, uid, "")
+		if err == nil {
+			t.Fail()
+		}
+	})
+	t.Run("deleting valid link", func(t *testing.T) {
+		err := MockLinkStore.DeleteLinks(ctx, uid, links[0].Platform)
+		if err != nil {
+			t.Fail()
+		}
+	})
+}
+
+func TestVerifyUser(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+	uid := uuid.NewString()
+	t.Run("verifying a valid user", func(t *testing.T) {
+		uid := generateCreator(ctx, uid)
+		defer destroyCreator(ctx, uid)
+		err := MockUserStore.VerifyUser(ctx, "users", uid)
+		if err != nil {
+			t.Fail()
+		}
+	})
+	t.Run("verifying an invalid user", func(t *testing.T) {
+		err := MockUserStore.VerifyUser(ctx, "users", "NA")
+		if err == nil {
+			t.Fail()
+		}
+	})
+	t.Run("verifying with invalid role", func(t *testing.T) {
+		err := MockUserStore.VerifyUser(ctx, "X", "0001")
+		if err == nil {
+			t.Fail()
+		}
+	})
+}
+
+func TestUpdateUserPassword(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+
+	// creating a dummy brand
+	uid := "dummy_user_01"
+	generateCreator(ctx, uid)
+	defer func() {
+		destroyCreator(ctx, uid)
+		cancel()
+	}()
+	t.Run("OK", func(t *testing.T) {
+		new_pass := "random_password"
+		err := MockUserStore.ChangePassword(ctx, uid, new_pass)
+		if err != nil {
+			t.Fail()
+		}
+	})
+	t.Run("Invalid ID", func(t *testing.T) {
+		new_pass := "random_password"
+		err := MockUserStore.ChangePassword(ctx, "NA", new_pass)
+		if err == nil {
+			t.Fail()
+		}
+	})
+	t.Run("violating minimum password length", func(t *testing.T) {
+		new_pass := "123456" // min length is 8
+		err := MockUserStore.ChangePassword(ctx, uid, new_pass)
+		if err == nil {
+			t.Fail()
+		}
+	})
+}
