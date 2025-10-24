@@ -1,5 +1,5 @@
--include ../.env
-MIGRATION_PATH = database/migrations
+-include .env
+MIGRATION_PATH = backend/database/migrations
 
 .PHONY: startdb migratedown migrateup migrateforce migration server test
 startdb:
