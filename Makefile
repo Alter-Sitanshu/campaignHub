@@ -18,7 +18,7 @@ migration:
 	@migrate create -seq -ext sql -dir $(MIGRATION_PATH) $(filter-out $@, $(MAKECMDGOALS))
 
 test:
-	go test -v ./...
+	go test -v ./backend/...
 
 build:
 	go build -o ./bin/main.exe main.go
