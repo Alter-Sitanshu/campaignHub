@@ -1,0 +1,67 @@
+services:
+  db:
+    image: postgres:12-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: ${DB_NAME}
+    networks:
+      - backend
+    volumes:
+      - psql_vol:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  
+  redis:
+    image: redis:latest
+    restart: always
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
+    networks:
+      - backend
+    volumes:
+      - redis_vol:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  server:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      - DOCKER_ENV=true
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    ports:
+      - 8080:8080
+    networks:
+      - backend
+      - frontend
+    volumes:
+      - server_logs:/data
+
+volumes:
+  redis_vol:
+  psql_vol:
+  server_logs:
+
+networks:
+  backend:
+    external: true
+  frontend:
+    external: true
+
+
+
