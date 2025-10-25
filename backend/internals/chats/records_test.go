@@ -115,8 +115,11 @@ func TestFollowUnfollow(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), QueryTimeOut)
 
 	// creating a mock creator
-	creator := "mock_follow_user_001"
-	GenerateCreator(ctx, creator)
+	creator := "mock_creator_001"
+	_, err := GenerateCreator(ctx, creator)
+	if err != nil {
+		log.Printf("error creating user: %s\n", err.Error())
+	}
 
 	// brands to follow for the user
 	bids := SeedBrands(ctx, 10)
@@ -129,15 +132,17 @@ func TestFollowUnfollow(t *testing.T) {
 	}()
 
 	t.Run("Follow 10 brands and then unfollow last 5", func(t *testing.T) {
-		// slight delay to ensire the creation of brands and user
+		// slight delay to ensure the creation of brands and user
 		time.Sleep(time.Millisecond * 50)
 		// follow all the brands first
 		before, after := 10, 5
 		for i := range bids {
 			err := MockHub.store.FollowBrand(ctx, creator, bids[i])
 			if err != nil {
-				log.Printf("failed at creation of follow: %q\n", err.Error())
+				log.Printf("failed at creation of follow for %q: %q\n", bids[i], err.Error())
 				t.FailNow()
+			} else {
+				log.Printf("created: %q -> %q\n", creator, bids[i])
 			}
 		}
 		listBefore, _ := MockHub.store.LoadFollowedBrands(ctx, creator)

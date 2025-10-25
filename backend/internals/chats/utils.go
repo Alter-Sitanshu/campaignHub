@@ -31,17 +31,20 @@ func Init() {
 	MockHub = NewHub(MockHubStore, MockCacheService)
 }
 
-func GenerateCreator(ctx context.Context, mockUserId string) string {
+func GenerateCreator(ctx context.Context, mockUserId string) (string, error) {
 	query := `
 		INSERT INTO users (id, first_name, last_name, email, password, gender, age, role)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
 	args := []any{
-		mockUserId, "mock_first_name", "mock_last_name", "email@gmail.com",
+		mockUserId, fmt.Sprintf("mock_name_%s", mockUserId), "mock_last_name",
+		fmt.Sprintf("%s_email@gmail.com", mockUserId),
 		"password", "O", 20, "LVL1",
 	}
-	MockHubStore.ExecContext(ctx, query, args...)
-	return mockUserId
+	if _, err := MockHubStore.ExecContext(ctx, query, args...); err != nil {
+		return "", err
+	}
+	return mockUserId, nil
 }
 
 func DestroyCreator(ctx context.Context, mockUserId string) {
