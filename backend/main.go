@@ -41,8 +41,8 @@ func main() {
 		Addr: env.GetString("PORT", ":8080"), // default port 8080
 		DbCfg: api.DBConfig{
 			ADDR:         env.GetString("DB_ADDR", ""),
-			MaxConns:     env.GetInt("MAXCONN", 10),
-			MaxIdleConns: env.GetInt("MAXIDLECONN", 5),
+			MaxConns:     env.GetInt("MAXCONN", 15),
+			MaxIdleConns: env.GetInt("MAXIDLECONN", 10),
 			MaxIdleTime:  env.GetInt("MAXIDLETIME", 5), // 5 Minutes -> Converted into an interval internally
 		},
 		TokenCfg: api.TokenConfig{

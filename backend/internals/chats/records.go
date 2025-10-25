@@ -21,8 +21,8 @@ type HubStoreInterface interface {
 	GetConversationMessages(ctx context.Context, conversationID string, offset, limit int) ([]Message, error)
 	UpdateLastMessageAt(ctx context.Context, conversationID string) error
 	MarkMessagesAsRead(ctx context.Context, conversationID string, userID string) error
-	UnfollowBrand(user, brand string) error
-	FollowBrand(user, brand string) error
+	UnfollowBrand(ctx context.Context, user, brand string) error
+	FollowBrand(ctx context.Context, user, brand string) error
 }
 
 // making map[brandID]bool for easy lookup
@@ -204,7 +204,7 @@ func (hs *HubStore) MarkMessagesAsRead(ctx context.Context, conversationID strin
 	return nil
 }
 
-func (hs *HubStore) FollowBrand(user, brand string) error {
+func (hs *HubStore) FollowBrand(ctx context.Context, user, brand string) error {
 	query := `
 		INSERT INTO following_list (user_id, brand_id)
 		VALUES ($1, $2)
@@ -217,7 +217,7 @@ func (hs *HubStore) FollowBrand(user, brand string) error {
 	return nil
 }
 
-func (hs *HubStore) UnfollowBrand(user, brand string) error {
+func (hs *HubStore) UnfollowBrand(ctx context.Context, user, brand string) error {
 	query := `
 		DELETE FROM following_list
 		WHERE user_id = $1 AND brand_id = $2

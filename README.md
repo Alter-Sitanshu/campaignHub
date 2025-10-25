@@ -7,7 +7,7 @@
 
 ## 📐 ER Diagram
 
-![Database Diagram](./database/CamapaignHub.png)  
+![Database Diagram](.backend/database/CamapaignHub.png)  
 *(Exported from [dbdiagram.io](https://dbdiagram.io))*  
 
 ---

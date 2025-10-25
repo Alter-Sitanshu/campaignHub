@@ -41,7 +41,7 @@ func TestLoadFollowedBrands(t *testing.T) {
 
 	t.Run("OK", func(t *testing.T) {
 		for _, id := range bids {
-			err := MockHub.store.FollowBrand(creatorID, id)
+			err := MockHub.store.FollowBrand(ctx, creatorID, id)
 			if err != nil {
 				log.Printf("failed at creation of follow: %q\n", err.Error())
 				t.Fatal()
@@ -129,10 +129,12 @@ func TestFollowUnfollow(t *testing.T) {
 	}()
 
 	t.Run("Follow 10 brands and then unfollow last 5", func(t *testing.T) {
+		// slight delay to ensire the creation of brands and user
+		time.Sleep(time.Millisecond * 50)
 		// follow all the brands first
 		before, after := 10, 5
 		for i := range bids {
-			err := MockHub.store.FollowBrand(creator, bids[i])
+			err := MockHub.store.FollowBrand(ctx, creator, bids[i])
 			if err != nil {
 				log.Printf("failed at creation of follow: %q\n", err.Error())
 				t.FailNow()
@@ -145,7 +147,7 @@ func TestFollowUnfollow(t *testing.T) {
 		}
 		// unfollow the last 5
 		for i := 5; i < 10; i++ {
-			err := MockHub.store.UnfollowBrand(creator, bids[i])
+			err := MockHub.store.UnfollowBrand(ctx, creator, bids[i])
 			if err != nil {
 				log.Printf("failed at unfollow\n")
 				t.Fail()

@@ -171,11 +171,11 @@ func (h *Hub) handleMessage(req *MessageRequest) {
 
 	// Handle follow brand
 	case "follow_brand":
-		h.handleFollowBrand(req)
+		h.handleFollowBrand(ctx, req)
 
 	// Handle unfollow brand
 	case "unfollow_brand":
-		h.handleUnfollowBrand(req)
+		h.handleUnfollowBrand(ctx, req)
 	default:
 		log.Printf("Unknown message type: %s from client: %s", req.Message.Type, req.Client.ID)
 	}
@@ -378,7 +378,7 @@ func (h *Hub) handleBroadcast(msg *BroadcastMessage) error {
 }
 
 // Handle follow brand
-func (h *Hub) handleFollowBrand(req *MessageRequest) {
+func (h *Hub) handleFollowBrand(ctx context.Context, req *MessageRequest) {
 	exists := req.Message.BrandID
 	if exists == nil {
 		return
@@ -397,14 +397,14 @@ func (h *Hub) handleFollowBrand(req *MessageRequest) {
 	req.Client.FollowedBrands[brandID] = true
 	h.followersMu.Unlock()
 	log.Printf("Client %s followed brand %s\n", req.Client.ID, brandID)
-	err := h.store.FollowBrand(req.Client.ID, brandID)
+	err := h.store.FollowBrand(ctx, req.Client.ID, brandID)
 	if err != nil {
 		log.Printf("error writing follow: %s\n", err.Error())
 	}
 }
 
 // Handle unfollow brand
-func (h *Hub) handleUnfollowBrand(req *MessageRequest) {
+func (h *Hub) handleUnfollowBrand(ctx context.Context, req *MessageRequest) {
 	exists := req.Message.BrandID
 	if exists == nil {
 		return
@@ -418,12 +418,26 @@ func (h *Hub) handleUnfollowBrand(req *MessageRequest) {
 		return
 	}
 
-	// Add user to brand's followers
-	h.brandFollowers[brandID][req.Client.ID] = req.Client
+	// Check user in brand's followers
+	if _, exists := h.brandFollowers[brandID][req.Client.ID]; !exists {
+		// Log the invalid request
+		log.Printf("error unfollow request for brand: %s, by client: %s\n", brandID, req.Client.ID)
+		return
+	}
 
-	// Track in client for easy removal
-	req.Client.FollowedBrands[brandID] = true
+	// Remove user from the followers's list
+	delete(h.brandFollowers[brandID], req.Client.ID)
+	delete(req.Client.FollowedBrands, brandID)
+
 	h.followersMu.Unlock()
+	if err := h.store.UnfollowBrand(ctx, req.Client.ID, brandID); err != nil {
+		// Log the invalid request
+		log.Printf("error unfollow request for brand: %s, by client: %s\n", brandID, req.Client.ID)
+		// undo the in-memory delete
+		h.brandFollowers[brandID][req.Client.ID] = req.Client
+		req.Client.FollowedBrands[brandID] = true
+		return
+	}
 	log.Printf("Client %s followed brand %s\n", req.Client.ID, brandID)
 
 }
