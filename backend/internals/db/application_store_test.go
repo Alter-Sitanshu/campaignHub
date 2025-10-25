@@ -61,6 +61,8 @@ func TestCreateApplications(t *testing.T) {
 	}()
 
 	t.Run("OK", func(t *testing.T) {
+		// Delay to ensure the creation of the entities
+		time.Sleep(time.Millisecond * 50)
 		appl := CampaignApplication{
 			Id:         appl_id,
 			CampaignId: camp[0],
