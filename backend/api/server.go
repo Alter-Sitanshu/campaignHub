@@ -13,7 +13,11 @@ import (
 	"github.com/Alter-Sitanshu/campaignHub/internals/mailer"
 	"github.com/Alter-Sitanshu/campaignHub/internals/platform"
 	"github.com/Alter-Sitanshu/campaignHub/internals/workers.go"
+	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/requestid"
+	"github.com/gin-contrib/secure"
 	"github.com/gin-gonic/gin"
+	"golang.org/x/time/rate"
 )
 
 type Application struct {
@@ -88,27 +92,7 @@ const (
 	DefaultSyncFrequency = 5                  // in minutes
 )
 
-func NewApplication(addr string, store *db.Store, cfg *Config, PASETO, JWT auth.TokenMaker,
-	mailer *mailer.MailService, cacheService *cache.Service, factory *platform.Factory,
-	appHub *chats.Hub, workers *workers.AppWorkers,
-) *Application {
-	gin.SetMode(gin.DebugMode) // TODO: change to release mode in production
-	router := gin.Default()
-	app := Application{
-		store: store,
-		server: &http.Server{
-			Addr:    addr,             // address the server listens on
-			Handler: router.Handler(), // HTTP handler to invoke, in this case, the Gin router
-		},
-		cfg:         *cfg,
-		jwtMaker:    JWT,
-		pasetoMaker: PASETO,
-		mailer:      mailer,
-		cache:       cacheService,
-		factory:     factory,
-		msgHub:      appHub,
-		workers:     workers,
-	}
+func (app *Application) AddRoutes(addr string, router *gin.Engine) {
 
 	// Public routes
 	router.GET("/", app.HealthCheck)
@@ -194,6 +178,88 @@ func NewApplication(addr string, store *db.Store, cfg *Config, PASETO, JWT auth.
 		accounts.DELETE("/accounts/:acc_id", app.DeleteUserAccount)
 		accounts.PUT("/accounts/:acc_id", app.DisableUserAccount)
 	}
+
+	app.server = &http.Server{
+		Addr:    addr,             // address the server listens on
+		Handler: router.Handler(), // HTTP handler to invoke, in this case, the Gin router
+	}
+}
+
+func NewApplication(addr string, store *db.Store, cfg *Config, PASETO, JWT auth.TokenMaker,
+	mailer *mailer.MailService, cacheService *cache.Service, factory *platform.Factory,
+	appHub *chats.Hub, workers *workers.AppWorkers,
+) *Application {
+	gin.SetMode(gin.DebugMode) // TODO: change to release mode in production
+	router := gin.Default()
+
+	app := Application{
+		store:       store,
+		cfg:         *cfg,
+		jwtMaker:    JWT,
+		pasetoMaker: PASETO,
+		mailer:      mailer,
+		cache:       cacheService,
+		factory:     factory,
+		msgHub:      appHub,
+		workers:     workers,
+	}
+
+	// rate limiter
+	limiter := rate.NewLimiter(rate.Limit(1000), 500)
+	// Attach the limiter to the router
+	router.Use(app.RateLimitter(limiter))
+
+	// Adding CORS
+	router.Use(cors.New(cors.Config{
+		AllowOrigins: []string{
+			"https://campaignhub.com",
+			"https://www.campaignhub.com",
+			"http://localhost:3000", // for dev
+		},
+		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders: []string{
+			"Origin", "Content-Type", "Authorization",
+			"X-Requested-With", "Accept", "X-Request-ID",
+		},
+		ExposeHeaders: []string{
+			"Content-Length", "Content-Disposition", // for file downloads
+		},
+		AllowCredentials: true,
+		AllowWebSockets:  true,
+		MaxAge:           12 * time.Hour,
+	}))
+
+	// Attaching Security headers
+	router.Use(secure.New(secure.Config{
+		FrameDeny:          true, // Prevent clickjacking
+		ContentTypeNosniff: true, // Stop MIME-type sniffing
+		BrowserXssFilter:   true, // Basic browser XSS protection
+
+		// Forcing HTTPS
+		SSLRedirect:          true,
+		SSLProxyHeaders:      map[string]string{"X-Forwarded-Proto": "https"},
+		STSSeconds:           31536000, // 1 year
+		STSIncludeSubdomains: true,
+		STSPreload:           true,
+
+		// Content Security Policy (CSP) For handling the Media/Chats
+		// TODO: change values to match the CDN, API, and frontend origins.
+		ContentSecurityPolicy: "default-src 'self'; " +
+			"img-src 'self' data: blob: https://cdn.campaignhub.com; " +
+			"media-src 'self' blob: https://cdn.campaignhub.com; " +
+			"script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+			"connect-src 'self' wss://api.campaignhub.com https://api.campaignhub.com; " +
+			"style-src 'self' 'unsafe-inline'; " +
+			"font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com;",
+
+		ReferrerPolicy: "strict-origin-when-cross-origin", // prevent leaking full URLs
+	}))
+
+	// Attaching request id headers
+	router.Use(requestid.New())
+
+	// adds the routes to the gin.Engine and attaches the handler to the application
+	app.AddRoutes(addr, router)
 
 	return &app
 }

@@ -15,7 +15,11 @@ require (
 	github.com/aead/poly1305 v0.0.0-20180717145839-3fee0db0b635 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
+	github.com/gin-contrib/cors v1.7.6 // indirect
+	github.com/gin-contrib/requestid v1.0.5 // indirect
+	github.com/gin-contrib/secure v1.1.2 // indirect
 	github.com/pkg/errors v0.8.0 // indirect
+	golang.org/x/time v0.14.0 // indirect
 )
 
 require (
