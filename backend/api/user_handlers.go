@@ -13,6 +13,7 @@ import (
 )
 
 // User Request Payload
+// gender = M/F or O(other)
 type UserPaylaod struct {
 	FirstName     string     `json:"first_name" binding:"required"`
 	LastName      string     `json:"last_name" binding:"required"`

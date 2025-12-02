@@ -90,7 +90,14 @@ func (app *Application) CreateSubmission(c *gin.Context) {
 	// Populating the submission with the meta data
 	submission.VideoTitle = metaData.Title
 	submission.VideoID = metaData.VideoID
-	submission.ThumbnailURL = metaData.Thumbnail.URL
+	// TODO: add the S3 url
+	// submission.ThumbnailURL = fmt.Sprintf(
+	// 	"%s/submissions/%s/thumb01/%s",
+	// 	app.cfg.AWS.S3.Addr,
+	// 	submission.Id,
+	// 	getExtension(metaData.Thumbnail.ContentType),
+	// )
+	// submission.ThumbnailURL = metaData.Thumbnail.URL
 	submission.Views = metaData.ViewCount
 	submission.LikeCount = metaData.LikeCount
 	submission.SyncFrequency = DefaultSyncFrequency
