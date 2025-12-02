@@ -21,15 +21,11 @@ type Stats struct {
 
 type YTThumbnails struct {
 	Medium struct {
-		URL    string `json:"url"`
-		Width  int    `json:"width"`
-		Height int    `json:"height"`
+		URL string `json:"url"`
 	} `json:"medium"`
 	// Optional low quality thumbnail
 	// Low struct {
 	// 	URL    string `json:"url"`
-	// 	Width  int    `json:"width"`
-	// 	Height int    `json:"height"`
 	// } `json:"default"`
 }
 
@@ -49,10 +45,8 @@ type YoutubeResponse struct {
 }
 
 type Thumbnail struct {
-	Quality string `json:"quality"`
-	URL     string `json:"url"`
-	Width   int    `json:"width"`
-	Height  int    `json:"height"`
+	Raw         []byte `json:"raw"`
+	ContentType string `json:"content-type"`
 }
 
 // Return structured metadata
@@ -116,11 +110,13 @@ func (yt *YTClient) GetVideoDetails(ctx context.Context, VideoID string) (any, e
 	// Convert string counts to integers
 	viewCount, _ := strconv.Atoi(video.Statistics.ViewCount)
 	likeCount, _ := strconv.Atoi(video.Statistics.LikeCount)
+	donwloadThumb, Type, err := DownloadFile(video.Details.Thumbs.Medium.URL)
+	if err != nil {
+		return nil, err
+	}
 	thumbs := Thumbnail{
-		Quality: "medium",
-		URL:     video.Details.Thumbs.Medium.URL,
-		Width:   video.Details.Thumbs.Medium.Width,
-		Height:  video.Details.Thumbs.Medium.Height,
+		Raw:         donwloadThumb,
+		ContentType: Type,
 	}
 	//{
 	// 	Quality: "low",

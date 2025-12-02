@@ -120,7 +120,6 @@ func (w *PollingWorker) syncSubmission(ctx context.Context, submission db.Pollin
 			ViewsDelta:    viewsDelta,
 			VideoTitle:    metadata.Title,
 			LikeCount:     metadata.LikeCount,
-			ThumbnailURL:  metadata.Thumbnails.URL,
 			EarningsDelta: earningsDelta,
 			CampaignID:    submission.CampaignId,
 			CreatorID:     submission.CreatorId,
