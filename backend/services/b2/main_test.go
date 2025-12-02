@@ -1,0 +1,26 @@
+//go:build integration
+// +build integration
+
+package b2
+
+import (
+	"log"
+	"os"
+	"testing"
+
+	"github.com/joho/godotenv"
+)
+
+// This TestMain will ONLY run when -tags=integration is passed
+func TestMain(m *testing.M) {
+	log.Printf("integration tests running...\n")
+	if os.Getenv("DOCKER_ENV") != "true" {
+		if err := godotenv.Load("../../../.env"); err != nil {
+			log.Println("No .env file found — relying on environment variables")
+		} else {
+			log.Println(".env file loaded successfully")
+		}
+	}
+
+	os.Exit(m.Run())
+}
