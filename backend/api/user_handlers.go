@@ -452,6 +452,7 @@ func (app *Application) GetCurrentUser(c *gin.Context) {
 
 func (app *Application) GetProfilePicUpdateURL(c *gin.Context) {
 	// Fetching the logged in user
+	ctx := c.Request.Context()
 	LogInUser, ok := c.Get("user")
 	if !ok {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
@@ -472,6 +473,12 @@ func (app *Application) GetProfilePicUpdateURL(c *gin.Context) {
 	objKey, err := b2.GenerateFileKey(UserID, "profile", ext)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, WriteError(err.Error()))
+		return
+	}
+	oldUrl := app.store.UserInterface.GetUserProfilePicture(ctx, UserID)
+	if oldUrl != "" && oldUrl != objKey {
+		// I need to delete the old profile picture
+		go app.s3Store.DeleteFileWithPerms(oldUrl)
 	}
 	fileKey := fmt.Sprintf("%s/%s", app.s3Store.BucketName, objKey)
 	signedURL, err := app.s3Store.GetSignedURL(&fileKey, b2.PutObj)
