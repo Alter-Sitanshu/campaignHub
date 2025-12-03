@@ -9,7 +9,7 @@ import (
 	"github.com/Alter-Sitanshu/campaignHub/internals"
 	"github.com/Alter-Sitanshu/campaignHub/internals/cache"
 	"github.com/Alter-Sitanshu/campaignHub/internals/db"
-	"github.com/Alter-Sitanshu/campaignHub/internals/platform"
+	"github.com/Alter-Sitanshu/campaignHub/services/platform"
 )
 
 func NewPollingWorker(
@@ -74,7 +74,7 @@ func (w *PollingWorker) syncSubmission(ctx context.Context, submission db.Pollin
 	}
 
 	// Fetch metadata from platform
-	response, err := w.platformClient.GetVideoDetails(ctx, parsed.Name, parsed.VideoID)
+	response, err := w.platformClient.GetVideoDetailsForWorkers(ctx, parsed.Name, parsed.VideoID)
 	if err != nil {
 		log.Printf("error: %s", err.Error())
 		return err
@@ -93,7 +93,6 @@ func (w *PollingWorker) syncSubmission(ctx context.Context, submission db.Pollin
 		Title:        metadata.Title,
 		ViewCount:    metadata.ViewCount,
 		LikeCount:    metadata.LikeCount,
-		Thumbnail:    metadata.Thumbnails,
 		UploadedAt:   metadata.UploadedAt,
 	}
 	w.cache.SetVideoMetadata(ctx, submission.Id, cacheMetadata)

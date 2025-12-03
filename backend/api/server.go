@@ -11,9 +11,9 @@ import (
 	"github.com/Alter-Sitanshu/campaignHub/internals/chats"
 	"github.com/Alter-Sitanshu/campaignHub/internals/db"
 	"github.com/Alter-Sitanshu/campaignHub/internals/mailer"
-	"github.com/Alter-Sitanshu/campaignHub/internals/platform"
 	"github.com/Alter-Sitanshu/campaignHub/internals/workers"
 	"github.com/Alter-Sitanshu/campaignHub/services/b2"
+	"github.com/Alter-Sitanshu/campaignHub/services/platform"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/requestid"
 

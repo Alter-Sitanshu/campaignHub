@@ -56,7 +56,7 @@ type VideoMetadata struct {
 	Title      string    `json:"title"`
 	ViewCount  int       `json:"view_count"`
 	LikeCount  int       `json:"like_count"`
-	Thumbnails Thumbnail `json:"thumbnails"`
+	Thumbnails Thumbnail `json:"thumbnails,omitempty"`
 	UploadedAt string    `json:"uploaded_at"`
 }
 
@@ -131,6 +131,59 @@ func (yt *YTClient) GetVideoDetails(ctx context.Context, VideoID string) (any, e
 		ViewCount:  viewCount,
 		LikeCount:  likeCount,
 		Thumbnails: thumbs,
+		UploadedAt: video.Details.UploadedAt,
+	}, nil
+}
+
+func (yt *YTClient) GetVideoDetailsForWorkers(ctx context.Context, VideoID string) (any, error) {
+	if VideoID == "" || VideoID == " " {
+		log.Printf("error: video id invalid %q\n", VideoID)
+		return nil, fmt.Errorf("invalid video id")
+	}
+	url := fmt.Sprintf(
+		"https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=%s&key=%s",
+		VideoID, yt.APIKey,
+	)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		log.Printf("error: %v", err.Error())
+		return nil, err
+	}
+
+	resp, err := yt.httpClient.Do(req)
+	if err != nil {
+		log.Printf("error: %v", err.Error())
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("youtube api returned status %d", resp.StatusCode)
+	}
+	var data YoutubeResponse
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		log.Printf("error: %v", err.Error())
+		return nil, err
+	}
+
+	if len(data.Items) == 0 {
+		log.Printf("error: %v", "invalid video id")
+		return nil, fmt.Errorf("video not found")
+	}
+
+	video := data.Items[0]
+
+	// Convert string counts to integers
+	viewCount, _ := strconv.Atoi(video.Statistics.ViewCount)
+	likeCount, _ := strconv.Atoi(video.Statistics.LikeCount)
+
+	return &VideoMetadata{
+		VideoID:    VideoID,
+		Platform:   "youtube",
+		Title:      video.Details.Title,
+		ViewCount:  viewCount,
+		LikeCount:  likeCount,
 		UploadedAt: video.Details.UploadedAt,
 	}, nil
 }

@@ -4,9 +4,12 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/Alter-Sitanshu/campaignHub/internals/platform"
 	"github.com/redis/go-redis/v9"
 )
+
+type Thumbnail struct {
+	ObjKey string
+}
 
 type VideoMetadata struct {
 	SubmissionID string `json:"submission_id"`
@@ -14,11 +17,11 @@ type VideoMetadata struct {
 	Platform     string `json:"platform"`
 
 	// From YouTube API
-	Title      string             `json:"title"`
-	ViewCount  int                `json:"view_count"`
-	LikeCount  int                `json:"like_count"`
-	Thumbnail  platform.Thumbnail `json:"thumbnail"`
-	UploadedAt string             `json:"uploaded_at"`
+	Title      string    `json:"title"`
+	ViewCount  int       `json:"view_count"`
+	LikeCount  int       `json:"like_count"`
+	Thumbnail  Thumbnail `json:"thumbnail"`
+	UploadedAt string    `json:"uploaded_at"`
 }
 
 // ==================================

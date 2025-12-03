@@ -3,13 +3,15 @@ package api
 import (
 	"fmt"
 	"log"
+	"mime"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/Alter-Sitanshu/campaignHub/internals/cache"
 	"github.com/Alter-Sitanshu/campaignHub/internals/db"
-	"github.com/Alter-Sitanshu/campaignHub/internals/platform"
+	"github.com/Alter-Sitanshu/campaignHub/services/b2"
+	"github.com/Alter-Sitanshu/campaignHub/services/platform"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -75,6 +77,18 @@ func (app *Application) CreateSubmission(c *gin.Context) {
 
 	Data := data.(platform.VideoMetadata) // convert the meta data type into desired struct
 
+	ext, _ := mime.ExtensionsByType(Data.Thumbnails.ContentType)
+	extension := ext[0]
+	objKey, _ := b2.GenerateFileKey(submission.Id, "thumbnail", extension)
+
+	fileKey := fmt.Sprintf("%s/%s", app.s3Store.BucketName, objKey)
+
+	err = app.s3Store.UploadFile(fileKey, Data.Thumbnails.Raw, Data.Thumbnails.ContentType)
+	if err != nil {
+		log.Printf("error uploading submission thumbnail: %s\n", err.Error())
+		// I dont know what to do for that
+	}
+
 	// populate the meta data
 	metaData := cache.VideoMetadata{
 		SubmissionID: submission.Id,
@@ -83,20 +97,16 @@ func (app *Application) CreateSubmission(c *gin.Context) {
 		Title:        Data.Title,
 		ViewCount:    Data.ViewCount,
 		LikeCount:    Data.LikeCount,
-		Thumbnail:    Data.Thumbnails,
-		UploadedAt:   Data.UploadedAt,
+		Thumbnail: cache.Thumbnail{
+			ObjKey: objKey,
+		},
+		UploadedAt: Data.UploadedAt,
 	}
 
 	// Populating the submission with the meta data
 	submission.VideoTitle = metaData.Title
 	submission.VideoID = metaData.VideoID
-	// TODO: add the S3 url
-	// submission.ThumbnailURL = fmt.Sprintf(
-	// 	"%s/submissions/%s/thumb01/%s",
-	// 	app.cfg.AWS.S3.Addr,
-	// 	submission.Id,
-	// 	getExtension(metaData.Thumbnail.ContentType),
-	// )
+	submission.ThumbnailURL = objKey
 	// submission.ThumbnailURL = metaData.Thumbnail.URL
 	submission.Views = metaData.ViewCount
 	submission.LikeCount = metaData.LikeCount
@@ -351,7 +361,7 @@ func (app *Application) GetSubmission(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	// get the updated cahed values
+	// get the updated cached values
 	amt, err := app.cache.GetSubmissionEarnings(ctx, sub.Id)
 	if err == nil {
 		sub.Earnings = amt
@@ -361,10 +371,43 @@ func (app *Application) GetSubmission(c *gin.Context) {
 		sub.Status = status
 	}
 
-	// Populate the output submission
-	output.Submission = *sub
+	vid, err := platform.ParseVideoURL(sub.Url)
+	if err != nil {
+		log.Printf("error: %s\n", err.Error())
+		c.JSON(http.StatusBadRequest, WriteError(err.Error()))
+		return
+	}
+	data, err := app.factory.GetVideoDetailsForWorkers(ctx, vid.Name, vid.VideoID)
+	if err != nil {
+		log.Printf("error fetching meta data: %s\n", err.Error())
+		c.JSON(http.StatusInternalServerError, WriteError("server error try again"))
+		return
+	}
+
+	Data := data.(platform.VideoMetadata) // convert the meta data type into desired struct
+
+	// populate the meta data
+	metaData := cache.VideoMetadata{
+		SubmissionID: sub.Id,
+		VideoID:      Data.VideoID,
+		Platform:     Data.Platform,
+		Title:        Data.Title,
+		ViewCount:    Data.ViewCount,
+		LikeCount:    Data.LikeCount,
+		Thumbnail: cache.Thumbnail{
+			ObjKey: sub.ThumbnailURL,
+		},
+		UploadedAt: Data.UploadedAt,
+	}
+	// populate the cache
+	app.cache.SetCreatorSubmissions(ctx, Entity.GetID(), []string{sub.Id})
+	app.cache.SetSubmissionEarnings(ctx, sub.Id, sub.Earnings)
+	app.cache.SetSubmissionStatus(ctx, sub.Id, sub.Status)
+	app.cache.SetVideoMetadata(ctx, sub.Id, &metaData)
 
 	// successful fetching
+	output.Meta = metaData
+	output.Submission = *sub
 	c.JSON(http.StatusOK, WriteResponse(output))
 }
 
@@ -400,7 +443,7 @@ func (app *Application) GetMySubmissions(c *gin.Context) {
 			return
 		}
 	}
-	// get the user submissions submissions
+	// get the user submissions
 	// check cache for the user submissions
 	subids, err := app.cache.GetCreatorSubmissions(ctx, UserID)
 	// Cache Hit
@@ -458,6 +501,13 @@ func (app *Application) GetMySubmissions(c *gin.Context) {
 			resp[i].Meta = *VideoMeta
 			// i do not need to throw an error
 			// i will ignore the failure and move forward
+		} else {
+			// get the bare minimum meta data
+			vid, err := platform.ParseVideoURL(output[i].Url)
+			if err == nil {
+				resp[i].Meta.VideoID = vid.VideoID
+				resp[i].Meta.Platform = vid.Name
+			}
 		}
 	}
 
