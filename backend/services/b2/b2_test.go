@@ -19,6 +19,7 @@ type MockS3Client struct {
 	CreateBucketFunc func(ctx context.Context, params *s3.CreateBucketInput, optFns ...func(*s3.Options)) (*s3.CreateBucketOutput, error)
 	GetObjectAclFunc func(ctx context.Context, params *s3.GetObjectAclInput, optFns ...func(*s3.Options)) (*s3.GetObjectAclOutput, error)
 	DeleteObjectFunc func(ctx context.Context, params *s3.DeleteObjectInput, optFns ...func(*s3.Options)) (*s3.DeleteObjectOutput, error)
+	HeadObjectFunc   func(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error)
 }
 
 func (m *MockS3Client) GetObject(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error) {
@@ -39,6 +40,10 @@ func (m *MockS3Client) GetObjectAcl(ctx context.Context, params *s3.GetObjectAcl
 
 func (m *MockS3Client) DeleteObject(ctx context.Context, params *s3.DeleteObjectInput, optFns ...func(*s3.Options)) (*s3.DeleteObjectOutput, error) {
 	return m.DeleteObjectFunc(ctx, params, optFns...)
+}
+
+func (m *MockS3Client) HeadObject(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
+	return m.HeadObjectFunc(ctx, params, optFns...)
 }
 
 // Mock Presign Client
@@ -187,6 +192,70 @@ func TestB2Storage_Upload(t *testing.T) {
 
 			if tt.wantErr && !errors.Is(err, tt.expectedErr) {
 				t.Errorf("Upload() error = %v, expectedErr %v", err, tt.expectedErr)
+			}
+		})
+	}
+}
+
+func TestB2Storage_ObjectExists(t *testing.T) {
+	tests := []struct {
+		name           string
+		objKey         string
+		fileData       []byte
+		contentType    string
+		mockUploadFunc func(ctx context.Context, params *s3.PutObjectInput, optFns ...func(*s3.Options)) (*s3.PutObjectOutput, error)
+		mockExistsFunc func(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error)
+		wantFile       bool
+		wantErr        bool
+	}{
+		{
+			name:        "successful upload",
+			objKey:      "test.jpg",
+			fileData:    []byte("test image data"),
+			contentType: "image/jpeg",
+			mockUploadFunc: func(ctx context.Context, params *s3.PutObjectInput, optFns ...func(*s3.Options)) (*s3.PutObjectOutput, error) {
+				return &s3.PutObjectOutput{}, nil
+			},
+			mockExistsFunc: func(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
+				return &s3.HeadObjectOutput{}, nil
+			},
+			wantFile: true,
+			wantErr:  false,
+		},
+		{
+			name:        "upload fails",
+			objKey:      "test.jpg",
+			fileData:    []byte("test data"),
+			contentType: "image/jpeg",
+			mockUploadFunc: func(ctx context.Context, params *s3.PutObjectInput, optFns ...func(*s3.Options)) (*s3.PutObjectOutput, error) {
+				return nil, errors.New("S3 error")
+			},
+			mockExistsFunc: func(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
+				return &s3.HeadObjectOutput{}, errors.New("S3 error")
+			},
+			wantFile: false,
+			wantErr:  true,
+		},
+	}
+	var err error
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockClient := &MockS3Client{
+				PutObjectFunc:  tt.mockUploadFunc,
+				HeadObjectFunc: tt.mockExistsFunc,
+			}
+
+			b2 := &B2Storage{
+				BucketName: "test-bucket",
+				Client:     mockClient,
+			}
+
+			err = b2.UploadFile(tt.objKey, tt.fileData, tt.contentType)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Upload() error = %v, wantedErr %v", err, tt.wantErr)
+			}
+			if exists, _ := b2.ObjectExists(tt.objKey); exists != tt.wantFile {
+				t.Errorf("ObjectExists() exist: %v, wanted: %v", exists, tt.wantFile)
 			}
 		})
 	}

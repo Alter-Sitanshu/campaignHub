@@ -25,6 +25,7 @@ type S3Client interface {
 	CreateBucket(ctx context.Context, params *s3.CreateBucketInput, optFns ...func(*s3.Options)) (*s3.CreateBucketOutput, error)
 	GetObjectAcl(ctx context.Context, params *s3.GetObjectAclInput, optFns ...func(*s3.Options)) (*s3.GetObjectAclOutput, error)
 	DeleteObject(ctx context.Context, params *s3.DeleteObjectInput, optFns ...func(*s3.Options)) (*s3.DeleteObjectOutput, error)
+	HeadObject(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error)
 }
 
 // PresignClient interface for mocking
@@ -53,6 +54,30 @@ type B2Storage struct {
 	BucketName string
 	Client     S3Client
 	signClient PresignClient
+}
+
+// Generates a S3 convention file/object key
+func GenerateFileKey(objID, purpose, extension string) (string, error) {
+	if objID == "" || purpose == "" || extension == "" {
+		log.Printf("bad request. objID/purpose/ext nil\n")
+		return "", ErrInvalidReq
+	}
+	switch purpose {
+	case "profile":
+		return generateProfileKey(objID, extension), nil
+	case "thumbnail":
+		return generateThumbnailKey(objID, extension), nil
+	default:
+		return "", ErrUnsupportedTask
+	}
+}
+
+func generateProfileKey(objID, extension string) string {
+	return fmt.Sprintf("/users/%s/profile.%s", objID, extension)
+}
+
+func generateThumbnailKey(objID, extension string) string {
+	return fmt.Sprintf("/submissions/%s/thumb.%s", objID, extension)
 }
 
 // CheckDeletePermission checks if you have delete permissions
@@ -298,4 +323,23 @@ func (b2 *B2Storage) DeleteFileWithPerms(objKey string) error {
 	}
 
 	return b2.DeleteFile(objKey)
+}
+
+func (b2 *B2Storage) ObjectExists(objKey string) (bool, error) {
+	if objKey == "" {
+		return false, ErrInvalidReq
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
+	defer cancel()
+
+	if _, err := b2.Client.HeadObject(ctx,
+		&s3.HeadObjectInput{
+			Bucket: aws.String(b2.BucketName),
+			Key:    aws.String(objKey),
+		}); err != nil {
+		log.Printf("error checking object: %s\n", err.Error())
+		return false, err
+	}
+
+	return true, nil
 }

@@ -169,19 +169,22 @@ func (app *Application) ForgotPassword(c *gin.Context) {
 		Body:    mailer.GeneratePasswordResetEmail(user.Email, token),
 	}
 	// Implementing a retry fallback
-	tries := 1
-	for tries <= app.cfg.MailCfg.MailRetries {
-		err = app.mailer.PushMail(InvitationReq)
-		if err == nil {
-			break
+	// Asynchronous mailing to avoid locking the user flow
+	go func() {
+		tries := 1
+		for tries <= app.cfg.MailCfg.MailRetries {
+			err = app.mailer.PushMail(InvitationReq)
+			if err == nil {
+				break
+			}
+			tries++
 		}
-		tries++
-	}
-	if err != nil && tries > app.cfg.MailCfg.MailRetries {
-		log.Printf("error sending password reset to %s: %v\n", user.Email, err.Error())
-		c.JSON(http.StatusInternalServerError, WriteError("Server Error"))
-		return
-	}
+		if err != nil && tries > app.cfg.MailCfg.MailRetries {
+			log.Printf("error sending password reset to %s: %v\n", user.Email, err.Error())
+			c.JSON(http.StatusInternalServerError, WriteError("Server Error"))
+			return
+		}
+	}()
 	// Successfully sent the mail
 	c.JSON(http.StatusOK, WriteResponse("If the email is registered, you will receive a password reset link"))
 }

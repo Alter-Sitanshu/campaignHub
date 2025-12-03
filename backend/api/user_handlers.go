@@ -1,6 +1,8 @@
 package api
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -8,8 +10,13 @@ import (
 	"github.com/Alter-Sitanshu/campaignHub/internals/cache"
 	"github.com/Alter-Sitanshu/campaignHub/internals/db"
 	"github.com/Alter-Sitanshu/campaignHub/internals/mailer"
+	"github.com/Alter-Sitanshu/campaignHub/services/b2"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+)
+
+const (
+	DefaultProfileObjectKey = "/users/fallback/default.jpg"
 )
 
 // User Request Payload
@@ -25,15 +32,16 @@ type UserPaylaod struct {
 }
 
 type UserResponse struct {
-	Id            string     `json:"id" binding:"required"`
-	FirstName     string     `json:"first_name" binding:"required"`
-	LastName      string     `json:"last_name" binding:"required"`
-	Email         string     `json:"email" binding:"required"`
-	IsVerified    bool       `json:"is_verified" binding:"required"`
-	Gender        string     `json:"gender" binding:"required"`
-	Amount        float64    `json:"amount" binding:"required,min=0"`
-	Age           int        `json:"age" binding:"required"`
-	PlatformLinks []db.Links `json:"links" binding:"required"`
+	Id             string     `json:"id" binding:"required"`
+	FirstName      string     `json:"first_name" binding:"required"`
+	LastName       string     `json:"last_name" binding:"required"`
+	Email          string     `json:"email" binding:"required"`
+	IsVerified     bool       `json:"is_verified" binding:"required"`
+	Gender         string     `json:"gender" binding:"required"`
+	Amount         float64    `json:"amount" binding:"required,min=0"`
+	Age            int        `json:"age" binding:"required"`
+	ProfilePicture string     `json:"profile_picture"`
+	PlatformLinks  []db.Links `json:"links" binding:"required"`
 }
 
 func (app *Application) CreateUser(c *gin.Context) {
@@ -165,16 +173,21 @@ func (app *Application) GetUserById(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, WriteError("server error"))
 		return
 	}
+	profilePic := app.store.UserInterface.GetUserProfilePicture(ctx, ID)
+	if profilePic == "" {
+		profilePic = DefaultProfileObjectKey
+	}
 	// make the response object
 	userResponse := UserResponse{
-		Id:            user.Id,
-		FirstName:     user.FirstName,
-		LastName:      user.LastName,
-		Email:         user.Email,
-		Gender:        user.Gender,
-		Amount:        user.Amount,
-		Age:           user.Age,
-		PlatformLinks: user.PlatformLinks,
+		Id:             user.Id,
+		FirstName:      user.FirstName,
+		LastName:       user.LastName,
+		Email:          user.Email,
+		Gender:         user.Gender,
+		Amount:         user.Amount,
+		Age:            user.Age,
+		ProfilePicture: profilePic,
+		PlatformLinks:  user.PlatformLinks,
 	}
 
 	// set the user profile in the cache
@@ -214,17 +227,22 @@ func (app *Application) GetUserByEmail(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
+	profilePic := app.store.UserInterface.GetUserProfilePicture(ctx, user.Id)
+	if profilePic == "" {
+		profilePic = DefaultProfileObjectKey
+	}
 	// make the response object
 	userResponse := UserResponse{
-		Id:            user.Id,
-		FirstName:     user.FirstName,
-		LastName:      user.LastName,
-		Email:         user.Email,
-		IsVerified:    user.IsVerified,
-		Gender:        user.Gender,
-		Amount:        user.Amount,
-		Age:           user.Age,
-		PlatformLinks: user.PlatformLinks,
+		Id:             user.Id,
+		FirstName:      user.FirstName,
+		LastName:       user.LastName,
+		Email:          user.Email,
+		IsVerified:     user.IsVerified,
+		Gender:         user.Gender,
+		Amount:         user.Amount,
+		Age:            user.Age,
+		ProfilePicture: profilePic,
+		PlatformLinks:  user.PlatformLinks,
 	}
 
 	// Set the user profile in cache
@@ -406,17 +424,22 @@ func (app *Application) GetCurrentUser(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, WriteError("server error"))
 		return
 	}
+	profilePic := app.store.UserInterface.GetUserProfilePicture(ctx, user.Id)
+	if profilePic == "" {
+		profilePic = DefaultProfileObjectKey
+	}
 	// make the response object
 	userResponse := UserResponse{
-		Id:            user.Id,
-		FirstName:     user.FirstName,
-		LastName:      user.LastName,
-		Email:         user.Email,
-		Gender:        user.Gender,
-		Amount:        user.Amount,
-		Age:           user.Age,
-		IsVerified:    user.IsVerified,
-		PlatformLinks: user.PlatformLinks,
+		Id:             user.Id,
+		FirstName:      user.FirstName,
+		LastName:       user.LastName,
+		Email:          user.Email,
+		Gender:         user.Gender,
+		Amount:         user.Amount,
+		Age:            user.Age,
+		IsVerified:     user.IsVerified,
+		ProfilePicture: profilePic,
+		PlatformLinks:  user.PlatformLinks,
 	}
 	// set the user profile in the cache
 	err = app.cache.SetUserProfile(ctx, UserID, cache.UserResponse(userResponse))
@@ -425,4 +448,121 @@ func (app *Application) GetCurrentUser(c *gin.Context) {
 	}
 	// successfully retreived the user
 	c.JSON(http.StatusOK, WriteResponse(userResponse))
+}
+
+func (app *Application) GetProfilePicUpdateURL(c *gin.Context) {
+	// Fetching the logged in user
+	LogInUser, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	// Typecasting the object to verify validity
+	Entity, ok := LogInUser.(db.AuthenticatedEntity)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	UserID := Entity.GetID()
+	ext := c.Query("ext") // jpg, png, etc.
+	if ext != "jpg" && ext != "png" && ext != "jpeg" {
+		c.JSON(http.StatusBadRequest, WriteError("unsupported format"))
+		return
+	}
+	objKey, err := b2.GenerateFileKey(UserID, "profile", ext)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, WriteError(err.Error()))
+	}
+	fileKey := fmt.Sprintf("%s/%s", app.s3Store.BucketName, objKey)
+	signedURL, err := app.s3Store.GetSignedURL(&fileKey, b2.PutObj)
+	if err != nil {
+		switch {
+		case errors.Is(err, b2.ErrInvalidReq):
+			c.JSON(http.StatusBadRequest, WriteError(err.Error()))
+		case errors.Is(err, b2.ErrUnsupportedTask):
+			c.JSON(http.StatusBadRequest, WriteError(err.Error()))
+		default:
+			c.JSON(http.StatusInternalServerError, WriteError("server error. try again"))
+		}
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"uploadUrl": signedURL,
+		"objectKey": fileKey,
+	})
+}
+
+func (app *Application) ConfirmProfilePicUpload(c *gin.Context) {
+	ctx := c.Request.Context()
+	LogInUser, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	// Typecasting the object to verify validity
+	Entity, ok := LogInUser.(db.AuthenticatedEntity)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	UserID := Entity.GetID()
+	var req struct {
+		ObjectKey string `json:"objectKey"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, WriteError("invalid request"))
+		return
+	}
+
+	// Verify object exists in S3 before saving
+	exists, err := app.s3Store.ObjectExists(req.ObjectKey)
+	if err != nil || !exists {
+		c.JSON(http.StatusBadRequest, WriteError("upload not found"))
+		return
+	}
+
+	// NOW save to DB
+	if err := app.store.UserInterface.SetUserProfilePicture(ctx, UserID, req.ObjectKey); err != nil {
+		c.JSON(http.StatusInternalServerError, WriteError("failed to update profile"))
+		go app.s3Store.DeleteFileWithPerms(req.ObjectKey)
+		return
+	}
+
+	c.JSON(http.StatusOK, WriteResponse("profile updated"))
+}
+
+func (app *Application) GetUserProfilePic(c *gin.Context) {
+	// Fetching the logged in user
+	ctx := c.Request.Context()
+	LogInUser, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	// Typecasting the object to verify validity
+	_, ok = LogInUser.(db.AuthenticatedEntity)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	id := c.Query("id")
+	fileKey := app.store.UserInterface.GetUserProfilePicture(ctx, id)
+	if fileKey == "" {
+		// Fallback FileKey
+		fileKey = fmt.Sprintf("%s/%s", app.s3Store.BucketName, DefaultProfileObjectKey)
+	}
+	signedURL, err := app.s3Store.GetSignedURL(&fileKey, b2.GetObj)
+	if err != nil {
+		switch {
+		case errors.Is(err, b2.ErrInvalidReq):
+			c.JSON(http.StatusBadRequest, WriteError(err.Error()))
+		case errors.Is(err, b2.ErrUnsupportedTask):
+			c.JSON(http.StatusBadRequest, WriteError(err.Error()))
+		default:
+			c.JSON(http.StatusInternalServerError, WriteError("server error. try again"))
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, WriteResponse(signedURL))
 }

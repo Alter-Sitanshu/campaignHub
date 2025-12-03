@@ -125,6 +125,12 @@ func (app *Application) AddRoutes(addr string, router *gin.Engine) {
 		users.DELETE("/:id", app.DeleteUser)
 		users.PATCH("/:id", app.UpdateUser)
 		users.GET("/campaigns/:id", app.GetUserCampaigns) // parameter: id
+		// query paramater ext (supported: jpeg, jpg, png)
+		users.GET("/profile_picture/", app.GetProfilePicUpdateURL)
+		// request must contain json{objectKey: ""}
+		users.POST("/profile_picture/confirm", app.ConfirmProfilePicUpload)
+		// query parameter id(user id)
+		users.GET("/profile_picture/download/", app.GetUserProfilePic)
 	}
 
 	// Brand routes
