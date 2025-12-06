@@ -24,8 +24,25 @@ type SubmissionPayload struct {
 }
 
 type SubmissionResponse struct {
-	Submission db.Submission       `json:"submission"`
-	Meta       cache.VideoMetadata `json:"meta"`
+	Submissions []Submission `json:"submissions"`
+}
+
+type Submission struct {
+	SubmissionID string  `json:"submission_id"`
+	CreatorID    string  `json:"creator_id"`
+	CampaignID   string  `json:"campaign_id"`
+	Platform     string  `json:"platform"`
+	VideoID      string  `json:"video_id"`
+	Title        string  `json:"title"`
+	Views        int     `json:"views"`
+	LikeCount    int     `json:"like_count"`
+	Thumbnail    string  `json:"thumbnail"`
+	UploadedAt   string  `json:"uploaded_at"`
+	Status       int     `json:"status"`
+	VideoStatus  string  `json:"video_status"`
+	Earnings     float64 `json:"earnings"`
+	LastSyncedAt string  `json:"last_synced_at"`
+	URL          string  `json:"url"`
 }
 
 func (app *Application) CreateSubmission(c *gin.Context) {
@@ -53,11 +70,12 @@ func (app *Application) CreateSubmission(c *gin.Context) {
 	// making the submission object
 	formattedTime := time.Now().Format("2006-01-02 15:04:05-07:00") // Format using a reference time
 	submission := db.Submission{
-		Id:         uuid.New().String(),
-		CreatorId:  payload.CreatorId,
-		CampaignId: payload.CampaignId,
-		Url:        payload.Url,
-		Status:     payload.Status,
+		Id:          uuid.New().String(),
+		CreatorId:   payload.CreatorId,
+		CampaignId:  payload.CampaignId,
+		Url:         payload.Url,
+		Status:      payload.Status,
+		VideoStatus: "active",
 	}
 
 	vid, err := platform.ParseVideoURL(payload.Url)
@@ -127,9 +145,24 @@ func (app *Application) CreateSubmission(c *gin.Context) {
 	app.cache.SetVideoMetadata(ctx, submission.Id, &metaData)
 
 	// successfully made the submission
-	resp := SubmissionResponse{
-		Submission: submission,
-		Meta:       metaData,
+	resp := []Submission{
+		{
+			SubmissionID: submission.Id,
+			CreatorID:    payload.CreatorId,
+			CampaignID:   payload.CampaignId,
+			Platform:     metaData.Platform,
+			VideoID:      metaData.VideoID,
+			Title:        metaData.Title,
+			Views:        metaData.ViewCount,
+			LikeCount:    metaData.LikeCount,
+			Thumbnail:    metaData.Thumbnail.ObjKey,
+			UploadedAt:   submission.CreatedAt,
+			Status:       submission.Status,
+			VideoStatus:  submission.VideoStatus,
+			Earnings:     submission.Earnings,
+			LastSyncedAt: submission.LastSyncedAt,
+			URL:          payload.Url,
+		},
 	}
 	c.JSON(http.StatusCreated, WriteResponse(resp))
 }
@@ -243,19 +276,42 @@ func (app *Application) FilterSubmissions(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, WriteError("server error"))
 		return
 	}
-	resp := make([]SubmissionResponse, len(output))
+	resp := make([]Submission, len(output))
 
 	// Attaching the meta data from the cache
 	// If i don't get the meta data in cache i ignore that for now
 	// Later i can add that by API calls i will figure something out
-
+	var temp db.Submission
+	var tempMeta cache.VideoMetadata
 	for i := range len(output) {
-		resp[i].Submission = output[i]
+		temp = output[i]
+		resp[i] = Submission{
+			SubmissionID: temp.Id,
+			CreatorID:    temp.CreatorId,
+			CampaignID:   temp.CampaignId,
+			UploadedAt:   temp.CreatedAt,
+			Status:       temp.Status,
+			Earnings:     temp.Earnings,
+			LikeCount:    temp.LikeCount,
+			Views:        temp.Views,
+			LastSyncedAt: temp.LastSyncedAt,
+			URL:          temp.Url,
+		}
 		VideoMeta, err := app.cache.GetVideoMetadata(ctx, output[i].Id)
 		if err == nil {
-			resp[i].Meta = *VideoMeta
+			tempMeta = *VideoMeta
+			resp[i].Platform = tempMeta.Platform
+			resp[i].VideoID = tempMeta.VideoID
+			resp[i].Title = tempMeta.Title
+			resp[i].Views = tempMeta.ViewCount
+			resp[i].LikeCount = tempMeta.LikeCount
+			resp[i].Thumbnail = tempMeta.Thumbnail.ObjKey
 			// i do not need to throw an error
 			// i will ignore the failure and move forward
+		} else {
+			vid, _ := platform.ParseVideoURL(temp.Url)
+			resp[i].VideoID = vid.VideoID
+			resp[i].Platform = vid.Name
 		}
 	}
 
@@ -303,9 +359,22 @@ func (app *Application) UpdateSubmission(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, WriteError("server error"))
 		return
 	}
-	var resp SubmissionResponse
 	sub_response, _ := app.store.SubmissionInterface.FindSubmissionById(ctx, sub_id)
-	resp.Submission = *sub_response
+	resp := []Submission{
+		{
+			SubmissionID: sub_response.Id,
+			CreatorID:    sub_response.CreatorId,
+			CampaignID:   sub_response.CampaignId,
+			UploadedAt:   sub_response.CreatedAt,
+			Status:       sub_response.Status,
+			VideoStatus:  sub_response.VideoStatus,
+			Earnings:     sub_response.Earnings,
+			LastSyncedAt: sub_response.LastSyncedAt,
+			LikeCount:    sub_response.LikeCount,
+			Views:        sub_response.Views,
+			URL:          sub_response.Url,
+		},
+	}
 	// cache the submission
 	app.cache.SetSubmissionEarnings(ctx, sub.Id, sub_response.Earnings)
 	app.cache.SetSubmissionStatus(ctx, sub.Id, sub_response.Status)
@@ -313,8 +382,13 @@ func (app *Application) UpdateSubmission(c *gin.Context) {
 	// Get the meta data for the updated submission from the cache
 	meta, err := app.cache.GetVideoMetadata(ctx, sub_id)
 	if err == nil {
-		// cache miss
-		resp.Meta = *meta
+		// cache hit
+		resp[0].VideoID = meta.VideoID
+		resp[0].Title = meta.Title
+		resp[0].Thumbnail = meta.Thumbnail.ObjKey
+		resp[0].LikeCount = meta.LikeCount
+		resp[0].Views = meta.ViewCount
+		resp[0].Platform = meta.Platform
 	}
 
 	// update successful
@@ -340,14 +414,6 @@ func (app *Application) GetSubmission(c *gin.Context) {
 		return
 	}
 
-	// fetch from the cache
-	var output SubmissionResponse
-	VideoMetaData, err := app.cache.GetVideoMetadata(ctx, sub_id)
-	if err == nil {
-		// cache hit
-		output.Meta = *VideoMetaData
-	}
-
 	// try fetching the submission
 	sub, err := app.store.SubmissionInterface.FindSubmissionById(ctx, sub_id)
 	if err != nil {
@@ -370,35 +436,43 @@ func (app *Application) GetSubmission(c *gin.Context) {
 	if err == nil {
 		sub.Status = status
 	}
+	// fetch from the cache
+	VideoMetaData, err := app.cache.GetVideoMetadata(ctx, sub_id)
+	var metaData cache.VideoMetadata
+	if err == nil {
+		// cache hit
+		metaData = *VideoMetaData
+	} else {
+		vid, err := platform.ParseVideoURL(sub.Url)
+		if err != nil {
+			log.Printf("error: %s\n", err.Error())
+			c.JSON(http.StatusBadRequest, WriteError(err.Error()))
+			return
+		}
+		data, err := app.factory.GetVideoDetailsForWorkers(ctx, vid.Name, vid.VideoID)
+		if err != nil {
+			log.Printf("error fetching meta data: %s\n", err.Error())
+			c.JSON(http.StatusInternalServerError, WriteError("server error try again"))
+			return
+		}
 
-	vid, err := platform.ParseVideoURL(sub.Url)
-	if err != nil {
-		log.Printf("error: %s\n", err.Error())
-		c.JSON(http.StatusBadRequest, WriteError(err.Error()))
-		return
-	}
-	data, err := app.factory.GetVideoDetailsForWorkers(ctx, vid.Name, vid.VideoID)
-	if err != nil {
-		log.Printf("error fetching meta data: %s\n", err.Error())
-		c.JSON(http.StatusInternalServerError, WriteError("server error try again"))
-		return
+		Data := data.(platform.VideoMetadata) // convert the meta data type into desired struct
+
+		// populate the meta data
+		metaData = cache.VideoMetadata{
+			SubmissionID: sub.Id,
+			VideoID:      Data.VideoID,
+			Platform:     Data.Platform,
+			Title:        Data.Title,
+			ViewCount:    Data.ViewCount,
+			LikeCount:    Data.LikeCount,
+			Thumbnail: cache.Thumbnail{
+				ObjKey: sub.ThumbnailURL,
+			},
+			UploadedAt: Data.UploadedAt,
+		}
 	}
 
-	Data := data.(platform.VideoMetadata) // convert the meta data type into desired struct
-
-	// populate the meta data
-	metaData := cache.VideoMetadata{
-		SubmissionID: sub.Id,
-		VideoID:      Data.VideoID,
-		Platform:     Data.Platform,
-		Title:        Data.Title,
-		ViewCount:    Data.ViewCount,
-		LikeCount:    Data.LikeCount,
-		Thumbnail: cache.Thumbnail{
-			ObjKey: sub.ThumbnailURL,
-		},
-		UploadedAt: Data.UploadedAt,
-	}
 	// populate the cache
 	app.cache.SetCreatorSubmissions(ctx, Entity.GetID(), []string{sub.Id})
 	app.cache.SetSubmissionEarnings(ctx, sub.Id, sub.Earnings)
@@ -406,9 +480,26 @@ func (app *Application) GetSubmission(c *gin.Context) {
 	app.cache.SetVideoMetadata(ctx, sub.Id, &metaData)
 
 	// successful fetching
-	output.Meta = metaData
-	output.Submission = *sub
-	c.JSON(http.StatusOK, WriteResponse(output))
+	resp := []Submission{
+		{
+			SubmissionID: sub.Id,
+			CreatorID:    sub.CreatorId,
+			CampaignID:   sub.CampaignId,
+			Platform:     metaData.Platform,
+			VideoID:      metaData.VideoID,
+			Title:        metaData.Title,
+			Views:        metaData.ViewCount,
+			LikeCount:    metaData.LikeCount,
+			Thumbnail:    metaData.Thumbnail.ObjKey,
+			UploadedAt:   sub.CreatedAt,
+			Status:       sub.Status,
+			VideoStatus:  sub.VideoStatus,
+			Earnings:     sub.Earnings,
+			LastSyncedAt: sub.LastSyncedAt,
+			URL:          sub.Url,
+		},
+	}
+	c.JSON(http.StatusOK, WriteResponse(resp))
 }
 
 func (app *Application) GetMySubmissions(c *gin.Context) {
@@ -448,28 +539,44 @@ func (app *Application) GetMySubmissions(c *gin.Context) {
 	subids, err := app.cache.GetCreatorSubmissions(ctx, UserID)
 	// Cache Hit
 	if err == nil {
-		var output []SubmissionResponse
+		var output []Submission
 		submissions, err := app.store.SubmissionInterface.FindMySubmissions(ctx, time_, subids, limit, offset)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, WriteError("server error"))
 			return
 		}
+		var temp db.Submission
 		for i := range submissions {
-			var resp SubmissionResponse
-			amt, err := app.cache.GetSubmissionEarnings(ctx, submissions[i].Id)
-			if err == nil {
-				submissions[i].Earnings = amt
+			temp = submissions[i]
+			var resp Submission = Submission{
+				SubmissionID: temp.Id,
+				CreatorID:    temp.CreatorId,
+				CampaignID:   temp.CampaignId,
+				UploadedAt:   temp.CreatedAt,
+				Status:       temp.Status,
+				Earnings:     temp.Earnings,
+				LikeCount:    temp.LikeCount,
+				Views:        temp.Views,
+				LastSyncedAt: temp.LastSyncedAt,
+				URL:          temp.Url,
 			}
-			meta, err := app.cache.GetVideoMetadata(ctx, submissions[i].Id)
+			amt, err := app.cache.GetSubmissionEarnings(ctx, temp.Id)
 			if err == nil {
-				submissions[i].Views = meta.ViewCount
-				resp.Meta = *meta
+				resp.Earnings = amt
 			}
-			status, err := app.cache.GetSubmissionStatus(ctx, submissions[i].Id)
+			meta, err := app.cache.GetVideoMetadata(ctx, temp.Id)
 			if err == nil {
-				submissions[i].Status = status
+				resp.VideoID = meta.VideoID
+				resp.Title = meta.Title
+				resp.Thumbnail = meta.Thumbnail.ObjKey
+				resp.LikeCount = meta.LikeCount
+				resp.Views = meta.ViewCount
+				resp.Platform = meta.Platform
 			}
-			resp.Submission = submissions[i]
+			status, err := app.cache.GetSubmissionStatus(ctx, temp.Id)
+			if err == nil {
+				resp.Status = status
+			}
 			output = append(output, resp)
 		}
 		// successfully filtered
@@ -488,26 +595,43 @@ func (app *Application) GetMySubmissions(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, WriteError("server error"))
 		return
 	}
-	resp := make([]SubmissionResponse, len(output))
+	resp := make([]Submission, len(output))
 
 	// Attaching the meta data from the cache
 	// If i don't get the meta data in cache i ignore that for now
 	// Later i can add that by API calls i will figure something out
 
+	var temp db.Submission
+	var tempMeta cache.VideoMetadata
 	for i := range len(output) {
-		resp[i].Submission = output[i]
+		temp = output[i]
+		resp[i] = Submission{
+			SubmissionID: temp.Id,
+			CreatorID:    temp.CreatorId,
+			CampaignID:   temp.CampaignId,
+			UploadedAt:   temp.CreatedAt,
+			Status:       temp.Status,
+			Earnings:     temp.Earnings,
+			LikeCount:    temp.LikeCount,
+			Views:        temp.Views,
+			LastSyncedAt: temp.LastSyncedAt,
+			URL:          temp.Url,
+		}
 		VideoMeta, err := app.cache.GetVideoMetadata(ctx, output[i].Id)
 		if err == nil {
-			resp[i].Meta = *VideoMeta
+			tempMeta = *VideoMeta
+			resp[i].Platform = tempMeta.Platform
+			resp[i].VideoID = tempMeta.VideoID
+			resp[i].Title = tempMeta.Title
+			resp[i].Views = tempMeta.ViewCount
+			resp[i].LikeCount = tempMeta.LikeCount
+			resp[i].Thumbnail = tempMeta.Thumbnail.ObjKey
 			// i do not need to throw an error
 			// i will ignore the failure and move forward
 		} else {
-			// get the bare minimum meta data
-			vid, err := platform.ParseVideoURL(output[i].Url)
-			if err == nil {
-				resp[i].Meta.VideoID = vid.VideoID
-				resp[i].Meta.Platform = vid.Name
-			}
+			vid, _ := platform.ParseVideoURL(temp.Url)
+			resp[i].VideoID = vid.VideoID
+			resp[i].Platform = vid.Name
 		}
 	}
 
