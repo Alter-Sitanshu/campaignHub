@@ -1,0 +1,500 @@
+:root {
+  --bg-light: #DAF1DE;
+  --bg-medium-light: #8EB69B;
+  --primary-accent: #235347;
+  --text-dark: #163832;
+  --text-deep: #0B2B26;
+  --bg-dark: #051F20;
+  
+  --bg-primary: #f7f9fb;
+  --bg-secondary: #ffffff;
+  --bg-gradient-from: #DAF1DE;
+  --bg-gradient-to: #ffffff;
+  --bg-secondary-button: #f1f5f9;
+  --bg-secondary-button-hover: #e2e8f0;
+  
+  --color-primary: #235347;
+  --color-primary-light: rgba(35, 83, 71, 0.1);
+  
+  --text-primary: #0B2B26;
+  --text-secondary: #163832;
+  
+  --border-color: rgba(142, 182, 155, 0.3);
+  
+  --radius-lg: 0.5rem;
+  --transition-fast: 0.3s ease;
+}
+
+/* ==========================================
+  DARK MODE SETTINGS
+  ==========================================
+*/
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary: #051F20;
+    --bg-secondary: #0B2B26;
+    --bg-gradient-from: #051F20;
+    --bg-gradient-to: #163832;
+    --bg-secondary-button: #163832;
+    --bg-secondary-button-hover: #235347;
+
+    --color-primary-light: rgba(142, 182, 155, 0.2);
+    --color-primary: #8EB69B;
+
+    --text-primary: #DAF1DE;
+    --text-secondary: #8EB69B;
+    
+    --border-color: rgba(142, 182, 155, 0.3);
+  }
+}
+
+/* Base layout */
+.form-page {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  font-family: 'Momo Trust Display', 'Inter', sans-serif;
+  background: var(--bg-gradient-from);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+}
+
+.auth-page {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  box-sizing: border-box;
+}
+
+.auth-container {
+  width: 100%;
+  max-width: 480px;
+  padding: 2.5rem;
+  border-radius: var(--radius-lg);
+  background: var(--bg-secondary);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--border-color);
+  box-sizing: border-box;
+}
+
+/* Typography and layout */
+.signup-box {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.auth-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--bg-light);
+  margin: 0 0 0.5rem 0;
+  font-family: 'Momo Trust Display', sans-serif;
+}
+
+.auth-header p {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.auth-header span {
+  color: var(--primary-accent);
+  font-weight: 600;
+}
+
+/* Form styling */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--bg-medium-light);
+}
+
+.form-group input, 
+#gender {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--bg-medium-light);
+  font-size: 1rem;
+  transition: all var(--transition-fast);
+  box-sizing: border-box;
+  font-family: 'Inter', sans-serif;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: var(--primary-accent);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.form-group input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+
+/* Submit button */
+#submit {
+  background: var(--primary-accent);
+  color: white;
+  border: none;
+  padding: 0.875rem;
+  border-radius: var(--radius-lg);
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  width: 100%;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+#submit:hover {
+  background: var(--text-dark);
+  transform: translateY(-0.25rem);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+#submit:active {
+  transform: translateY(0);
+}
+
+/* Footer */
+.auth-footer {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  margin-top: 1rem;
+}
+
+.auth-footer a {
+  color: var(--bg-light);
+  text-decoration: none;
+  font-weight: 100;
+  transition: color var(--transition-fast);
+}
+
+.auth-footer a:hover {
+  color: var(--bg-dark);
+}
+
+/* Progress bar */
+.progressBar {
+  width: 100%;
+  height: 4px;
+  background: rgba(142, 182, 155, 0.2);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 1rem;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--bg-medium-light);
+  transition: width 0.3s ease;
+}
+
+/* Step indicator */
+.steps-indicator {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  text-align: center;
+  margin-top: 0.5rem;
+  font-weight: 500;
+}
+
+/* Dynamic link fields */
+.link-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.link-select {
+  flex: 0 0 120px;
+  padding: 0.75rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--bg-medium-light);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-sizing: border-box;
+  font-weight: 500;
+}
+
+.link-select:focus {
+  outline: none;
+  border-color: var(--primary-accent);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.link-input {
+  flex: 1;
+  padding: 0.75rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--bg-medium-light);
+  font-size: 0.875rem;
+  box-sizing: border-box;
+  min-width: 0;
+  transition: all var(--transition-fast);
+}
+
+.link-input:focus {
+  outline: none;
+  border-color: var(--bg-medium-light);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.btn-remove {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  background: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+  font-size: 1.25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: all var(--transition-fast);
+}
+
+.btn-remove:hover {
+  background: rgba(220, 38, 38, 0.2);
+  border-color: rgba(220, 38, 38, 0.5);
+}
+
+/* Add link button */
+.btn-add {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: var(--radius-lg);
+  border: 1px dashed var(--border-color);
+  background: transparent;
+  color: var(--bg-medium-light);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-add:hover {
+  background: var(--color-primary-light);
+  border-color: var(--primary-accent);
+  color: var(--primary-accent);
+}
+
+/* Button group */
+.button-group {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.btn-secondary {
+  flex: 1;
+  background: var(--bg-secondary-button);
+  color: var(--bg-medium-light);
+  border: 1px solid var(--border-color);
+  padding: 0.875rem;
+  border-radius: var(--radius-lg);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-secondary:hover {
+  background: var(--bg-secondary-button-hover);
+  border-color: var(--primary-accent);
+  transform: translateY(-0.25rem);
+}
+
+.btn-secondary:active {
+  transform: translateY(0);
+}
+
+#submit-disabled {
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  padding: 0.875rem;
+  border-radius: var(--radius-lg);
+  font-size: 1rem;
+  font-weight: 600;
+  width: 100%;
+  background: var(--color-primary-light);
+  cursor: not-allowed;
+  transform: none !important;
+  opacity: 0.5;
+}
+
+#submit-disabled:hover {
+  background: var(--color-primary-light);
+  transform: none !important;
+}
+
+.error-text {
+  color: #dc2626;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+  font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .auth-container {
+    max-width: 100%;
+    padding: 2rem 1.5rem;
+  }
+
+  .auth-header h1 {
+    font-size: 1.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-container {
+    padding: 1.5rem;
+  }
+
+  .auth-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .link-group {
+    flex-wrap: wrap;
+  }
+
+  .link-select {
+    flex: 0 0 100px;
+  }
+}
+
+/* ==========================================
+   PAGE ENTRANCE ANIMATION
+   ========================================== */
+@keyframes floatFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.97);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(0px) scale(1.01);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.auth-container {
+  animation: floatFadeIn 0.7s ease-out;
+}
+
+/* Smooth form field animations */
+@keyframes slideField {
+  0% { opacity: 0; transform: translateY(12px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.form-group {
+  animation: slideField 0.5s ease forwards;
+  animation-delay: 0.15s;
+}
+
+/* Step animation */
+.steps-indicator {
+  animation: slideField 0.6s ease forwards;
+  animation-delay: 0.25s;
+}
+
+/* ==========================================
+   INTERACTION MICRO-ANIMATIONS
+   ========================================== */
+
+/* Inputs subtle hover glow */
+.form-group input:hover,
+#gender:hover,
+.link-input:hover,
+.link-select:hover {
+  border-color: var(--primary-accent);
+  box-shadow: 0 0 0 4px var(--color-primary-light);
+}
+
+/* Buttons — premium hover smoothness */
+#submit,
+.btn-secondary,
+.btn-add {
+  transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.3s ease, border-color 0.3s ease;
+}
+
+/* Buttons hover movement */
+#submit:hover,
+.btn-secondary:hover,
+.btn-add:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 18px -4px rgba(0, 0, 0, 0.12);
+}
+
+/* Remove button hover shake */
+@keyframes removePulse {
+  0% { transform: scale(1); }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+.btn-remove:hover {
+  animation: removePulse 0.25s ease-out;
+}
+
+/* Progress bar smooth fill */
+.progressFill {
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Input focus glow */
+.form-group input:focus,
+.form-group select:focus,
+.link-input:focus,
+.link-select:focus {
+  transform: scale(1.015);
+  box-shadow: 0 0 0 4px var(--color-primary-light);
+}
+
+/* Footer subtle fade-in */
+.auth-footer {
+  animation: floatFadeIn 0.9s ease-out;
+}

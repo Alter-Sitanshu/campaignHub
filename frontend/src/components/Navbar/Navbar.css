@@ -1,0 +1,155 @@
+:root {
+    --bg-light: #DAF1DE;
+    --bg-medium-light: #8EB69B;
+    --primary-accent: #235347;
+    --text-dark: #163832;
+    --text-deep: #0B2B26;
+    --bg-dark: #051F20;
+    --nav-border: 142, 182, 155;
+}
+
+.navbar-header {
+    background-color: transparent;
+    backdrop-filter: blur(7px);
+    position: fixed;
+    z-index: 50;
+    left: 0;
+    right: 0;
+    top: 0;
+    width: 100%;
+    font-family: "Momo Trust Display", sans-serif;
+    border-bottom: 1px solid rgba(142, 182, 155, 0.3);
+}
+
+.navbar-container {
+    margin: 0;
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.navbar-logo {
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-family: "Momo Trust Display", sans-serif;
+    color: var(--text-deep);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.navbar-logo:hover {
+    color: var(--primary-accent);
+}
+
+/* Desktop navigation - hidden on mobile */
+.navbar-links {
+    display: none;
+}
+
+@media (min-width: 768px) {
+    .navbar-links {
+        display: flex;
+        gap: 1.5rem;
+        font-size: 1rem;
+        font-weight: 400;
+        align-items: center;
+    }
+}
+
+.navbar-link {
+    color: var(--text-dark);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.navbar-link:hover {
+    color: var(--primary-accent);
+}
+
+.navbar-cta {
+    background-color: var(--primary-accent);
+    color: white;
+    padding: 0.5rem 1.25rem;
+    border-radius: 0.5rem;
+    font-weight: 200;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    text-decoration: none;
+    transition: background-color 0.3s ease;
+}
+
+.navbar-cta:hover {
+    background-color: var(--text-dark);
+}
+
+/* Mobile menu button - visible on mobile, hidden on desktop */
+.menu-button {
+    display: block;
+    color: var(--text-deep);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.25rem;
+}
+
+.menu-button:focus {
+    outline: 2px solid var(--primary-accent);
+    outline-offset: 2px;
+}
+
+@media (min-width: 768px) {
+    .menu-button {
+        display: none;
+    }
+}
+
+.menu-icon {
+    height: 1.5rem;
+    width: 1.5rem;
+}
+
+/* Mobile menu - hidden by default */
+.mobile-menu {
+    display: none;
+    background-color: var(--bg-light);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.mobile-menu.active {
+    display: block;
+}
+
+/* Always hide mobile menu on desktop */
+@media (min-width: 768px) {
+    .mobile-menu {
+        display: none !important;
+    }
+}
+
+.mobile-menu-link {
+    display: block;
+    padding: 0.75rem 1.5rem;
+    color: var(--text-dark);
+    text-decoration: none;
+    transition: background-color 0.2s ease;
+    border-bottom: 1px solid rgba(142, 182, 155, 0.1);
+}
+
+.mobile-menu-link:hover {
+    background-color: rgba(142, 182, 155, 0.2);
+}
+
+.mobile-menu-cta {
+    display: block;
+    padding: 1rem 1.5rem;
+    background-color: var(--primary-accent);
+    color: white;
+    text-align: center;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background-color 0.3s ease;
+}
+
+.mobile-menu-cta:hover {
+    background-color: var(--text-dark);
+}
