@@ -34,8 +34,8 @@ func NewJWTMaker(secretKey string) (TokenMaker, error) {
 	return &JWTMaker{secretKey: secretKey}, nil
 }
 
-func (j *JWTMaker) CreateToken(iss, aud, email string, dur time.Duration) (string, error) {
-	payload, err := NewPayload(iss, aud, email, dur)
+func (j *JWTMaker) CreateToken(iss, aud, objID string, dur time.Duration) (string, error) {
+	payload, err := NewPayload(iss, aud, objID, dur)
 	if err != nil {
 		log.Printf("error creating token: %v\n", err.Error())
 		return "", err
@@ -44,6 +44,7 @@ func (j *JWTMaker) CreateToken(iss, aud, email string, dur time.Duration) (strin
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, payload)
 	// signing the jwt token
 	tokenString, err := token.SignedString([]byte(j.secretKey))
+	log.Printf("token: %s\n", tokenString)
 	if err != nil {
 		log.Printf("error signing token: %v\n", err.Error())
 		return "", err

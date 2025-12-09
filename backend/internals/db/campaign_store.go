@@ -26,6 +26,21 @@ type Campaign struct {
 	CreatedAt string `json:"created_at"`
 }
 
+type CampaignResp struct {
+	Id      string  `json:"id"`
+	BrandId string  `json:"brand_id"`
+	Brand   string  `json:"brand"`
+	Title   string  `json:"title"`
+	Budget  float64 `json:"budget"`
+	CPM     float64 `json:"cpm"`
+	Req     string  `json:"requirements"`
+	// added this to segregate the campaigns on the basis of platform
+	Platform  string `json:"platform"`
+	DocLink   string `json:"doc_link"`
+	Status    int    `json:"status"`
+	CreatedAt string `json:"created_at"`
+}
+
 // Update Campaign payload
 type UpdateCampaign struct {
 	// No option to update CPM to avoid frauds
@@ -146,11 +161,13 @@ func (c *CampaignStore) UpdateCampaign(ctx context.Context, campaign_id string, 
 	return nil
 }
 
-func (c *CampaignStore) GetRecentCampaigns(ctx context.Context, offset int, limit int) ([]Campaign, error) {
-	var output []Campaign
+func (c *CampaignStore) GetRecentCampaigns(ctx context.Context, offset int, limit int) ([]CampaignResp, error) {
+	var output []CampaignResp
 	query := `
-		SELECT id, brand_id, title, budget, cpm, requirements, platform, doc_link, status, created_at
-		FROM campaigns
+		SELECT c.id, c.brand_id, b.name AS brand_name, c.title, c.budget, c.cpm, 
+		c.requirements, c.platform, c.doc_link, c.status, c.created_at
+		FROM campaigns c
+		LEFT JOIN brands b ON campaigns.brand_id = b.id
 		ORDER BY created_at DESC, id DESC
 		LIMIT $1 OFFSET $2
 	`
@@ -161,10 +178,11 @@ func (c *CampaignStore) GetRecentCampaigns(ctx context.Context, offset int, limi
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var row Campaign
+		var row CampaignResp
 		err = rows.Scan(
 			&row.Id,
 			&row.BrandId,
+			&row.Brand,
 			&row.Title,
 			&row.Budget,
 			&row.CPM,
@@ -184,8 +202,8 @@ func (c *CampaignStore) GetRecentCampaigns(ctx context.Context, offset int, limi
 	return output, nil
 }
 
-func (c *CampaignStore) GetBrandCampaigns(ctx context.Context, brandid string) ([]Campaign, error) {
-	var output []Campaign
+func (c *CampaignStore) GetBrandCampaigns(ctx context.Context, brandid string) ([]CampaignResp, error) {
+	var output []CampaignResp
 	query := `
 		SELECT id, title, budget, cpm, requirements, platform, doc_link, status, created_at
 		FROM campaigns
@@ -199,7 +217,7 @@ func (c *CampaignStore) GetBrandCampaigns(ctx context.Context, brandid string) (
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var row Campaign
+		var row CampaignResp
 		err = rows.Scan(
 			&row.Id,
 			&row.Title,
@@ -221,15 +239,17 @@ func (c *CampaignStore) GetBrandCampaigns(ctx context.Context, brandid string) (
 	return output, nil
 }
 
-func (c *CampaignStore) GetUserCampaigns(ctx context.Context, userid string) ([]Campaign, error) {
-	var output []Campaign
+func (c *CampaignStore) GetUserCampaigns(ctx context.Context, userid string) ([]CampaignResp, error) {
+	var output []CampaignResp
 	query := `
-		SELECT id, brand_id, title, budget, cpm, requirements, platform, doc_link, status, created_at
-		FROM campaigns
+		SELECT c.id, c.brand_id, b.name AS brand, c.title, c.budget, 
+		c.cpm, c.requirements, c.platform, c.doc_link, c.status, c.created_at
+		FROM campaigns c
 		WHERE id = (SELECT campaign_id
 			FROM submissions
 			WHERE creator_id = $1
 		)
+		LEFT JOIN brands b ON c.brand_id = b.id
 		ORDER BY created_at DESC, id DESC
 	`
 	rows, err := c.db.QueryContext(ctx, query, userid)
@@ -239,10 +259,11 @@ func (c *CampaignStore) GetUserCampaigns(ctx context.Context, userid string) ([]
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var row Campaign
+		var row CampaignResp
 		err = rows.Scan(
 			&row.Id,
 			&row.BrandId,
+			&row.Brand,
 			&row.Title,
 			&row.Budget,
 			&row.CPM,
@@ -263,10 +284,12 @@ func (c *CampaignStore) GetUserCampaigns(ctx context.Context, userid string) ([]
 }
 
 func (c *CampaignStore) GetMultipleCampaigns(ctx context.Context, campaignIDs []string,
-) ([]Campaign, error) {
+) ([]CampaignResp, error) {
 	query := `
-		SELECT id, brand_id, title, budget, cpm, requirements, platform, doc_link, status, created_at
-		FROM campaigns
+		SELECT c.id, c.brand_id, b.name AS brand, c.title, c.budget, c.cpm, 
+		c.requirements, c.platform, c.doc_link, c.status, c.created_at
+		FROM campaigns c
+		LEFT JOIN brands b ON c.brand_id = b.id
 		WHERE id IN $1
 	`
 	rows, err := c.db.QueryContext(ctx, query, campaignIDs)
@@ -275,12 +298,13 @@ func (c *CampaignStore) GetMultipleCampaigns(ctx context.Context, campaignIDs []
 		return nil, err
 	}
 	defer rows.Close()
-	var output []Campaign
+	var output []CampaignResp
 	for rows.Next() {
-		var row Campaign
+		var row CampaignResp
 		err = rows.Scan(
 			&row.Id,
 			&row.BrandId,
+			&row.Brand,
 			&row.Title,
 			&row.Budget,
 			&row.CPM,
@@ -301,16 +325,19 @@ func (c *CampaignStore) GetMultipleCampaigns(ctx context.Context, campaignIDs []
 	return output, nil
 }
 
-func (c *CampaignStore) GetCampaign(ctx context.Context, id string) (*Campaign, error) {
+func (c *CampaignStore) GetCampaign(ctx context.Context, id string) (*CampaignResp, error) {
 	query := `
-		SELECT id, brand_id, title, budget, cpm, requirements, platform, doc_link, status, created_at
-		FROM campaigns
+		SELECT c.id, c.brand_id, b.name AS brand, c.title, c.budget, c.cpm, 
+		c.requirements, c.platform, c.doc_link, c.status, c.created_at
+		FROM campaigns c
+		LEFT JOIN brands b ON c.brand_id = b.id
 		WHERE id = $1
 	`
-	var row Campaign
+	var row CampaignResp
 	err := c.db.QueryRowContext(ctx, query, id).Scan(
 		&row.Id,
 		&row.BrandId,
+		&row.Brand,
 		&row.Title,
 		&row.Budget,
 		&row.CPM,

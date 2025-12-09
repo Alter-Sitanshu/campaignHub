@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"log"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -9,7 +8,7 @@ import (
 )
 
 type Payload struct {
-	Id        uuid.UUID `json:"id"`
+	Id        string    `json:"id"`
 	Sub       string    `json:"sub"`
 	IssuedAt  time.Time `json:"iat"`
 	ExpiredAt time.Time `json:"exp"`
@@ -36,18 +35,14 @@ func (payload *Payload) GetAudience() (jwt.ClaimStrings, error) {
 	return jwt.ClaimStrings{payload.Audience}, nil
 }
 
-func NewPayload(iss, aud, email string, dur time.Duration) (*Payload, error) {
-	id, err := uuid.NewRandom()
-	if err != nil {
-		log.Printf("error making issued: %v\n", err.Error())
-		return nil, err
-	}
+func NewPayload(iss, aud, objID string, dur time.Duration) (*Payload, error) {
+	id := uuid.NewString()
 	if iss == "" || aud == "" {
 		return nil, ErrMissingRequired
 	}
 	return &Payload{
 		Id:        id,
-		Sub:       email,
+		Sub:       objID,
 		Issuer:    iss,
 		Audience:  aud,
 		IssuedAt:  time.Now(),
@@ -57,5 +52,5 @@ func NewPayload(iss, aud, email string, dur time.Duration) (*Payload, error) {
 
 type TokenMaker interface {
 	VerifyToken(token string) (*Payload, error)
-	CreateToken(iss, aud, email string, dur time.Duration) (string, error)
+	CreateToken(iss, aud, objID string, dur time.Duration) (string, error)
 }

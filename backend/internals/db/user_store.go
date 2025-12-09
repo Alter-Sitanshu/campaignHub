@@ -101,7 +101,7 @@ func (u *UserStore) VerifyUser(ctx context.Context, entity, id string) error {
 		WHERE id = $1
 	`
 	switch entity {
-	case "users":
+	case "us":
 		res, err := u.db.ExecContext(ctx, user_query, id)
 		if err != nil {
 			log.Printf("invalid user id")
@@ -110,7 +110,7 @@ func (u *UserStore) VerifyUser(ctx context.Context, entity, id string) error {
 		if count, _ := res.RowsAffected(); count == 0 {
 			return ErrInvalidId
 		}
-	case "brands":
+	case "br":
 		res, err := u.db.ExecContext(ctx, brand_query, id)
 		if err != nil {
 			log.Printf("invalid brand id")
@@ -155,7 +155,7 @@ func (u *UserStore) GetUserById(ctx context.Context, id string) (*User, error) {
 	)
 	if err != nil {
 		// for debugging: Comment out later
-		log.Printf("DB Query Error for Id(%s): %v\n", id, err.Error())
+		log.Printf("users DB Query Error for Id(%s): %v\n", id, err.Error())
 		return nil, err
 	}
 

@@ -301,7 +301,7 @@ func (app *Application) GetCampaign(c *gin.Context) {
 	}
 
 	// check cache
-	var campaignResponse *db.Campaign
+	var campaignResponse *db.CampaignResp
 	err := app.cache.GetCampaign(ctx, campaign_id, campaignResponse)
 	if err == nil {
 		c.JSON(http.StatusOK, WriteResponse(campaignResponse))
