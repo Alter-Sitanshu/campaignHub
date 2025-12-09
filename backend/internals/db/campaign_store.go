@@ -167,8 +167,8 @@ func (c *CampaignStore) GetRecentCampaigns(ctx context.Context, offset int, limi
 		SELECT c.id, c.brand_id, b.name AS brand_name, c.title, c.budget, c.cpm, 
 		c.requirements, c.platform, c.doc_link, c.status, c.created_at
 		FROM campaigns c
-		LEFT JOIN brands b ON campaigns.brand_id = b.id
-		ORDER BY created_at DESC, id DESC
+		LEFT JOIN brands b ON c.brand_id = b.id
+		ORDER BY c.created_at DESC, c.id DESC
 		LIMIT $1 OFFSET $2
 	`
 	rows, err := c.db.QueryContext(ctx, query, limit, offset)
@@ -245,12 +245,12 @@ func (c *CampaignStore) GetUserCampaigns(ctx context.Context, userid string) ([]
 		SELECT c.id, c.brand_id, b.name AS brand, c.title, c.budget, 
 		c.cpm, c.requirements, c.platform, c.doc_link, c.status, c.created_at
 		FROM campaigns c
-		WHERE id = (SELECT campaign_id
+		LEFT JOIN brands b ON c.brand_id = b.id
+		WHERE c.id = (SELECT campaign_id
 			FROM submissions
 			WHERE creator_id = $1
 		)
-		LEFT JOIN brands b ON c.brand_id = b.id
-		ORDER BY created_at DESC, id DESC
+		ORDER BY c.created_at DESC, c.id DESC
 	`
 	rows, err := c.db.QueryContext(ctx, query, userid)
 	if err != nil {
@@ -290,7 +290,7 @@ func (c *CampaignStore) GetMultipleCampaigns(ctx context.Context, campaignIDs []
 		c.requirements, c.platform, c.doc_link, c.status, c.created_at
 		FROM campaigns c
 		LEFT JOIN brands b ON c.brand_id = b.id
-		WHERE id IN $1
+		WHERE c.id IN $1
 	`
 	rows, err := c.db.QueryContext(ctx, query, campaignIDs)
 	if err != nil {
@@ -331,7 +331,7 @@ func (c *CampaignStore) GetCampaign(ctx context.Context, id string) (*CampaignRe
 		c.requirements, c.platform, c.doc_link, c.status, c.created_at
 		FROM campaigns c
 		LEFT JOIN brands b ON c.brand_id = b.id
-		WHERE id = $1
+		WHERE c.id = $1
 	`
 	var row CampaignResp
 	err := c.db.QueryRowContext(ctx, query, id).Scan(
