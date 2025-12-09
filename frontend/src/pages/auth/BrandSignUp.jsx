@@ -247,7 +247,7 @@ const BrandSignUp = () => {
                         onClick={handleSubmit}
                         id={!isValid ? 'submit-disabled' : 'submit'}
                         type="button"
-                        disabled={!isValid}
+                        disabled={!isValid || isLoading}
                     >
                         {isLoading ? "Submitting..." : "Create Account"}
                     </button>
@@ -256,7 +256,7 @@ const BrandSignUp = () => {
                 </form>
 
                 <p className="auth-footer">
-                    Already have an account? <a href="/auth/brands/sign_in">Sign in</a>
+                    Already have an account? <a href="/auth/sign_in">Sign in</a>
                 </p>
             </div>
             </div>

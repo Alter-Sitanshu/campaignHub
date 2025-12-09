@@ -5,24 +5,32 @@ import { signin } from '../../api';
 import { useAuth } from "../../AuthContext";
 
 // entity is either users/brands
-const SignIn = ({ entity }) => {
+const SignIn = () => {
     // will use this to navigate to the creator page
+    const { user, login } = useAuth();
     const navigate = useNavigate();
-    const signupURL = `/auth/${entity}/sign_up`;
+    const [signupURL, setSignupURL ] = useState("/auth/users/sign_up");
 
     const [isValid, setIsValid] = useState(false);
     const [ isLoading, setIsLoading ] = useState(false);
     const [errors, setErrors] = useState({});
+
     const [formData, setFormData] = useState({
         email: '',
         password: '',
+        entity: 'users',
     });
 
     useEffect(() => {
+
+        if(user !== null) {
+            navigate(`/${user.entity}/dashboard/${user.id}`);
+        }
+
         const currentErrors = getErrors();
         setErrors(currentErrors);
         setIsValid(Object.keys(currentErrors).length === 0);
-    }, [formData]);
+    }, [formData, user]);
 
     const getErrors = () => {
         const newErrors = {};
@@ -34,23 +42,29 @@ const SignIn = ({ entity }) => {
     }
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        if(e.target.name === "entity") {
+            // entity is a checkbox
+            let newEntity = e.target.checked ? "brands": "users";
+            setSignupURL(`/auth/${newEntity}/sign_up`);
+            setFormData({...formData, [e.target.name]: newEntity});
+        } else {
+            setFormData({ ...formData, [e.target.name]: e.target.value });
+        }
     };
 
-    const { login } = useAuth();
     const handleSubmit = async () => {
         setIsLoading(true);
         const payload = {
             email: formData.email,
             password: formData.password,
-            entity: entity,
+            entity: formData.entity,
         }
         let resp = await signin(payload);
         if (resp.type == "error") {
             navigate(`/errors/${resp.status}`);
         } else{
             login(resp);
-            navigate(`/${entity}/dashboard/${resp.id}`);
+            navigate(`/${formData.entity}/dashboard/${resp.id}`);
         }
     };
 
@@ -91,12 +105,24 @@ const SignIn = ({ entity }) => {
                                     onChange={handleChange}
                                 />
                             </div>
+                            <div className="form-group checkbox-wrapper">
+                                <label htmlFor="entity" className="checkbox-label">
+                                    <input 
+                                    type="checkbox" 
+                                    className="checkbox-input"
+                                    name="entity"
+                                    onChange={handleChange}
+                                    />
+                                    <span className="checkbox-custom"></span>
+                                    Are you a brand?
+                                </label>
+                            </div>
                             <div className="button-group">
                                 <button 
                                     onClick={handleSubmit}
                                     id={!isValid ? 'submit-disabled' : 'submit'}
                                     type="button"
-                                    disabled={!isValid}
+                                    disabled={!isValid || isLoading}
                                     >
                                     {isLoading ? "Signing In..." : "Sign In"}
                                 </button>

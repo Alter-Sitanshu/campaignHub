@@ -3,62 +3,187 @@ import { useEffect, useState } from "react";
 import defaultProfile from "../../../../assets/default-profile.avif";
 import { useAuth } from "../../../../AuthContext";
 import { api } from "../../../../api";
+import { useNavigate } from "react-router-dom";
 
-export function validateImage(file) {
-  return file.size < 2 * 1024 * 1024; // 2 MB
+function validateImage(file) {
+    return file.size < 2 * 1024 * 1024; // 2 MB
 }
 
 const Profile = ({ entity }) => {
     const { user } = useAuth();
     const [isLoading, setIsLoading] = useState(true);
-    const [profile, setProfile] = useState(null);
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [preview, setPreview] = useState(defaultProfile);
 
+    const [profile, setProfile] = useState(null);
+    const [form, setForm] = useState(null);
+
+    const [Link, setLink] = useState({
+        platform: "",
+        url: "",
+    });
+    const navigate = useNavigate();
+    const [popup, setPopup] = useState(false);
+
+    // --------------------------
+    //  Fetch Data
+    // --------------------------
     useEffect(() => {
+        if (user === null) {
+            navigate("/");
+        }
         const fetchData = async () => {
-            if (user?.id) { // Ensure user exists
-                try {
-                    let url;
-                    if (entity === "users") {
-                        url = "/users/me";
-                    } else if (entity === "brands") {
-                        url = `/brands/${user.id}`;
-                    }
-                    const response = await api.get(url);
-                    setProfile(response.data.data); // Update state
-                    setIsLoading(false);
-                } catch (err) {
-                    console.error(err);
+            if (!user?.id) return;
+
+            try {
+                let url =
+                    entity === "users"
+                        ? "/users/me"
+                        : `/brands/${user.id}`;
+
+                const response = await api.get(url);
+                const data = response.data.data;
+
+                // Set profile
+                setProfile(data);
+
+                // Initialize form based on entity
+                if (entity === "users") {
+                    setForm({
+                        first_name: data.first_name,
+                        last_name: data.last_name,
+                        email: data.email,
+                        age: data.age,
+                    });
+                } else {
+                    setForm({
+                        email: data.email,
+                        address: data.address,
+                        website: data.website,
+                    });
                 }
+
+                setIsLoading(false);
+            } catch (err) {
+                console.error(err);
             }
         };
 
-        // Call it immediately
         fetchData();
+    }, [user, entity]);
 
-    }, [user]);
-
-    const [ selectedFile, setSelectedFile ] = useState(null);
-    const [ preview, setPreview ] = useState(defaultProfile);
-
-
-    if (isLoading) {
-        return <div>Loading...</div>
+    if (isLoading || !profile || !form) {
+        return <div>Loading...</div>;
     }
-    
+
+    // --------------------------
+    //  Photo Change
+    // --------------------------
     function handlePhotoChange(e) {
         const file = e.target.files[0];
-        if (!validateImage(file)) {
-            return
-        }
-        const newPreview = URL.createObjectURL(file);
-        setPreview(newPreview);
-        console.log(newPreview);
+        if (!file || !validateImage(file)) return;
+
         setSelectedFile(file);
+        setPreview(URL.createObjectURL(file));
     }
 
+    // --------------------------
+    // Add social link
+    // --------------------------
+    function handleAddLink() {
+        console.log(Link);
+    }
 
+    // --------------------------
+    // Upload photo + update profile
+    // --------------------------
+    async function handleProfileChange() {
+        try {
+            // 1) Upload Photo (if selected)
+            if (selectedFile) {
+                const ext = selectedFile.name.split(".").pop();
+                const response = await api.get(`/${entity}/profile_picture/?ext=${ext}`);
+
+                const uploadUrl = response.data.data.uploadUrl;
+                const objKey = response.data.data.objKey;
+
+                // Upload file to signed URL
+                await fetch(uploadUrl, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": selectedFile.type,
+                    },
+                    body: selectedFile,
+                });
+
+                // Inform backend that upload succeeded
+                await api.post(`/${entity}/profile_picture/confirm`, {
+                    objectKey: objKey,
+                });
+            }
+
+            // 2) Find changed fields
+            const updates = {};
+            for (const key in form) {
+                if (form[key] !== profile[key]) {
+                    updates[key] = form[key];
+                }
+            }
+
+            // 3) Send profile updates ONLY if something changed
+            if (Object.keys(updates).length > 0) {
+                await api.patch(`/${entity}/${user.id}`, updates);
+            }
+
+            alert("Profile updated!");
+        } catch (err) {
+            console.error(err);
+            alert("Error updating profile!");
+        }
+    }
     return (
         <div>
+            {popup && (
+                <div className="addlink-popup-overlay">
+                    <div className="addlink-popup-card">
+
+                        <h3 className="popup-title">Add Social Link</h3>
+
+                        <div className="link-group">
+                            <select
+                                id="platform-select"
+                                value={Link.platform}
+                                onChange={(e) => setLink({ ...Link, platform: e.target.value })}
+                                className="link-select"
+                            >
+                                <option value="">Select platform</option>
+                                <option value="instagram">Instagram</option>
+                                <option value="youtube">YouTube</option>
+                                <option value="twitter">Twitter</option>
+                                <option value="tiktok">TikTok</option>
+                                <option value="linkedin">LinkedIn</option>
+                            </select>
+
+                            <input
+                                type="url"
+                                placeholder="https://..."
+                                value={Link.url}
+                                onChange={(e) => setLink({ ...Link, url: e.target.value })}
+                                className="link-input"
+                            />
+                        </div>
+
+                        <div className="popup-actions">
+                            <button className="popup-cancel" onClick={() => setPopup(false)}>
+                                Cancel
+                            </button>
+                            <button className="popup-save" onClick={handleAddLink}>
+                                Save
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             <div className="profile-main-card">
                 <div className="profile-content">
                     <div className="profile-avatar-section">
@@ -100,11 +225,11 @@ const Profile = ({ entity }) => {
                         <div className="profile-form-section">
                             <div className="profile-form-group">
                             <label className="profile-form-label">Name</label>
-                            <input type="text" placeholder="XYZ" readOnly={true} className="profile-form-input" value={profile.name} />
+                            <input id="name" type="text" placeholder="XYZ" readOnly={true} className="profile-form-input" value={profile.name} />
                             </div>
                             <div className="profile-form-group">
                             <label className="profile-form-label">Sector</label>
-                            <input type="text" placeholder="Beauty" readOnly={true} className="profile-form-input" value={profile.sector} />
+                            <input id="sector" type="text" placeholder="Beauty" readOnly={true} className="profile-form-input" value={profile.sector} />
                             </div>
                             <div className="profile-form-group">
                             <label className="profile-form-label">Email</label>
@@ -127,7 +252,7 @@ const Profile = ({ entity }) => {
                 <div className="profile-social-card">
                     <div className="profile-social-header">
                         <h3 className="profile-social-title">Social Media Accounts</h3>
-                        <button className="social-add-button">Add Link</button>
+                        <button className="social-add-button" onClick={() => setPopup(true)}>Add Link</button>
                     </div>
                     <div className="profile-social-list">
                     {profile.links.map((account, i) => (

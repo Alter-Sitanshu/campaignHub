@@ -11,8 +11,19 @@ import Footer from '../../components/Footer/Footer';
 import Navbar from '../../components/Navbar/Navbar';
 import FeatureCard from '../../components/Card/FeatureCard';
 import StepCard from '../../components/Card/StepCard';
+import { useAuth } from '../../AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const Landing = () => {
+    const navigate = useNavigate();
+
+    let { user } = useAuth();
+    useEffect(() => {
+        if(user) {
+            navigate(`${user.entity}/dashboard/${user.id}`)
+        }
+    }, [user])
+
     return (
         <>
             <Navbar />

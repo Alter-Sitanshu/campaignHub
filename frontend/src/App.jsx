@@ -22,8 +22,7 @@ function App() {
           <Route path='/' element={<Landing />}></Route>
           
           {/* auth pages */}
-          <Route path="/auth/users/sign_in" element={<SignIn entity="users"/>}></Route>
-          <Route path="/auth/brands/sign_in" element={<SignIn entity="brands"/>}></Route>
+          <Route path="/auth/sign_in" element={<SignIn />}></Route>
           <Route path="/auth/users/sign_up" element={<SignUp />}></Route>
           <Route path="/auth/brands/sign_up" element={<BrandSignUp />}></Route>
 

@@ -14,11 +14,11 @@ const Dashboard = () => {
     const [activeTab, setActiveTab] = useState('overview');
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
+    if (user === null) {
+        navigate("/auth/sign_in");
+    }
     if (loading) return <div>Loading...</div>;
 
-    if (!user) {
-        navigate("/auth/brands/sign_in");
-    }
 
 
     // Mock data

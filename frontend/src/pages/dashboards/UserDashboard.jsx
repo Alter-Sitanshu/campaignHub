@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import SubCard from "../../components/Card/SubCard";
 import sampleThumb from "../../assets/sampleThumb.jpg";
 import Profile from "./components/Profile/Profile";
@@ -11,17 +11,20 @@ import { useNavigate } from "react-router-dom";
 
 const UserDashboard = () => {
     const navigate = useNavigate();
-    const { user, loading } = useAuth();
+    const { user, loading, logout } = useAuth();
     const [ activeTab, setActiveTab ] = useState("overview");
     const [ sidebarOpen, setSidebarOpen ] = useState(false);
 
+    useEffect(() => {
+        if (user === null) {
+            navigate("/auth/sign_in");
+        }
+    }, [user]);
     if (loading) return <div>Loading...</div>;
 
-    if (!user) {
-        navigate("/auth/users/sign_in");
+    const handleLogout = () => {
+        logout();
     }
-
-    
 
     // Mock data
     const stats = {
@@ -161,7 +164,10 @@ const UserDashboard = () => {
                             <div className="sidebar-user-wrapper">
                             <div className="sidebar-user-avatar">{user.username.charAt(0)}</div>
                             <div className="sidebar-user-details">
-                                <p className="sidebar-user-name">{user.username}</p>
+                                <div className="name-container">
+                                    <p className="sidebar-user-name">{user.username}</p>
+                                    <button className="logout-button" onClick={handleLogout}>logout</button>
+                                </div>
                                 <p className="sidebar-user-handle">{user.email}</p>
                             </div>
                             </div>

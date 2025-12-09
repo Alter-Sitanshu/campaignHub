@@ -128,17 +128,44 @@
 
 .sidebar-user-details {
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    row-gap: 0.3rem;
 }
 
 .sidebar-user-name {
     font-size: 0.875rem;
     font-weight: 500;
     color: var(--bg-light);
+    margin: 0;
 }
 
 .sidebar-user-handle {
+    margin: 0;
     font-size: 0.75rem;
     color: var(--bg-medium-light);
+}
+
+.name-container {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logout-button {
+    background: red;
+    color: white;
+    border-radius: 2rem;
+    border: none;
+    padding: 0.3rem 0.8rem;
+    transition: all 0.2s ease-in-out;
+}
+
+.logout-button:hover {
+    cursor: pointer;
+    opacity: 0.7;
+    background: rgb(119, 11, 11);
 }
 
 /* ==========================================

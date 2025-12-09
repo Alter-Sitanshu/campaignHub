@@ -299,7 +299,7 @@ export default function SignupPage() {
                     onClick={handleSubmit}
                     id={!isStepValid ? 'submit-disabled' : 'submit'}
                     type="button"
-                    disabled={!isStepValid}
+                    disabled={!isStepValid || isLoading}
                   >
                     {isLoading ? "Signing up..." : "Create Account"}
                   </button>
@@ -308,7 +308,7 @@ export default function SignupPage() {
             </form>
 
             <p className="auth-footer">
-              Already have an account? <a href="/auth/users/sign_in">Sign in</a>
+              Already have an account? <a href="/auth/sign_in">Sign in</a>
             </p>
           </div>
         </div>

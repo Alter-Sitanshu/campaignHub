@@ -64,7 +64,8 @@ export const signin = async (data) => {
             "status": response.status,
             "id": response.data.data.id,
             "username": response.data.data.username,
-            "email": response.data.data.email
+            "email": response.data.data.email,
+            "entity": data.entity,
         };
     } catch(err) {
         if (err.response) {
