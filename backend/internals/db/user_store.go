@@ -353,6 +353,42 @@ func (u *UserStore) UpdateUser(ctx context.Context, id string, payload UpdatePay
 	return nil
 }
 
+func (u *UserStore) GetUserProfilePicture(ctx context.Context, id string) string {
+	query := `
+		SELECT url
+		FROM profile_pictures
+		WHERE user_id = $1
+	`
+	var url string
+	if err := u.db.QueryRowContext(ctx, query, id).Scan(
+		&url,
+	); err != nil {
+		return ""
+	}
+
+	return url
+}
+
+func (u *UserStore) SetUserProfilePicture(ctx context.Context, id, fileKey string) error {
+	query := `
+        INSERT INTO profile_pictures (user_id, url, updated_at)
+        VALUES ($1, $2, NOW())
+        ON CONFLICT (user_id) 
+        DO UPDATE SET 
+            url = EXCLUDED.url,
+            updated_at = NOW()
+        RETURNING url
+    `
+	var oldURL string
+	err := u.db.QueryRowContext(ctx, query, id, fileKey).Scan(&oldURL)
+	if err != nil && err != sql.ErrNoRows {
+		return fmt.Errorf("failed to update profile picture: %w", err)
+	}
+	return nil
+	// if the insertion fails in db but succeeds in S3 Bucket
+	// there will be inconsistency but the app won't crash as fallback will save
+}
+
 // ----------  LinkStore Implementation ---------------
 
 func (l *LinkStore) AddLinks(ctx context.Context, id string, links []Links) error {

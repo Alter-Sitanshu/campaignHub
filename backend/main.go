@@ -18,8 +18,13 @@ import (
 	"github.com/Alter-Sitanshu/campaignHub/internals/chats"
 	"github.com/Alter-Sitanshu/campaignHub/internals/db"
 	"github.com/Alter-Sitanshu/campaignHub/internals/mailer"
-	"github.com/Alter-Sitanshu/campaignHub/internals/platform"
-	"github.com/Alter-Sitanshu/campaignHub/internals/workers.go"
+	"github.com/Alter-Sitanshu/campaignHub/internals/workers"
+	"github.com/Alter-Sitanshu/campaignHub/services/b2"
+	"github.com/Alter-Sitanshu/campaignHub/services/platform"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	AWSconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/joho/godotenv"
 )
 
@@ -73,6 +78,12 @@ func main() {
 			YouTubeAPIKey: env.GetString("YTAPIKEY", ""),
 			MetaToken:     env.GetString("METAKEY", ""),
 		},
+		B2Cfg: api.B2Config{
+			KeyID:    env.GetString("B2KeyID", ""),
+			AppKey:   env.GetString("B2API_KEY", ""),
+			Region:   env.GetString("B2Region", "us-east-001"),
+			Endpoint: env.GetString("B2Endpoint", ""),
+		},
 	}
 
 	// Making DB connection
@@ -85,6 +96,35 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error connecting to DB %v\n", err.Error())
 	}
+
+	// ----------  AWS S3 CONFIGURATIONS -------------
+
+	// Setting the S3 configurations
+	bucket := env.GetString("RootBucket", "")
+	// Building config using functional options
+	cfg, err := AWSconfig.LoadDefaultConfig(context.TODO(),
+		AWSconfig.WithRegion(config.B2Cfg.Region),
+		AWSconfig.WithCredentialsProvider(
+			credentials.NewStaticCredentialsProvider(
+				config.B2Cfg.KeyID,
+				config.B2Cfg.AppKey,
+				"",
+			),
+		),
+	)
+	if err != nil {
+		log.Fatalf("unable to load SDK config: %v", err)
+	}
+
+	// Create S3 client with UsePathStyle option
+	s3Client := s3.NewFromConfig(cfg, func(o *s3.Options) {
+		o.BaseEndpoint = aws.String(config.B2Cfg.Endpoint)
+		o.UsePathStyle = true
+	})
+	b2Storage := b2.NewB2(bucket, s3Client)
+
+	// ----------  AWS S3 CONFIGURATIONS -------------
+
 	// Setting the Token Makers
 	jwt_Maker, err := auth.NewJWTMaker(config.TokenCfg.JWTSecret)
 	if err != nil {
@@ -144,6 +184,7 @@ func main() {
 		factory,
 		appHub,
 		appWorker,
+		b2Storage,
 	)
 
 	// Graceful Shutdown
@@ -159,6 +200,8 @@ func main() {
 		defer cancel()
 
 		// trigger the shutdown
+		// the shutdown channel is un-buffered
+		// thus the following line blocks inf till it gets error (final error)
 		shutdown <- app.Shutdown(ctx)
 	}()
 

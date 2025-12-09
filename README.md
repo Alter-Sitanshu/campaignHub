@@ -62,6 +62,9 @@
 | POST | `/brands/signup` | `CreateBrand` | signup for brands |
 | POST | `/forgot_password/request/:entity` | `ForgotPassword` | send reset email |
 | POST | `/forgot_password/confirm/:entity` | `ResetPassword` | verify reset token |
+| GET | `/profile_picture/` | `GetProfilePicUpdateURLL` | sends presigned S3 url |
+| GET | `/profile_picture/download/?id` | `GetUserProfilePic` | sends presigned S3 url |
+| POST | `/profile_picture/confirm` | `ConfirmProfilePicUpload` | WriteBack to DB ACK |
 
 ### 👤 Users
 | Method | Route | Handler | Purpose |
