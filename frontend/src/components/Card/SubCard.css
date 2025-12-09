@@ -172,6 +172,7 @@
   display: grid;
   grid-template-columns: max-content auto; /* label column & value column */
   row-gap: 4px;
+  column-gap: 0.3rem;
 }
 
 .id-row {

@@ -1,37 +1,76 @@
 import axios from "axios";
 
-const api = axios.create({
+export const api = axios.create({
     baseURL: "http://localhost:8080/api/v1",
     withCredentials: true,
 });
 
-export const signup = (data, entity) => {
-    let output = "";
+export const signup = async (data, entity) => {
     if (!entity || entity.trim().length === 0) {
-        return "error";
-    } else if (entity === "users"){
-        api.post("/users/signup", data)
-        .then(response => {
-            console.log('Signup success:', response.data);
-            output = response.data.id;
-        })
-        .catch(err => {
-            console.log(err);
-            output = "error";
-        });
-    } else if (entity === "brands") {
-        api.post("/brands/signup", data)
-        .then(response => {
-            console.log('Signup success:', response.data);
-            output = response.data.id;
-        })
-        .catch(err => {
-            console.log(err);
-            output = "error";
-        });
-    } else {
-        return "error";
+        return {
+            "type": "error",
+            "status": 400,
+        };
     }
+    try {
+        let response;
+        if (entity === "users") {
+            response = await api.post("/users/signup", data);
+        } else if (entity === "brands") {
+            response = await api.post("/brands/signup", data)
+        } else {
+            return {
+                "type": "error",
+                "status": 400
+            };
+        }
+        if (response.status != 201) {
+            return {
+                "type": "error",
+                "status": response.status
+            };
+        };
+        return {
+            "type": "success",
+            "status": response.status,
+        };
+    } catch {
+        return {
+            "type": "error",
+            "status": 500
+        };
+    }
+}
 
-    return output;
+export const signin = async (data) => {
+    const email = data.email;
+    if (!email || email.trim().length === 0) {
+        return {
+            "type": "error",
+            "status": 400,
+        };
+    }
+    try {
+        let response;
+        response = await api.post("/login", data);
+        if (response.status != 200) {
+            return {
+                "type": "error",
+                "status": response.status
+            };
+        };
+        return {
+            "type": "success",
+            "status": response.status,
+            "id": response.data.data.id,
+            "username": response.data.data.username,
+            "email": response.data.data.email
+        };
+    } catch(err) {
+        if (err.response) {
+            return { type: "error", status: err.response.status };
+        }
+        
+        return { type: "error", status: 400 };
+    }
 }

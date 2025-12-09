@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 const BrandSignUp = () => {
     const navigate = useNavigate();
+    const [isLoading, setIsLoading] = useState(false);
     const [ formData, setFormData ] = useState(
         {
             "name": "",
@@ -24,12 +25,21 @@ const BrandSignUp = () => {
         setIsValid(Object.keys(err).length === 0);
     }, [formData, step])
 
-    const handleSubmit = async (formData) => {
-        const id = await signup(formData, "brands");
-        if (id !== "error") {
-            navigate(`/brand/dashboard/${ id }`);
+    const handleSubmit = async () => {
+        setIsLoading(true);
+        const payload = {
+            "name": formData.name,
+            "email": formData.email,
+            "sector": formData.sector,
+            "password": formData.password,
+            "website": formData.website,
+            "address": formData.address,
+        }
+        const resp = await signup(payload, "brands");
+        if (resp.type !== "error") {
+            navigate("/auth/brands/sign_in");
         } else {
-            navigate(`/404/`);
+            navigate(`/errors/${resp.status}/`);
         }
     }
 
@@ -134,7 +144,7 @@ const BrandSignUp = () => {
                 {step === 1 && (
                     <>
                     <div className="form-group">
-                        <label htmlFor="first_name">First Name</label>
+                        <label htmlFor="name">Name</label>
                         <input
                         type="text"
                         id="name"
@@ -239,7 +249,7 @@ const BrandSignUp = () => {
                         type="button"
                         disabled={!isValid}
                     >
-                        Create Account
+                        {isLoading ? "Submitting..." : "Create Account"}
                     </button>
                     )}
                 </div>

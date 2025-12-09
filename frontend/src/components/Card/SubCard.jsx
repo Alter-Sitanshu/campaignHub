@@ -52,33 +52,37 @@ const SubCard = ({ sub, thumb }) => {
           </div>
 
           <div className="details-wrapper">
-            <table className="ids-grid">
-              <tr className="id-row">
-                <td className="id-label">Submisssion</td>
-                <td className="id-val">{sub.submission_id ?? sub.id}</td>
-              </tr>
-              <tr className="id-row">
-                <td className="id-label">Campaign</td>
-                <td className="id-val">{sub.campaign_id ?? sub.campaign}</td>
-              </tr>
-              <tr className="id-row">
-                <td className="id-label">VideoID</td>
-                <td className="id-val">{sub.video_id}</td>
-              </tr>
+            <table>
+              <tbody className="ids-grid">
+                <tr className="id-row">
+                  <td className="id-label">Submisssion</td>
+                  <td className="id-val">{sub.submission_id ?? sub.id}</td>
+                </tr>
+                <tr className="id-row">
+                  <td className="id-label">Campaign</td>
+                  <td className="id-val">{sub.campaign_id ?? sub.campaign}</td>
+                </tr>
+                <tr className="id-row">
+                  <td className="id-label">VideoID</td>
+                  <td className="id-val">{sub.video_id}</td>
+                </tr>
+              </tbody>
             </table>
-            <table className="ids-grid">
-              <tr className="id-row">
-                <td className="id-label">Applied On</td>
-                <td className="id-val">{sub.created_at ? new Date(sub.created_at).toLocaleString() : "-"}</td>
-              </tr>
-              <tr className="id-row">
-                <td className="id-label">Submitted On</td>
-                <td className="id-val">{sub.uploaded_at ? new Date(sub.uploaded_at).toLocaleString() : "-"}</td>
-              </tr>
-              <tr className="id-row">
-                <td className="id-label">Last Synced</td>
-                <td className="id-val">{sub.last_synced_at ? new Date(sub.last_synced_at).toLocaleString() : "-"}</td>
-              </tr>
+            <table>
+              <tbody className="ids-grid">
+                <tr className="id-row">
+                  <td className="id-label">Applied</td>
+                  <td className="id-val">{sub.created_at ? new Date(sub.created_at).toLocaleString() : "-"}</td>
+                </tr>
+                <tr className="id-row">
+                  <td className="id-label">Submitted</td>
+                  <td className="id-val">{sub.uploaded_at ? new Date(sub.uploaded_at).toLocaleString() : "-"}</td>
+                </tr>
+                <tr className="id-row">
+                  <td className="id-label">Last Synced</td>
+                  <td className="id-val">{sub.last_synced_at ? new Date(sub.last_synced_at).toLocaleString() : "-"}</td>
+                </tr>
+              </tbody>
             </table>
           </div>
         </div>

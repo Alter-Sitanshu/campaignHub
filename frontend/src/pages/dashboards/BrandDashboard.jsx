@@ -2,11 +2,24 @@ import { useState } from 'react';
 import './dashboard.css';
 import Profile from './components/Profile/Profile';
 import Analytics from './components/Analytics/Analytics';
+import Messages from './components/Messages/Messages';
 import Overview from './components/Overview/Overview';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../AuthContext';
 
 const Dashboard = () => {
+
+    const navigate = useNavigate();
+    const { user, loading } = useAuth();
     const [activeTab, setActiveTab] = useState('overview');
     const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    if (loading) return <div>Loading...</div>;
+
+    if (!user) {
+        navigate("/auth/brands/sign_in");
+    }
+
 
     // Mock data
     const stats = {
@@ -36,7 +49,7 @@ const Dashboard = () => {
             <div className="sidebar-inner">
             {/* Logo */}
             <div className="sidebar-header">
-                <h1 className="sidebar-logo">ConnectSphere</h1>
+                <a className="sidebar-logo">FrogMedia</a>
                 <p className="sidebar-subtitle">Brand Dashboard</p>
             </div>
 
@@ -96,10 +109,10 @@ const Dashboard = () => {
             {/* User Info */}
             <div className="sidebar-user-info">
                 <div className="sidebar-user-wrapper">
-                <div className="sidebar-user-avatar">JD</div>
+                <div className="sidebar-user-avatar">{user.username.charAt(0)}</div>
                 <div className="sidebar-user-details">
-                    <p className="sidebar-user-name">Jane Doe</p>
-                    <p className="sidebar-user-handle">@janedoe</p>
+                    <p className="sidebar-user-name">{user.username}</p>
+                    <p className="sidebar-user-handle">{user.email}</p>
                 </div>
                 </div>
             </div>
@@ -205,7 +218,7 @@ const Dashboard = () => {
             {activeTab === 'messages' && (<Messages messages={messages}/>)}
             {activeTab === 'analytics' && (<Analytics />)}
 
-            {activeTab === 'profile' && (<Profile />)}
+            {activeTab === 'profile' && (<Profile entity={"brands"}/>)}
             </main>
         </div>
         </div>

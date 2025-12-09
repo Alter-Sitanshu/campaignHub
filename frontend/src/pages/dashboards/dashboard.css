@@ -44,6 +44,7 @@
     font-weight: 700;
     color: var(--bg-light);
     font-family: "Momo Trust Display", sans-serif;
+    text-decoration: none;
 }
 
 .sidebar-subtitle {

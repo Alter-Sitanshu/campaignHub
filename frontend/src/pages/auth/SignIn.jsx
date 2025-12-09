@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react';
 import './signup.css';
 import { useNavigate } from 'react-router-dom';
+import { signin } from '../../api';
+import { useAuth } from "../../AuthContext";
 
 // entity is either users/brands
-const SignIn = (entity) => {
+const SignIn = ({ entity }) => {
     // will use this to navigate to the creator page
     const navigate = useNavigate();
+    const signupURL = `/auth/${entity}/sign_up`;
 
     const [isValid, setIsValid] = useState(false);
+    const [ isLoading, setIsLoading ] = useState(false);
     const [errors, setErrors] = useState({});
     const [formData, setFormData] = useState({
         email: '',
@@ -33,10 +37,21 @@ const SignIn = (entity) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const handleSubmit = () => {
-        console.log('Submitting:', formData);
-        navigate("/");
-        // TODO : Send to backend here
+    const { login } = useAuth();
+    const handleSubmit = async () => {
+        setIsLoading(true);
+        const payload = {
+            email: formData.email,
+            password: formData.password,
+            entity: entity,
+        }
+        let resp = await signin(payload);
+        if (resp.type == "error") {
+            navigate(`/errors/${resp.status}`);
+        } else{
+            login(resp);
+            navigate(`/${entity}/dashboard/${resp.id}`);
+        }
     };
 
     return (
@@ -83,12 +98,12 @@ const SignIn = (entity) => {
                                     type="button"
                                     disabled={!isValid}
                                     >
-                                    Log In
+                                    {isLoading ? "Signing In..." : "Sign In"}
                                 </button>
                             </div>
                         </form>
                         <p className="auth-footer">
-                            Don't have an account? <a href={`/auth/${entity}/sign_up`}>Create One</a>
+                            Don't have an account? <a href={signupURL}>Create One</a>
                         </p>
                     </div>
                 </div>

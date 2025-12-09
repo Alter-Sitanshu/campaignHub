@@ -5,11 +5,22 @@ import Profile from "./components/Profile/Profile";
 import Overview from "./components/Overview/Overview";
 import Messages from "./components/Messages/Messages";
 import Analytics from "./components/Analytics/Analytics";
+import Feed from "./components/Feed/Feed";
+import { useAuth } from "../../AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const UserDashboard = () => {
-
+    const navigate = useNavigate();
+    const { user, loading } = useAuth();
     const [ activeTab, setActiveTab ] = useState("overview");
     const [ sidebarOpen, setSidebarOpen ] = useState(false);
+
+    if (loading) return <div>Loading...</div>;
+
+    if (!user) {
+        navigate("/auth/users/sign_in");
+    }
+
     
 
     // Mock data
@@ -80,7 +91,7 @@ const UserDashboard = () => {
                 <aside className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
                     <div className="sidebar-inner">
                         <div className="sidebar-header">
-                            <h2 className="sidebar-logo">FrogMedia</h2>
+                            <a href="/" className="sidebar-logo">FrogMedia</a>
                             <p className="sidebar-subtitle">Creator Dashboard</p>
                         </div>
                         <div className="sidebar-navigation">
@@ -148,10 +159,10 @@ const UserDashboard = () => {
                         {/* User Info */}
                         <div className="sidebar-user-info">
                             <div className="sidebar-user-wrapper">
-                            <div className="sidebar-user-avatar">JD</div>
+                            <div className="sidebar-user-avatar">{user.username.charAt(0)}</div>
                             <div className="sidebar-user-details">
-                                <p className="sidebar-user-name">Jane Doe</p>
-                                <p className="sidebar-user-handle">@janedoe</p>
+                                <p className="sidebar-user-name">{user.username}</p>
+                                <p className="sidebar-user-handle">{user.email}</p>
                             </div>
                             </div>
                         </div>
@@ -193,7 +204,7 @@ const UserDashboard = () => {
                                 <div className="submissions-table-container">
                                     <div className="submissions-table-wrapper">
                                         {submissions.slice(0, 10).map((sub, i) => (
-                                            <SubCard key={i} sub={sub} thumb={sampleThumb}/>
+                                            <SubCard key={`sub-${i}`} sub={sub} thumb={sampleThumb}/>
                                         ))}
                                     </div>
                                 </div>
@@ -201,7 +212,8 @@ const UserDashboard = () => {
                         )}
                         {activeTab === 'messages' && (<Messages messages={messages}/>)}
                         {activeTab === 'analytics' && (<Analytics />)}
-                        {activeTab === 'profile' && (<Profile />)}
+                        {activeTab === 'feed' && (<Feed sub={submissions} />)}
+                        {activeTab === 'profile' && (<Profile entity={"users"}/>)}
                     </main>
                 </div>
             </div>

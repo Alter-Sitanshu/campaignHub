@@ -6,6 +6,8 @@ import { signup } from '../../api';
 export default function SignupPage() {
   // will use this to navigate to the creator page
   const navigate = useNavigate();
+
+  const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [step, setStep] = useState(1);
   const [isStepValid, setIsStepValid] = useState(false);
@@ -99,7 +101,7 @@ export default function SignupPage() {
   };
 
   const handleSubmit = async () => {
-    console.log("Submitting...");
+    setIsLoading(true);
     let payload = {
       "first_name": formData.first_name,
       "last_name": formData.last_name,
@@ -121,13 +123,12 @@ export default function SignupPage() {
     } else {
       payload.gender = "O";
     };
-    const id = await signup(payload, "users");
-    if (id !== "error") {
-      navigate(`/users/dashboard/${ id }`);
+    const resp = await signup(payload, "users");
+    if (resp.type !== "error") {
+      navigate("/auth/users/sign_in");
     } else {
-      navigate(`/404/`);
+      navigate(`/errors/${resp.status}/`);
     }
-    // TODO:  Send to backend here
   };
 
   return (
@@ -300,7 +301,7 @@ export default function SignupPage() {
                     type="button"
                     disabled={!isStepValid}
                   >
-                    Create Account
+                    {isLoading ? "Signing up..." : "Create Account"}
                   </button>
                 )}
               </div>
