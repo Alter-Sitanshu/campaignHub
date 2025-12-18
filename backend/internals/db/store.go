@@ -112,10 +112,11 @@ type Store struct {
 	CampaignInterace interface {
 		LaunchCampaign(context.Context, *Campaign) error
 		EndCampaign(context.Context, string) error
+		ActivateCampaign(context.Context, string) error
 		UpdateCampaign(context.Context, string, UpdateCampaign) error
-		GetRecentCampaigns(context.Context, int, int) ([]CampaignResp, error)
-		GetBrandCampaigns(context.Context, string) ([]CampaignResp, error)
-		GetUserCampaigns(context.Context, string) ([]CampaignResp, error)
+		GetRecentCampaigns(ctx context.Context, limit int, cursorSeq string) ([]CampaignResp, int64, bool, error)
+		GetBrandCampaigns(ctx context.Context, brandID string, limit int, cursorSeq string) ([]CampaignResp, int64, bool, error)
+		GetUserCampaigns(ctx context.Context, brandID string, limit int, cursorSeq string) ([]CampaignResp, int64, bool, error)
 		GetCampaign(context.Context, string) (*CampaignResp, error)
 		DeleteCampaign(context.Context, string) error
 		GetMultipleCampaigns(ctx context.Context, campaignIDs []string) ([]CampaignResp, error)

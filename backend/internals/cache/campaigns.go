@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"fmt"
 	"time"
 )
 
@@ -100,8 +101,8 @@ func (s *Service) RemoveActiveCampaign(ctx context.Context, campaignID string) e
 // Company Campaigns List
 // ==================================
 
-func (s *Service) SetUserCampaigns(ctx context.Context, userID string, campaignIDs []string) error {
-	key := UserCampaignsKey(userID)
+func (s *Service) SetUserCampaigns(ctx context.Context, userID, cursor string, campaignIDs []string) error {
+	key := UserCampaignsKey(fmt.Sprintf("%s-%s", userID, cursor))
 
 	// Clear existing set
 	s.Delete(ctx, key)
@@ -153,8 +154,8 @@ func (s *Service) GetCompanyCampaigns(ctx context.Context, companyID string) ([]
 	return s.SMembers(ctx, key)
 }
 
-func (s *Service) GetUserCampaigns(ctx context.Context, userID string) ([]string, error) {
-	key := UserCampaignsKey(userID)
+func (s *Service) GetUserCampaigns(ctx context.Context, userID, cursor string) ([]string, error) {
+	key := UserCampaignsKey(fmt.Sprintf("%s-%s", userID, cursor))
 	return s.SMembers(ctx, key)
 }
 

@@ -52,7 +52,7 @@ func TestCreateApplications(t *testing.T) {
 	generateBrand(bid)
 
 	// launch a dummy campaign
-	camp := SeedCampaign(ctx, bid, 1)
+	camp := SeedCampaign(ctx, bid, ActiveStatus, 1)
 	defer func() {
 		destroyCampaign(ctx, camp)
 		destroyBrand(bid)
@@ -119,7 +119,7 @@ func TestGetCreatorApplications(t *testing.T) {
 	// create a dummy brand
 	generateBrand(bid)
 
-	campIDs := SeedCampaign(ctx, bid, 10)
+	campIDs := SeedCampaign(ctx, bid, ActiveStatus, 10)
 	applIDs := SeedApplications(ctx, campIDs, uid)
 
 	defer func() {
@@ -174,7 +174,7 @@ func TestGetCampaignApplications(t *testing.T) {
 	// create a dummy brand
 	generateBrand(bid)
 
-	campIDs := SeedCampaign(ctx, bid, 1)
+	campIDs := SeedCampaign(ctx, bid, ActiveStatus, 1)
 	applIDs := SeedApplications(ctx, campIDs, uid)
 
 	defer func() {
@@ -228,7 +228,7 @@ func TestDestroyApplications(t *testing.T) {
 	generateCreator(ctx, uid)
 	// generate the dummy brand
 	generateBrand(bid)
-	campIDs := SeedCampaign(ctx, bid, 3)
+	campIDs := SeedCampaign(ctx, bid, ActiveStatus, 3)
 	applIDs := SeedApplications(ctx, campIDs, uid)
 	// clean up before exit
 	defer func() {
@@ -267,7 +267,7 @@ func TestGetApplication(t *testing.T) {
 	generateBrand(bid)
 
 	// generate the campaigns
-	campIDs := SeedCampaign(ctx, bid, 1)
+	campIDs := SeedCampaign(ctx, bid, ActiveStatus, 1)
 	appl_id := SeedApplications(ctx, campIDs, uid)
 	//clean up the entries
 	defer func() {
@@ -304,7 +304,7 @@ func TestSetStatus(t *testing.T) {
 	generateBrand(bid)
 
 	// generate the campaigns
-	campIDs := SeedCampaign(ctx, bid, 1)
+	campIDs := SeedCampaign(ctx, bid, ActiveStatus, 1)
 	appl_id := SeedApplications(ctx, campIDs, uid)
 	//clean up the entries
 	defer func() {

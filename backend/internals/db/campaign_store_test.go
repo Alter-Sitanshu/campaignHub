@@ -30,7 +30,7 @@ func destroyBrand(bid string) {
 	MockBrandStore.DeregisterBrand(context.Background(), bid)
 }
 
-func SeedCampaign(ctx context.Context, bid string, num int) []string {
+func SeedCampaign(ctx context.Context, bid string, status, num int) []string {
 	i := 0
 	var ids []string
 	tx, _ := MockCampaignStore.db.BeginTx(ctx, nil)
@@ -41,7 +41,7 @@ func SeedCampaign(ctx context.Context, bid string, num int) []string {
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		`
 		args := []any{
-			id, bid, fmt.Sprintf("title_%d", i), 1000.0, 101.0, "", "youtube", "", DraftStatus,
+			id, bid, fmt.Sprintf("title_%d", i), 1000.0, 101.0, "", "youtube", "", status,
 		}
 		_, err := tx.ExecContext(ctx, query, args...)
 		if err != nil {
@@ -139,8 +139,8 @@ func TestGetRecentCampaigns(t *testing.T) {
 		destroyBrand(bid)
 		cancel()
 	}()
-	GenIds := SeedCampaign(ctx, bid, 10)
-	got, err := MockCampaignStore.GetRecentCampaigns(ctx, 0, 10)
+	GenIds := SeedCampaign(ctx, bid, ActiveStatus, 10)
+	got, _, _, err := MockCampaignStore.GetRecentCampaigns(ctx, 10, "")
 	if err != nil {
 		log.Printf("Fetching error in campaign feed: %v", err.Error())
 		t.Fail()
@@ -270,7 +270,7 @@ func TestGetBrandCampaigns(t *testing.T) {
 			t.Fail()
 		}
 
-		campaigns, err := MockCampaignStore.GetBrandCampaigns(ctx, brandID)
+		campaigns, _, _, err := MockCampaignStore.GetBrandCampaigns(ctx, brandID, 1, "")
 		if err != nil || len(campaigns) == 0 {
 			log.Printf("got: %v, want: %v", len(campaigns), 1)
 			t.Fail()
@@ -329,7 +329,7 @@ func TestGetUserCampaigns(t *testing.T) {
 			t.Fail()
 		}
 
-		campaigns, err := MockCampaignStore.GetUserCampaigns(ctx, userID)
+		campaigns, _, _, err := MockCampaignStore.GetUserCampaigns(ctx, userID, 1, "")
 		if err != nil || len(campaigns) == 0 || campaigns[0].Id != campaignID {
 			log.Printf("got: %v, want: %v", len(campaigns), 1)
 			t.Fail()

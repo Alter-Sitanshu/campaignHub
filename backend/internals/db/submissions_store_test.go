@@ -80,7 +80,7 @@ func TestMakeSubmission(t *testing.T) {
 	generateBrand(bid)
 
 	// mock campaign
-	camp := SeedCampaign(ctx, bid, 1)
+	camp := SeedCampaign(ctx, bid, ActiveStatus, 1)
 	defer func() {
 		destroyCampaign(ctx, camp)
 		destroyBrand(bid)
@@ -118,7 +118,7 @@ func TestFindSubmission(t *testing.T) {
 	generateBrand(bid)
 
 	// mock campaign
-	camp := SeedCampaign(ctx, bid, 1)
+	camp := SeedCampaign(ctx, bid, ActiveStatus, 1)
 
 	// mock submission
 	sub := Submission{
@@ -167,7 +167,7 @@ func TestFilteringSubmissions(t *testing.T) {
 	generateBrand(bid)
 
 	// mock campaign
-	camp := SeedCampaign(ctx, bid, 1)
+	camp := SeedCampaign(ctx, bid, ActiveStatus, 1)
 
 	// mock submissions
 	ids := SeedSubmissions(ctx, 10, DraftStatus)
@@ -211,7 +211,7 @@ func TestUpdateSubmissions(t *testing.T) {
 	generateBrand(bid)
 
 	// mock campaign
-	camp := SeedCampaign(ctx, bid, 1)
+	camp := SeedCampaign(ctx, bid, ActiveStatus, 1)
 
 	// mock submissions
 	ids := SeedSubmissions(ctx, 1, DraftStatus)
@@ -266,7 +266,7 @@ func TestDeleteSub(t *testing.T) {
 	generateBrand(bid)
 
 	// mock campaign
-	camp := SeedCampaign(ctx, bid, 1)
+	camp := SeedCampaign(ctx, bid, ActiveStatus, 1)
 
 	// mock submission
 	sub := Submission{
@@ -303,7 +303,7 @@ func TestChangeViews(t *testing.T) {
 	bid := uuid.New().String()
 	generateBrand(bid)
 	// mock campaign
-	camp := SeedCampaign(ctx, bid, 1)
+	camp := SeedCampaign(ctx, bid, ActiveStatus, 1)
 	// mock submission
 	sub := Submission{
 		Id:         "0001",
@@ -362,7 +362,7 @@ func TestGetSubmissionsForSync(t *testing.T) {
 	generateBrand(bid)
 
 	// launch a campaign
-	campaignIds := SeedCampaign(ctx, bid, 1)
+	campaignIds := SeedCampaign(ctx, bid, ActiveStatus, 1)
 
 	// cleanup
 	defer func() {

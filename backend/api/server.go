@@ -129,12 +129,13 @@ func (app *Application) AddRoutes(addr string, router *gin.Engine) {
 	// campaign routes
 	campaigns := base.Group("/campaigns", app.AuthMiddleware())
 	{
-		campaigns.GET("", app.GetCampaignFeed) // query parametes: limit, offset
+		campaigns.GET("/feed", app.GetCampaignFeed) // query parametes: cursor
 		campaigns.GET("/:campaign_id", app.GetCampaign)
-		campaigns.GET("/user/:userid", app.GetUserCampaigns) // parameter: user_id
-		campaigns.GET("/brand/:brandid", app.GetBrandCampaigns)
+		campaigns.GET("/user/:userid", app.GetUserCampaigns)    // query parameters: cursor
+		campaigns.GET("/brand/:brandid", app.GetBrandCampaigns) // query parameters: cursor
 		campaigns.POST("", app.CreateCampaign)
-		campaigns.PUT("/:campaign_id", app.StopCampaign)
+		campaigns.PUT("/stop/:campaign_id", app.StopCampaign)
+		campaigns.PUT("/activate/:campaign_id", app.ActivateCampaign)
 		campaigns.DELETE("/:campaign_id", app.DeleteCampaign)
 		campaigns.PATCH("/:campaign_id", app.UpdateCampaign)
 	}
@@ -146,7 +147,7 @@ func (app *Application) AddRoutes(addr string, router *gin.Engine) {
 		applications.GET("/my-applications", app.GetCreatorApplications)        // query: offset, limit
 		applications.PATCH("/status/:application_id", app.SetApplicationStatus) // query: status
 		applications.DELETE("/delete/:application_id", app.DeleteApplication)
-		applications.POST("", app.CreateApplication)
+		applications.POST("/:campaign_id", app.CreateApplication)
 	}
 
 	// tickets routes
@@ -206,7 +207,7 @@ func NewApplication(addr string, store *db.Store, cfg *Config, JWT, PASETO auth.
 	}
 
 	// rate limiter
-	limiter := rate.NewLimiter(rate.Limit(1000), 500)
+	limiter := rate.NewLimiter(rate.Limit(100), 50)
 	// Attach the limiter to the router
 	router.Use(app.RateLimitter(limiter))
 

@@ -44,7 +44,6 @@ func (j *JWTMaker) CreateToken(iss, aud, objID string, dur time.Duration) (strin
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, payload)
 	// signing the jwt token
 	tokenString, err := token.SignedString([]byte(j.secretKey))
-	log.Printf("token: %s\n", tokenString)
 	if err != nil {
 		log.Printf("error signing token: %v\n", err.Error())
 		return "", err

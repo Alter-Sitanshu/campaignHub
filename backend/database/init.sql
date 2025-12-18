@@ -74,6 +74,7 @@ CREATE TABLE campaigns (
   doc_link varchar(255),
   status int NOT NULL,
   created_at timestamptz DEFAULT now(),
+  seq BIGSERIAL,
   CONSTRAINT fk_campaign_status FOREIGN KEY (status) REFERENCES status (id),
   CONSTRAINT fk_campaign_brand FOREIGN KEY (brand_id) REFERENCES brands (id)
 );
@@ -130,3 +131,4 @@ CREATE TABLE submissions (
 CREATE INDEX idx_tx_from_to ON transactions (from_id, to_id);
 CREATE INDEX idx_brand_name ON brands (name);
 CREATE INDEX idx_submissions_campaign_status ON submissions (campaign_id, status);
+CREATE INDEX idx_campaigns_seq ON campaigns(seq DESC);
