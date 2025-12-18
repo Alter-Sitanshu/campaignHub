@@ -1,77 +1,60 @@
-import "./feed.css";
-import sampleThumb from "../../../../assets/default-profile.avif";
-import SubCard from "../../../../components/Card/SubCard";
 import CampaignCard from "../../../../components/Card/CampaignCard";
+import { useEffect, useState } from "react";
+import { api } from "../../../../api";
+
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInView } from 'react-intersection-observer';
 
 const Feed = () => {
-    // Mock Campaigns
-    const campaigns = [
-        {
-            "id": "cmp_001",
-            "brand": "EcoWear",
-            "title": "Winter Sale Awareness",
-            "budget": 50000,
-            "cpm": 120,
-            "requirements": "Create 1 reel + 2 story posts",
-            "platform": "instagram",
-            "doc_link": "https://example.com/docs/cmp_001",
-            "status": 1,
-            "created_at": "2025-01-12T10:30:00Z"
-        }, {
-            "id": "cmp_002",
-            "brand": "Tech Gadgets",
-            "title": "New Product Launch",
-            "budget": 75000,
-            "cpm": 150,
-            "requirements": "Unboxing video + 1 carousel post",
-            "platform": "youtube",
-            "doc_link": "https://example.com/docs/cmp_002",
-            "status": 0,
-            "created_at": "2025-01-15T14:45:00Z"
-        }, {
-            "id": "cmp_003",
-            "brand": "HealthPlus",
-            "title": "App Install Campaign",
-            "budget": 30000,
-            "cpm": 90,
-            "requirements": "2 reels demonstrating app usage",
-            "platform": "instagram",
-            "doc_link": "https://example.com/docs/cmp_003",
-            "status": 1,
-            "created_at": "2025-01-18T09:20:00Z"
-        }, {
-            "id": "cmp_004",
-            "brand": "TechReview Pro",
-            "title": "Tech Gadget Review",
-            "budget": 100000,
-            "cpm": 200,
-            "requirements": "Full YouTube review + 1 short",
-            "platform": "youtube",
-            "doc_link": "https://example.com/docs/cmp_004",
-            "status": 2,
-            "created_at": "2025-01-20T17:10:00Z"
-        }, {
-            "id": "cmp_005",
-            "brand": "FestiveVibes",
-            "title": "Festival Campaign",
-            "budget": 45000,
-            "cpm": 110,
-            "requirements": "Festive-themed reel + 1 story",
-            "platform": "instagram",
-            "doc_link": "https://example.com/docs/cmp_005",
-            "status": 1,
-            "created_at": "2025-01-22T12:00:00Z"
+    // 1. Setup the infinite query
+    const { 
+        data, 
+        fetchNextPage, 
+        hasNextPage, 
+        isFetchingNextPage 
+    } = useInfiniteQuery({
+        queryKey: ['campaignFeed'],
+        queryFn: async ({ pageParam = "" }) => {
+            // Pass the cursor (pageParam) to backend
+            const res = await api.get(`/campaigns/feed?cursor=${pageParam}`);
+            return res.data.data;
+        },
+        // Extract the cursor for the NEXT call from the CURRENT response
+        getNextPageParam: (lastPage) => lastPage.meta.has_more ? lastPage.meta.cursor : undefined,
+        staleTime: 60 * 1000,          // 1 min cache
+        cacheTime: 5 * 60 * 1000,      // 5 min keep in memory
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+    });
+
+    // 2. Setup the scroll trigger (invisible div at bottom)
+    const { ref, inView } = useInView({
+        threshold: 0,
+        rootMargin: '200px', // preload before reaching bottom
+    });
+    // 3. Auto-load when trigger comes into view
+    useEffect(() => {
+        if (inView && hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
         }
-    ];
+    }, [inView, hasNextPage, isFetchingNextPage]);
 
     return (
         <div>
             <div className="submissions-table-container">
-                <div className="campaign-table-wrapper">
-                    {campaigns.slice(0, 10).map((camp, i) => (
-                        <CampaignCard key={`camp-${i}`} campaign={camp}/>
-                    ))}
-                </div>
+                {data?.pages.map((group, i) => (
+                    <div key={i}>
+                        {group.campaigns?.map(campaign => (
+                            <CampaignCard key={campaign.id} 
+                                campaign={campaign}
+                            />
+                        ))}
+                    </div>
+                ))}
+            </div>
+            {/* Invisible Trigger Div */}
+            <div ref={ref} className="loading-trigger">
+                {isFetchingNextPage ? 'Loading more...' : ''}
             </div>
         </div>
     )

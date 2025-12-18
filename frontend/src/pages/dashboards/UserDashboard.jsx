@@ -19,7 +19,7 @@ const UserDashboard = () => {
         if (user === null) {
             navigate("/auth/sign_in");
         }
-    }, [user]);
+    }, [loading, user, navigate]);
     if (loading) return <div>Loading...</div>;
 
     const handleLogout = () => {
@@ -87,7 +87,7 @@ const UserDashboard = () => {
         { id: 3, brand: 'HealthPlus', preview: 'Payment has been processed...', time: '1d ago', unread: true },
         { id: 3, brand: 'HealthPlus', preview: 'Payment has been processed...', time: '1d ago', unread: false },
     ];
-
+    if (!user) return null;
     return (
         <>
             <div className="dashboard-container">
@@ -218,7 +218,7 @@ const UserDashboard = () => {
                         )}
                         {activeTab === 'messages' && (<Messages messages={messages}/>)}
                         {activeTab === 'analytics' && (<Analytics />)}
-                        {activeTab === 'feed' && (<Feed sub={submissions} />)}
+                        {activeTab === 'feed' && (<Feed />)}
                         {activeTab === 'profile' && (<Profile entity={"users"}/>)}
                     </main>
                 </div>

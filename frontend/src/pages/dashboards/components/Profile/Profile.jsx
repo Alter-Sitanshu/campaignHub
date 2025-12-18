@@ -91,7 +91,14 @@ const Profile = ({ entity }) => {
     // Add social link
     // --------------------------
     function handleAddLink() {
+        //TODO: handle later
         console.log(Link);
+    }
+
+    function handleOnChange(e) {
+        newVal = e.target.value;
+        targetKey = e.target.name;
+        setForm({...form, targetKey: newVal});
     }
 
     // --------------------------
@@ -233,15 +240,15 @@ const Profile = ({ entity }) => {
                             </div>
                             <div className="profile-form-group">
                             <label className="profile-form-label">Email</label>
-                            <input type="email" defaultValue="jane@example.com" className="profile-form-input" value={profile.email}/>
+                            <input type="email" placeholder="jane@example.com" className="profile-form-input" name="email"  onChange={handleOnChange} value={profile.email}/>
                             </div>
                             <div className="profile-form-group">
                             <label className="profile-form-label">Address</label>
-                            <input type="text-area" defaultValue="Where you are" className="profile-form-input" value={profile.address} />
+                            <input type="text-area" placeholder="Where you are" className="profile-form-input" name="address" onChange={handleOnChange} value={profile.address} />
                             </div>
                             <div className="profile-form-group">
                             <label className="profile-form-label">Website</label>
-                            <input type="text" placeholder="https://" className="profile-form-input" value={profile.website} />
+                            <input type="text" placeholder="https://" className="profile-form-input" name="website" onChange={handleOnChange} value={profile.website} />
                             </div>
                             <button className="profile-save-button">Save Changes</button>
                         </div>

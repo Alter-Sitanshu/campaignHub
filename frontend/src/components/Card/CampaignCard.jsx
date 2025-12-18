@@ -1,7 +1,25 @@
 import "./CampaignCard.css";
+import { api } from "../../api";
+import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 
 const CampaignCard = ({ campaign }) => {
+    const navigate = useNavigate();
+    const [ Applied, setApplied ] = useState(false);
+    const [ Applying, setApplying ] = useState(false);
+
+    async function handleApply() {
+        setApplying(true);
+        const response = await api.post(`/applications/${campaign.id}`);
+        if (response.status != 201) {
+            setApplying(false);
+            navigate(`/errors/${response.status}`);
+        }
+        setApplying(false);
+        setApplied(true);
+    }
+
     const getStatusConfig = (status) => {
         switch (status) {
         case 0:
@@ -65,7 +83,7 @@ const CampaignCard = ({ campaign }) => {
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M14.5 2h-9A2.5 2.5 0 0 0 3 4.5v15A2.5 2.5 0 0 0 5.5 22h13A2.5 2.5 0 0 0 21 19.5v-11L14.5 2zm0 1.5 6 6h-4.5A1.5 1.5 0 0 1 14.5 8V3.5zM6 12h12v1.5H6V12zm0 4h12v1.5H6V16z"/>
                     </svg>
-                    <p>{campaign.requirements}</p>
+                    <p>{`${campaign.requirements.slice(0, 150)}...`}</p>
                 </div>
             </div>
             <div className="campaign-card-money">
@@ -89,7 +107,9 @@ const CampaignCard = ({ campaign }) => {
                 </div>
             </div>
             <div className="campaign-card-footer">
-                <a href="">Apply Now</a>
+                <button onClick={handleApply}
+                    disabled={Applying || Applied}
+                >{Applied ? "Applied" : Applying ? "Applying..." : "Apply Now"}</button>
                 <a href="">Open Details</a>
             </div>
         </div>

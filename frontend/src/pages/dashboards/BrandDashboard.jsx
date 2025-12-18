@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import './dashboard.css';
 import Profile from './components/Profile/Profile';
 import Analytics from './components/Analytics/Analytics';
@@ -6,20 +6,39 @@ import Messages from './components/Messages/Messages';
 import Overview from './components/Overview/Overview';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../AuthContext';
+import { api } from '../../api';
+import BrandCampaignFeed from './components/Feed/BrandCampaignFeed';
 
 const Dashboard = () => {
-
     const navigate = useNavigate();
-    const { user, loading } = useAuth();
+    const { user, loading, logout } = useAuth();
     const [activeTab, setActiveTab] = useState('overview');
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
-    if (user === null) {
-        navigate("/auth/sign_in");
-    }
+    const [ campaigns, setCampaigns ] = useState(null);
+
+    const handleLogout = () => {
+        logout();
+    };
+
+    const loadRecentCampaigns = async () => {
+        const response = await api.get(`/campaigns/brand/${user.id}?cursor=${""}`);
+        if (response.status != 200) {
+            console.log("error fetching brand campaigns...");
+        } else {
+            setCampaigns(response.data.data.campaigns);
+        }
+    };
+
+    useEffect(() => {
+        if (user === null) {
+            navigate("/auth/sign_in");
+        } else {
+            if(campaigns === null) loadRecentCampaigns();
+        }
+    }, [loading, user, navigate]);
+    
     if (loading) return <div>Loading...</div>;
-
-
 
     // Mock data
     const stats = {
@@ -29,12 +48,6 @@ const Dashboard = () => {
         earnings: '$12,450'
     };
 
-    const campaigns = [
-        { id: 1, brand: 'EcoWear', status: 'active', deadline: '2025-11-15', budget: '$2,500' },
-        { id: 2, brand: 'TechGadgets', status: 'pending', deadline: '2025-11-20', budget: '$3,200' },
-        { id: 3, brand: 'HealthPlus', status: 'completed', deadline: '2025-10-30', budget: '$1,800' },
-    ];
-
     const messages = [
         { id: 1, brand: 'EcoWear', preview: 'Can we schedule a call to discuss...', time: '2h ago', unread: true },
         { id: 2, brand: 'TechGadgets', preview: 'The content looks great! Just one...', time: '5h ago', unread: false },
@@ -42,6 +55,8 @@ const Dashboard = () => {
         { id: 3, brand: 'HealthPlus', preview: 'Payment has been processed...', time: '1d ago', unread: false },
     ];
 
+    
+    if (!user) return null;
     return (
         <div className="dashboard-container">
         {/* Sidebar */}
@@ -111,7 +126,10 @@ const Dashboard = () => {
                 <div className="sidebar-user-wrapper">
                 <div className="sidebar-user-avatar">{user.username.charAt(0)}</div>
                 <div className="sidebar-user-details">
-                    <p className="sidebar-user-name">{user.username}</p>
+                    <div className="name-container">
+                        <p className="sidebar-user-name">{user.username}</p>
+                        <button className="logout-button" onClick={handleLogout}>logout</button>
+                    </div>
                     <p className="sidebar-user-handle">{user.email}</p>
                 </div>
                 </div>
@@ -157,63 +175,9 @@ const Dashboard = () => {
 
             {/* Content Area */}
             <main className="content-area">
-            {activeTab === 'overview' && (<Overview stats={stats} campaigns={campaigns.slice(0,3)}/>)}
+            {activeTab === 'overview' && (<Overview stats={stats} campaigns={campaigns ? campaigns.slice(0,5) : null}/>)}
 
-            {activeTab === 'campaigns' && (
-                <div>
-                <div className="campaigns-page-header">
-                    <div className="campaigns-page-header-text">
-                    <h3 className="campaigns-page-title">All Campaigns</h3>
-                    <p className="campaigns-page-subtitle">Manage your brand partnerships</p>
-                    </div>
-                    <button className="button-new-campaign">+ New Campaign</button>
-                </div>
-
-                <div className="campaigns-table-container">
-                    <div className="campaigns-table-wrapper">
-                    <table className="campaigns-table">
-                        <thead className="campaigns-table-head">
-                        <tr>
-                            <th className="campaigns-table-header">Brand</th>
-                            <th className="campaigns-table-header">Status</th>
-                            <th className="campaigns-table-header">Deadline</th>
-                            <th className="campaigns-table-header">Budget</th>
-                            <th className="campaigns-table-header">Actions</th>
-                        </tr>
-                        </thead>
-                        <tbody className="campaigns-table-body">
-                        {campaigns.map(campaign => (
-                            <tr key={campaign.id} className="campaigns-table-row">
-                            <td className="campaigns-table-cell">
-                                <div className="campaigns-table-brand-cell">
-                                <div className="campaigns-table-avatar">
-                                    {campaign.brand.slice(0, 2)}
-                                </div>
-                                <span className="campaigns-table-brand-name">{campaign.brand}</span>
-                                </div>
-                            </td>
-                            <td className="campaigns-table-cell">
-                                <span className={`campaign-status-badge campaign-status-${campaign.status}`}>
-                                {campaign.status}
-                                </span>
-                            </td>
-                            <td className="campaigns-table-cell">
-                                <span className="campaigns-table-text">{campaign.deadline}</span>
-                            </td>
-                            <td className="campaigns-table-cell">
-                                <span className="campaigns-table-budget">{campaign.budget}</span>
-                            </td>
-                            <td className="campaigns-table-cell">
-                                <button className="campaigns-table-action-button">View</button>
-                            </td>
-                            </tr>
-                        ))}
-                        </tbody>
-                    </table>
-                    </div>
-                </div>
-                </div>
-            )}
+            {activeTab === 'campaigns' && (<BrandCampaignFeed />)}
 
             {activeTab === 'messages' && (<Messages messages={messages}/>)}
             {activeTab === 'analytics' && (<Analytics />)}

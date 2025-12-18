@@ -37,7 +37,7 @@ const BrandSignUp = () => {
         }
         const resp = await signup(payload, "brands");
         if (resp.type !== "error") {
-            navigate("/auth/brands/sign_in");
+            navigate("/auth/sign_in");
         } else {
             navigate(`/errors/${resp.status}/`);
         }

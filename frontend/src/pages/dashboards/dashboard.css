@@ -460,7 +460,7 @@
 
 .campaigns-table-header {
     padding: 0.75rem 1.5rem;
-    text-align: left;
+    text-align: center;
     font-size: 0.75rem;
     font-weight: 600;
     color: var(--text-deep);
@@ -482,37 +482,29 @@
 }
 
 .campaigns-table-cell {
-    padding: 1rem 1.5rem;
+    padding: 0.8rem 1rem;
     white-space: nowrap;
-}
-
-.campaigns-table-brand-cell {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.campaigns-table-avatar {
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 0.5rem;
-    background-color: var(--primary-accent);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: 600;
-    font-size: 0.875rem;
-}
-
-.campaigns-table-brand-name {
-    font-weight: 500;
-    color: var(--text-deep);
+    overflow-x: hidden;
+    text-align: center;
 }
 
 .campaigns-table-text {
     font-size: 0.875rem;
     color: var(--text-dark);
+}
+
+.campaigns-table-action {
+    z-index: 20;
+    font-size: 0.875rem;
+    color: white;
+    background-color: var(--primary-accent);
+    width: fit-content;
+    padding: 0.2rem 1rem;
+    border-radius: 2rem;
+}
+
+.campaigns-table-action:hover {
+    cursor: pointer;
 }
 
 .campaigns-table-budget {
@@ -531,8 +523,16 @@
     font-size: 0.875rem;
 }
 
+button:disabled {
+    cursor: not-allowed;
+}
+
 .campaigns-table-action-button:hover {
     color: var(--text-dark);
+}
+
+#tr-draft:hover {
+    cursor: pointer;
 }
 
 

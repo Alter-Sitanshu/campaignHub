@@ -1,6 +1,8 @@
+import { useAuth } from "../../../../AuthContext";
 import "./overview.css";
 
 const Overview = ({ stats, campaigns }) => {
+    const { user } = useAuth();
     return (
         <div>
             {/* Stats Grid */}
@@ -53,27 +55,30 @@ const Overview = ({ stats, campaigns }) => {
             {/* Recent Activity */}
             <div className="campaigns-section">
                 <h3 className="campaigns-section-title">Recent Campaigns</h3>
-                <div className="campaigns-list">
-                {campaigns.map(campaign => (
-                    <div key={campaign.id} className="campaign-card">
-                    <div className="campaign-card-left">
-                        <div className="campaign-avatar">
-                        {campaign.brand.slice(0, 2)}
+                {campaigns && (
+                    <div className="campaigns-list">
+                    {campaigns.map(campaign => (
+                        <div key={campaign.id} className="campaign-card">
+                            <div className="campaign-card-left">
+                                <div className="campaign-avatar">
+                                {user.username.slice(0, 2)}
+                                </div>
+                                <div className="campaign-info">
+                                <p className="campaign-brand-name">{user.username}</p>
+                                <p className="campaign-deadline">Due: {campaign.created_at}</p>
+                                </div>
+                            </div>
+                            <div className="campaign-card-right">
+                                <p className="campaign-budget">{campaign.budget}</p>
+                                <span className={`campaign-status-badge campaign-status-${campaign.status}`}>
+                                {campaign.status}
+                                </span>
+                            </div>
                         </div>
-                        <div className="campaign-info">
-                        <p className="campaign-brand-name">{campaign.brand}</p>
-                        <p className="campaign-deadline">Due: {campaign.deadline}</p>
-                        </div>
+                    
+                    ))}
                     </div>
-                    <div className="campaign-card-right">
-                        <p className="campaign-budget">{campaign.budget}</p>
-                        <span className={`campaign-status-badge campaign-status-${campaign.status}`}>
-                        {campaign.status}
-                        </span>
-                    </div>
-                    </div>
-                ))}
-                </div>
+                )}
             </div>
         </div>
     )

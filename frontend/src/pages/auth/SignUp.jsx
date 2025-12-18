@@ -125,7 +125,7 @@ export default function SignupPage() {
     };
     const resp = await signup(payload, "users");
     if (resp.type !== "error") {
-      navigate("/auth/users/sign_in");
+      navigate("/auth/sign_in");
     } else {
       navigate(`/errors/${resp.status}/`);
     }
