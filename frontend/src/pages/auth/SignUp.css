@@ -1,30 +1,3 @@
-:root {
-  --bg-light: #DAF1DE;
-  --bg-medium-light: #8EB69B;
-  --primary-accent: #235347;
-  --text-dark: #163832;
-  --text-deep: #0B2B26;
-  --bg-dark: #051F20;
-  
-  --bg-primary: #f7f9fb;
-  --bg-secondary: #ffffff;
-  --bg-gradient-from: #DAF1DE;
-  --bg-gradient-to: #ffffff;
-  --bg-secondary-button: #f1f5f9;
-  --bg-secondary-button-hover: #e2e8f0;
-  
-  --color-primary: #235347;
-  --color-primary-light: rgba(35, 83, 71, 0.1);
-  
-  --text-primary: #0B2B26;
-  --text-secondary: #163832;
-  
-  --border-color: rgba(142, 182, 155, 0.3);
-  
-  --radius-lg: 0.5rem;
-  --transition-fast: 0.3s ease;
-}
-
 /* ==========================================
   DARK MODE SETTINGS
   ==========================================

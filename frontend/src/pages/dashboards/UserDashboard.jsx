@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import SubCard from "../../components/Card/SubCard";
-import sampleThumb from "../../assets/sampleThumb.jpg";
 import Profile from "./components/Profile/Profile";
 import Overview from "./components/Overview/Overview";
 import Messages from "./components/Messages/Messages";
@@ -33,12 +32,6 @@ const UserDashboard = () => {
         engagement: '8.5%',
         earnings: '$12,450'
     };
-
-    const campaigns = [
-        { id: 1, brand: 'EcoWear', status: 'active', deadline: '2025-11-15', budget: '$2,500' },
-        { id: 2, brand: 'TechGadgets', status: 'pending', deadline: '2025-11-20', budget: '$3,200' },
-        { id: 3, brand: 'HealthPlus', status: 'completed', deadline: '2025-10-30', budget: '$1,800' },
-    ];
     
     const submissions = [
     {
@@ -198,7 +191,7 @@ const UserDashboard = () => {
                         </div>
                     </header>
                     <main className="content-area">
-                        {activeTab === "overview" && ( <Overview stats={stats} campaigns={campaigns.slice(0,3)}/>)}
+                        {activeTab === "overview" && ( <Overview stats={stats} campaigns={submissions.slice(0, 5)} isUser={true}/>)}
                         {activeTab === "submissions" && (
                             <div>
                                 <div className="campaigns-page-header">
@@ -210,13 +203,13 @@ const UserDashboard = () => {
                                 <div className="submissions-table-container">
                                     <div className="submissions-table-wrapper">
                                         {submissions.slice(0, 10).map((sub, i) => (
-                                            <SubCard key={`sub-${i}`} sub={sub} thumb={sampleThumb}/>
+                                            <SubCard key={`sub-${i}`} sub={sub} />
                                         ))}
                                     </div>
                                 </div>
                             </div>
                         )}
-                        {activeTab === 'messages' && (<Messages messages={messages}/>)}
+                        {activeTab === 'messages' && navigate(`/users/dashboard/${user.id}/messages`)}
                         {activeTab === 'analytics' && (<Analytics />)}
                         {activeTab === 'feed' && (<Feed />)}
                         {activeTab === 'profile' && (<Profile entity={"users"}/>)}

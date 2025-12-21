@@ -97,7 +97,8 @@ func (app *Application) AddRoutes(addr string, router *gin.Engine) {
 	// Public routes
 	base := router.Group("/api/v1")
 	base.GET("/", app.HealthCheck)
-	// query parameter: token: Example /verify/?token=
+	base.GET("/ws", app.AuthMiddleware(), app.WebSocketHandler)
+	// query parameter: token: Example /verify/?token =
 	base.GET("/verify", app.Verification)
 	base.POST("/login", app.Login)
 	base.POST("/users/signup", app.CreateUser)
@@ -179,6 +180,14 @@ func (app *Application) AddRoutes(addr string, router *gin.Engine) {
 		accounts.POST("", app.CreateAccount)
 		accounts.DELETE("/accounts/:acc_id", app.DeleteUserAccount)
 		accounts.PUT("/accounts/:acc_id", app.DisableUserAccount)
+	}
+
+	// messaging routes
+	conversations := base.Group("/private/conversations", app.AuthMiddleware())
+	{
+		conversations.GET("", app.GetEntityConversations)
+		// query parameters timestamp and cursor
+		conversations.GET(":conversation/messages", app.GetConversationMessages)
 	}
 
 	app.server = &http.Server{

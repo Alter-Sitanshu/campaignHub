@@ -1,7 +1,9 @@
 import { useAuth } from "../../../../AuthContext";
 import "./overview.css";
+import CampaignCard from "../../../../components/Card/CampaignCard";
+import SubCard from "../../../../components/Card/SubCard";
 
-const Overview = ({ stats, campaigns }) => {
+const Overview = ({ stats, campaigns, isUser = false }) => {
     const { user } = useAuth();
     return (
         <div>
@@ -55,28 +57,18 @@ const Overview = ({ stats, campaigns }) => {
             {/* Recent Activity */}
             <div className="campaigns-section">
                 <h3 className="campaigns-section-title">Recent Campaigns</h3>
-                {campaigns && (
+                {!isUser && (
                     <div className="campaigns-list">
-                    {campaigns.map(campaign => (
-                        <div key={campaign.id} className="campaign-card">
-                            <div className="campaign-card-left">
-                                <div className="campaign-avatar">
-                                {user.username.slice(0, 2)}
-                                </div>
-                                <div className="campaign-info">
-                                <p className="campaign-brand-name">{user.username}</p>
-                                <p className="campaign-deadline">Due: {campaign.created_at}</p>
-                                </div>
-                            </div>
-                            <div className="campaign-card-right">
-                                <p className="campaign-budget">{campaign.budget}</p>
-                                <span className={`campaign-status-badge campaign-status-${campaign.status}`}>
-                                {campaign.status}
-                                </span>
-                            </div>
-                        </div>
-                    
+                    {campaigns?.map(campaign => (
+                        <CampaignCard key={campaign.id} campaign={campaign} isBrand={true} />
                     ))}
+                    </div>
+                )}
+                {isUser && (
+                    <div className="campaigns-list">
+                        {campaigns?.map(campaign => (
+                            <SubCard key={`sub-${campaign.submission_id}`} sub={campaign} />
+                        ))}
                     </div>
                 )}
             </div>

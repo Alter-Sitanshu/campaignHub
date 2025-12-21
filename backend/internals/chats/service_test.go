@@ -107,13 +107,13 @@ func TestBroadcast(t *testing.T) {
 	}
 
 	// start a conversation
-	err := testHub.store.CreateConversation(ctx, conv)
+	err := testHub.Store.CreateConversation(ctx, conv)
 	if err != nil {
 		t.Errorf("error could not start conversation: %q", err.Error())
 	}
 	defer func() {
 		ClearMessages(ctx)
-		testHub.store.DeleteConversation(ctx, conv.ID)
+		testHub.Store.DeleteConversation(ctx, conv.ID)
 	}()
 
 	msgReq := &MessageRequest{
@@ -132,11 +132,24 @@ func TestBroadcast(t *testing.T) {
 
 	// delay
 	time.Sleep(50 * time.Millisecond)
+	// Expect recipient to receive the message
 	select {
 	case msg := <-c2.Send:
-		t.Logf("hub sent message: %q", string(msg))
+		t.Logf("hub sent message to recipient: %q", string(msg))
 	case <-time.After(200 * time.Millisecond):
-		t.Fatalf("timed out waiting for hub to push message to client.Send")
+		t.Fatalf("timed out waiting for hub to push message to recipient client.Send")
+	}
+
+	// Expect sender to receive an acknowledgement
+	select {
+	case ack := <-c1.Send:
+		t.Logf("hub sent ack to sender: %q", string(ack))
+		// simple sanity check: ack payload should contain "message:ack"
+		if !strings.Contains(string(ack), "message:ack") {
+			t.Fatalf("expected ack payload, got: %s", string(ack))
+		}
+	case <-time.After(200 * time.Millisecond):
+		t.Fatalf("timed out waiting for hub to push ack to sender client.Send")
 	}
 	testHub.Stop()
 }

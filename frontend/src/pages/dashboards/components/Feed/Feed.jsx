@@ -46,7 +46,7 @@ const Feed = () => {
                     <div key={i}>
                         {group.campaigns?.map(campaign => (
                             <CampaignCard key={campaign.id} 
-                                campaign={campaign}
+                                campaign={campaign} isBrand={false}
                             />
                         ))}
                     </div>

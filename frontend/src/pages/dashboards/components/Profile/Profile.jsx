@@ -211,19 +211,19 @@ const Profile = ({ entity }) => {
                         <div className="profile-form-section">
                             <div className="profile-form-group">
                             <label className="profile-form-label">First Name</label>
-                            <input type="text" defaultValue="Jane" className="profile-form-input" value={profile.first_name} />
+                            <input type="text" placeholder="Jane" onChange={handleOnChange} className="profile-form-input" value={profile.first_name} />
                             </div>
                             <div className="profile-form-group">
                             <label className="profile-form-label">Last Name</label>
-                            <input type="text" defaultValue="Doe" className="profile-form-input" value={profile.last_name} />
+                            <input type="text" placeholder="Doe" onChange={handleOnChange} className="profile-form-input" value={profile.last_name} />
                             </div>
                             <div className="profile-form-group">
                             <label className="profile-form-label">Email</label>
-                            <input type="email" defaultValue="jane@example.com" className="profile-form-input" value={profile.email}/>
+                            <input type="email" placeholder="jane@example.com" onChange={handleOnChange} className="profile-form-input" value={profile.email}/>
                             </div>
                             <div className="profile-form-group">
                             <label className="profile-form-label">Age</label>
-                            <input type="text" defaultValue="0" className="profile-form-input" value={profile.age} />
+                            <input type="text" placeholder="0" onChange={handleOnChange} className="profile-form-input" value={profile.age} />
                             </div>
                             <button className="profile-save-button">Save Changes</button>
                         </div>

@@ -1,7 +1,7 @@
 import "./SubCard.css";
+import fallbackThumbnail from "../../assets/sampleThumb.jpg";
 
-
-const SubCard = ({ sub, thumb }) => {
+const SubCard = ({ sub }) => {
   // tolerate both naming conventions for counts
   const views = sub.view_count ?? sub.views ?? 0;
   const likes = sub.like_count ?? sub.likeCount ?? 0;
@@ -13,7 +13,7 @@ const SubCard = ({ sub, thumb }) => {
     <a className="sub-card detailed" role="article" aria-label={`${title} submission`} href={sub.url} target="_blank" rel="noopener noreferrer">
       <div className="thumbnail-wrapper">
         <img
-          src={sub.thumbnail?.url !== "" ? sub.thumbnail.url : thumb}
+          src={sub.thumbnail?.url !== "" ? sub.thumbnail.url : fallbackThumbnail}
           alt={title}
           className="thumbnail"
           loading="lazy"
@@ -72,15 +72,15 @@ const SubCard = ({ sub, thumb }) => {
               <tbody className="ids-grid">
                 <tr className="id-row">
                   <td className="id-label">Applied</td>
-                  <td className="id-val">{sub.created_at ? new Date(sub.created_at).toLocaleString() : "-"}</td>
+                  <td className="id-val">{sub.created_at ? new Date(sub.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "-"}</td>
                 </tr>
                 <tr className="id-row">
                   <td className="id-label">Submitted</td>
-                  <td className="id-val">{sub.uploaded_at ? new Date(sub.uploaded_at).toLocaleString() : "-"}</td>
+                  <td className="id-val">{sub.uploaded_at ? new Date(sub.uploaded_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "-"}</td>
                 </tr>
                 <tr className="id-row">
                   <td className="id-label">Last Synced</td>
-                  <td className="id-val">{sub.last_synced_at ? new Date(sub.last_synced_at).toLocaleString() : "-"}</td>
+                  <td className="id-val">{sub.last_synced_at ? new Date(sub.last_synced_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "-"}</td>
                 </tr>
               </tbody>
             </table>

@@ -116,7 +116,7 @@ func (c *CampaignStore) EndCampaign(ctx context.Context, id string) error {
 	}
 
 	// successfully ended the campaign
-	return nil
+	return tx.Commit()
 }
 
 // This function Ends a campaign
@@ -140,7 +140,7 @@ func (c *CampaignStore) ActivateCampaign(ctx context.Context, id string) error {
 	}
 
 	// successfully activated the campaign
-	return nil
+	return tx.Commit()
 }
 
 // This functions updates a specific campaign details

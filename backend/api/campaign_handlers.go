@@ -196,7 +196,7 @@ func (app *Application) StopCampaign(c *gin.Context) {
 	}
 	// invalidate the active campaign
 	app.cache.RemoveActiveCampaign(ctx, campaign.Id)
-	// successfully delted the campaign
+	// successfully deleted the campaign
 	c.JSON(http.StatusNoContent, WriteResponse("campaign ended"))
 }
 

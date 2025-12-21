@@ -36,7 +36,6 @@ func (app *Application) Verification(c *gin.Context) {
 	}
 	entity := payload.Sub[:2]
 	TokenID := payload.Sub[3:]
-	log.Printf("Sub: %s\n", payload.Sub)
 	// User verified -> create session -> Redirect to welcome page
 	err = app.store.UserInterface.VerifyUser(ctx, entity, TokenID)
 	if err != nil {

@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import './dashboard.css';
 import Profile from './components/Profile/Profile';
 import Analytics from './components/Analytics/Analytics';
-import Messages from './components/Messages/Messages';
 import Overview from './components/Overview/Overview';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../AuthContext';
@@ -21,22 +20,32 @@ const Dashboard = () => {
         logout();
     };
 
-    const loadRecentCampaigns = async () => {
-        const response = await api.get(`/campaigns/brand/${user.id}?cursor=${""}`);
-        if (response.status != 200) {
-            console.log("error fetching brand campaigns...");
-        } else {
+    const loadRecentCampaigns = useCallback(async () => {
+        if (!user?.id) return;
+
+        try {
+            const response = await api.get(
+                `/campaigns/brand/${user.id}?cursor=`
+            );
             setCampaigns(response.data.data.campaigns);
+        } catch (err) {
+            console.error(err);
         }
-    };
+    }, [user?.id]);
 
     useEffect(() => {
-        if (user === null) {
+        if (loading) return;
+
+        if (!user) {
             navigate("/auth/sign_in");
-        } else {
-            if(campaigns === null) loadRecentCampaigns();
+            return;
         }
-    }, [loading, user, navigate]);
+
+        if (!campaigns) {
+            console.log("loading campaings...");
+            loadRecentCampaigns();
+        }
+    }, [loading, user, campaigns, navigate]);
     
     if (loading) return <div>Loading...</div>;
 
@@ -179,7 +188,7 @@ const Dashboard = () => {
 
             {activeTab === 'campaigns' && (<BrandCampaignFeed />)}
 
-            {activeTab === 'messages' && (<Messages messages={messages}/>)}
+            {activeTab === 'messages' && navigate(`/brands/dashboard/${user.id}/messages`)}
             {activeTab === 'analytics' && (<Analytics />)}
 
             {activeTab === 'profile' && (<Profile entity={"brands"}/>)}

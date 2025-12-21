@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 
 
-const CampaignCard = ({ campaign }) => {
+const CampaignCard = ({ campaign, isBrand }) => {
     const navigate = useNavigate();
     const [ Applied, setApplied ] = useState(false);
     const [ Applying, setApplying ] = useState(false);
@@ -26,7 +26,7 @@ const CampaignCard = ({ campaign }) => {
             return 'Draft';
         case 1:
             return 'Active';
-        case 2:
+        case 3:
             return 'Completed';
         default:
             return 'Unknown';
@@ -107,9 +107,10 @@ const CampaignCard = ({ campaign }) => {
                 </div>
             </div>
             <div className="campaign-card-footer">
-                <button onClick={handleApply}
+                {!isBrand && (<button onClick={handleApply}
                     disabled={Applying || Applied}
                 >{Applied ? "Applied" : Applying ? "Applying..." : "Apply Now"}</button>
+                )}
                 <a href="">Open Details</a>
             </div>
         </div>
