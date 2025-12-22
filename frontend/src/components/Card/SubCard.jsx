@@ -1,5 +1,5 @@
 import "./SubCard.css";
-import fallbackThumbnail from "../../assets/sampleThumb.jpg";
+import fallbackThumbnail from "../../assets/samplethumb.jpg";
 
 const SubCard = ({ sub }) => {
   // tolerate both naming conventions for counts
