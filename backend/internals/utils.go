@@ -15,9 +15,8 @@ type BatchUpdate struct {
 	ViewsDelta int `json:"views_delta"`
 
 	// Metadata updates
-	VideoTitle   string `json:"video_title,omitempty"`
-	LikeCount    int    `json:"like_count"`
-	ThumbnailURL string `json:"thumbnail_url,omitempty"`
+	VideoTitle string `json:"video_title,omitempty"`
+	LikeCount  int    `json:"like_count"`
 
 	// Earnings
 	EarningsDelta float64 `json:"earnings_delta"`

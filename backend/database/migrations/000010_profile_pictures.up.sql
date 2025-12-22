@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS profile_pictures (
+    user_id VARCHAR(36) PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    url VARCHAR(255) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT now()
+);

@@ -119,9 +119,6 @@ func (w *BatchWorker) groupAndMergeUpdates(updates []*internals.BatchUpdate) *Gr
 			if update.VideoTitle != "" {
 				existing.VideoTitle = update.VideoTitle
 			}
-			if update.ThumbnailURL != "" {
-				existing.ThumbnailURL = update.ThumbnailURL
-			}
 		} else {
 			submissionMap[update.SubmissionID] = update
 		}

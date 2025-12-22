@@ -8,7 +8,7 @@ import (
 	"github.com/Alter-Sitanshu/campaignHub/internals"
 	"github.com/Alter-Sitanshu/campaignHub/internals/cache"
 	"github.com/Alter-Sitanshu/campaignHub/internals/db"
-	"github.com/Alter-Sitanshu/campaignHub/internals/platform"
+	"github.com/Alter-Sitanshu/campaignHub/services/platform"
 )
 
 type GroupedUpdates struct {

@@ -39,7 +39,6 @@ func (r *BatchRepository) BatchUpdateSubmissions(ctx context.Context, updates []
             earnings = earnings + $2,
             like_count = $3,
             video_title = COALESCE(NULLIF($4, ''), video_title),
-            thumbnail_url = COALESCE(NULLIF($5, ''), thumbnail_url),
             metadata_last_updated = NOW(),
             last_synced_at = NOW()
         WHERE id = $6
@@ -58,7 +57,6 @@ func (r *BatchRepository) BatchUpdateSubmissions(ctx context.Context, updates []
 			update.EarningsDelta,
 			update.LikeCount,
 			update.VideoTitle,
-			update.ThumbnailURL,
 			update.SubmissionID,
 		)
 

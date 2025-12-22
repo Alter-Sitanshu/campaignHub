@@ -92,6 +92,8 @@ type Store struct {
 		UpdateUser(context.Context, string, UpdatePayload) error
 		VerifyUser(ctx context.Context, entity, id string) error
 		ChangePassword(ctx context.Context, id, new_pass string) error
+		GetUserProfilePicture(ctx context.Context, id string) string
+		SetUserProfilePicture(ctx context.Context, id, fileKey string) error
 
 		// TODO: Implement the follow/unfollow brand option(AT LAST)
 		// FollowBrand(context.Context, string, string) error

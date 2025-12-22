@@ -24,3 +24,7 @@ func NewInstagramClient(token string) *Instagram {
 func (i *Instagram) GetVideoDetails(ctx context.Context, VideoID string) (any, error) {
 	return 0, nil
 }
+
+func (i *Instagram) GetVideoDetailsForWorkers(ctx context.Context, VideoID string) (any, error) {
+	return 0, nil
+}

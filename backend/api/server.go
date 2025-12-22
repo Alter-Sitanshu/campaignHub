@@ -11,8 +11,9 @@ import (
 	"github.com/Alter-Sitanshu/campaignHub/internals/chats"
 	"github.com/Alter-Sitanshu/campaignHub/internals/db"
 	"github.com/Alter-Sitanshu/campaignHub/internals/mailer"
-	"github.com/Alter-Sitanshu/campaignHub/internals/platform"
-	"github.com/Alter-Sitanshu/campaignHub/internals/workers.go"
+	"github.com/Alter-Sitanshu/campaignHub/internals/workers"
+	"github.com/Alter-Sitanshu/campaignHub/services/b2"
+	"github.com/Alter-Sitanshu/campaignHub/services/platform"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/requestid"
 	_ "github.com/gin-contrib/secure"
@@ -34,6 +35,7 @@ type Application struct {
 	factory *platform.Factory
 	msgHub  *chats.Hub
 	workers *workers.AppWorkers
+	s3Store *b2.B2Storage
 }
 
 type Config struct {
@@ -45,6 +47,14 @@ type Config struct {
 	MailCfg    MailConfig
 	RedisCfg   RedisConfig
 	FactoryCfg FactoryConfig
+	B2Cfg      B2Config
+}
+
+type B2Config struct {
+	KeyID    string
+	AppKey   string
+	Endpoint string
+	Region   string
 }
 
 type FactoryConfig struct {
@@ -93,7 +103,6 @@ const (
 )
 
 func (app *Application) AddRoutes(addr string, router *gin.Engine) {
-
 	// Public routes
 	base := router.Group("/api/v1")
 	base.GET("/", app.HealthCheck)
@@ -116,6 +125,12 @@ func (app *Application) AddRoutes(addr string, router *gin.Engine) {
 		users.DELETE("/:id", app.DeleteUser)
 		users.PATCH("/:id", app.UpdateUser)
 		users.GET("/campaigns/:id", app.GetUserCampaigns) // parameter: id
+		// query paramater ext (supported: jpeg, jpg, png)
+		users.GET("/profile_picture/", app.GetProfilePicUpdateURL)
+		// request must contain json{objectKey: ""}
+		users.POST("/profile_picture/confirm", app.ConfirmProfilePicUpload)
+		// query parameter id(user id)
+		users.GET("/profile_picture/download/", app.GetUserProfilePic)
 	}
 
 	// Brand routes
@@ -198,7 +213,7 @@ func (app *Application) AddRoutes(addr string, router *gin.Engine) {
 
 func NewApplication(addr string, store *db.Store, cfg *Config, JWT, PASETO auth.TokenMaker,
 	mailer *mailer.MailService, cacheService *cache.Service, factory *platform.Factory,
-	appHub *chats.Hub, workers *workers.AppWorkers,
+	appHub *chats.Hub, workers *workers.AppWorkers, s3Store *b2.B2Storage,
 ) *Application {
 	gin.SetMode(gin.TestMode) // TODO: change to release mode in production
 	router := gin.Default()
@@ -213,6 +228,7 @@ func NewApplication(addr string, store *db.Store, cfg *Config, JWT, PASETO auth.
 		factory:     factory,
 		msgHub:      appHub,
 		workers:     workers,
+		s3Store:     s3Store,
 	}
 
 	// rate limiter
@@ -225,6 +241,7 @@ func NewApplication(addr string, store *db.Store, cfg *Config, JWT, PASETO auth.
 		AllowOrigins: []string{
 			"https://campaignhub.com",
 			"https://www.campaignhub.com",
+			"http://localhost:5173", // for dev
 			"http://localhost:5173", // for dev
 		},
 		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -245,7 +262,17 @@ func NewApplication(addr string, store *db.Store, cfg *Config, JWT, PASETO auth.
 	// 	FrameDeny:          true, // Prevent clickjacking
 	// 	ContentTypeNosniff: true, // Stop MIME-type sniffing
 	// 	BrowserXssFilter:   true, // Basic browser XSS protection
+	// router.Use(secure.New(secure.Config{
+	// 	FrameDeny:          true, // Prevent clickjacking
+	// 	ContentTypeNosniff: true, // Stop MIME-type sniffing
+	// 	BrowserXssFilter:   true, // Basic browser XSS protection
 
+	// 	// Forcing HTTPS
+	// 	SSLRedirect:          true,
+	// 	SSLProxyHeaders:      map[string]string{"X-Forwarded-Proto": "https"},
+	// 	STSSeconds:           31536000, // 1 year
+	// 	STSIncludeSubdomains: true,
+	// 	STSPreload:           true,
 	// 	// Forcing HTTPS
 	// 	SSLRedirect:          true,
 	// 	SSLProxyHeaders:      map[string]string{"X-Forwarded-Proto": "https"},
@@ -262,7 +289,18 @@ func NewApplication(addr string, store *db.Store, cfg *Config, JWT, PASETO auth.
 	// 		"connect-src 'self' wss://api.campaignhub.com https://api.campaignhub.com; " +
 	// 		"style-src 'self' 'unsafe-inline'; " +
 	// 		"font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com;",
+	// 	// Content Security Policy (CSP) For handling the Media/Chats
+	// 	// TODO: change values to match the CDN, API, and frontend origins.
+	// 	ContentSecurityPolicy: "default-src 'self'; " +
+	// 		"img-src 'self' data: blob: https://cdn.campaignhub.com; " +
+	// 		"media-src 'self' blob: https://cdn.campaignhub.com; " +
+	// 		"script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+	// 		"connect-src 'self' wss://api.campaignhub.com https://api.campaignhub.com; " +
+	// 		"style-src 'self' 'unsafe-inline'; " +
+	// 		"font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com;",
 
+	// 	ReferrerPolicy: "strict-origin-when-cross-origin", // prevent leaking full URLs
+	// }))
 	// 	ReferrerPolicy: "strict-origin-when-cross-origin", // prevent leaking full URLs
 	// }))
 
