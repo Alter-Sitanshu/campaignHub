@@ -444,8 +444,11 @@
     overflow: hidden;
 }
 
-.campaigns-table-wrapper,
-.submissions-table-wrapper {
+.submissions-table-container {
+    padding: 1.2rem;
+}
+
+.campaigns-table-wrapper {
     overflow-x: auto;
 }
 

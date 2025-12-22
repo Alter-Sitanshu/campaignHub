@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import './signup.css';
+import './SignUp.css';
 import { useNavigate } from 'react-router-dom';
 import { signin } from '../../api';
 import { useAuth } from "../../AuthContext";
