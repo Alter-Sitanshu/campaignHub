@@ -68,6 +68,9 @@ func wsReader(app *Application, client *chats.Client) {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("socket read error (unexpected): %v", err)
 			} else {
+				if websocket.IsCloseError(err, websocket.CloseGoingAway, websocket.CloseNormalClosure) {
+					go app.msgHub.FlushMessages(string(client.ID))
+				}
 				log.Printf("socket read closed: %v", err)
 			}
 			return

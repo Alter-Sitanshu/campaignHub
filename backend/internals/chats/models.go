@@ -1,7 +1,9 @@
 package chats
 
 import (
+	"context"
 	"database/sql"
+	"log"
 	"sync"
 	"time"
 
@@ -163,4 +165,23 @@ func (h *Hub) Unregister(client *Client) {
 // SubmitMessage forwards an incoming message request to the hub for processing.
 func (h *Hub) SubmitMessage(req *MessageRequest) {
 	h.processMessage <- req
+}
+
+func (h *Hub) FlushMessages(clientID string) {
+	clientConversationIds := h.Store.getConversationIdtoFlush(context.TODO(), clientID)
+	if clientConversationIds == nil {
+		log.Printf("err no conversation found to flush for <%s>\n", clientID)
+		return
+	}
+	h.msgBufMu.RLock()
+	for _, id := range clientConversationIds {
+		flushBuf := h.msgBuffer[id]
+		if flushBuf == nil {
+			continue
+		}
+
+		h.Store.SaveMessages(context.Background(), flushBuf)
+		delete(h.msgBuffer, id)
+	}
+	log.Printf("flushed conversation buffer for cleint<%s>\n", clientID)
 }

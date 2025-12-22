@@ -397,3 +397,25 @@ func (hs *HubStore) UnfollowBrand(ctx context.Context, user, brand string) error
 
 	return nil
 }
+
+func (hs *HubStore) getConversationIdtoFlush(ctx context.Context, clientid string) []string {
+	query := `
+		SELECT id FROM conversations
+		WHERE participant_one = $1 OR participant_two = $1
+	`
+	rows, err := hs.db.QueryContext(ctx, query, clientid)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+	var output []string
+	for rows.Next() {
+		var id string
+		if err = rows.Scan(&id); err != nil {
+			return nil
+		}
+		output = append(output, id)
+	}
+
+	return output
+}
