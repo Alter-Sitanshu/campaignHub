@@ -1,13 +1,19 @@
 package api
 
 import (
+	"encoding/base64"
+	"fmt"
 	"log"
 	"net/http"
-	"strconv"
+	"time"
 
 	"github.com/Alter-Sitanshu/campaignHub/internals/db"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+)
+
+const (
+	FeedLimit = 10
 )
 
 type CampaignPayload struct {
@@ -19,7 +25,16 @@ type CampaignPayload struct {
 	// added this to segregate the campaigns on the basis of platform
 	Platform string `json:"platform"`
 	DocLink  string `json:"doc_link" binding:"required"`
-	Status   int    `json:"status" binding:"required,oneof=0 1 3"`
+	Status   *int   `json:"status" binding:"required,oneof=0 1 3"`
+}
+
+type Meta struct {
+	Cursor  string `json:"cursor"`
+	HasMore bool   `json:"has_more"`
+}
+type FeedResponse struct {
+	Campaigns []db.CampaignResp `json:"campaigns"`
+	Meta      Meta              `json:"meta"`
 }
 
 func (app *Application) CreateCampaign(c *gin.Context) {
@@ -40,7 +55,7 @@ func (app *Application) CreateCampaign(c *gin.Context) {
 	}
 	var payload CampaignPayload
 	if err := c.BindJSON(&payload); err != nil {
-		c.JSON(http.StatusBadRequest, WriteError("invalid input"))
+		c.JSON(http.StatusBadRequest, WriteError(err.Error()))
 		return
 	}
 	if Entity.GetID() != payload.BrandId {
@@ -57,7 +72,7 @@ func (app *Application) CreateCampaign(c *gin.Context) {
 		Req:      payload.Req,
 		Platform: payload.Platform,
 		DocLink:  payload.DocLink,
-		Status:   payload.Status,
+		Status:   *payload.Status,
 	}
 	err := app.store.CampaignInterace.LaunchCampaign(ctx, &campaign)
 	if err != nil {
@@ -65,6 +80,7 @@ func (app *Application) CreateCampaign(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, WriteError("server error"))
 		return
 	}
+	campaign.CreatedAt = time.Now().Format(time.RFC3339)
 	// cache the campaign
 	err = app.cache.SetCampaign(ctx, campaign.Id, campaign)
 	if err != nil {
@@ -76,19 +92,73 @@ func (app *Application) CreateCampaign(c *gin.Context) {
 
 func (app *Application) GetBrandCampaigns(c *gin.Context) {
 	ctx := c.Request.Context()
-	BrandID := c.Query("brandid")
+	BrandID := c.Param("brandid")
 	if ok := uuid.Validate(BrandID); ok != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid request"))
 		return
 	}
-	campaigns, err := app.store.CampaignInterace.GetBrandCampaigns(ctx, BrandID)
+	cursor := c.Query("cursor")
+	var lastSeq string
+	if cursor != "" {
+		seqBytes, err := base64.RawStdEncoding.DecodeString(cursor)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, WriteError("bad request parameters"))
+		}
+		lastSeq = string(seqBytes)
+	}
+	output, next, hasMore, err := app.store.CampaignInterace.GetBrandCampaigns(ctx, BrandID, FeedLimit, lastSeq)
 	if err != nil {
-		// server error
+		c.JSON(http.StatusInternalServerError, WriteError("server error"))
+		return
+	}
+	var buf []byte
+	// return the campaign feed
+	c.JSON(http.StatusOK, WriteResponse(FeedResponse{
+		Campaigns: output,
+		Meta: Meta{
+			Cursor:  base64.RawStdEncoding.EncodeToString(fmt.Appendf(buf, "%d", next)),
+			HasMore: hasMore,
+		},
+	}))
+}
+
+func (app *Application) ActivateCampaign(c *gin.Context) {
+	ctx := c.Request.Context()
+	LogInUser, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	Entity, ok := LogInUser.(db.AuthenticatedEntity)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	ID := c.Param("campaign_id")
+	if ok := uuid.Validate(ID); ok != nil {
+		c.JSON(http.StatusBadRequest, WriteError("invalid request"))
+		return
+	}
+	// fetch campaign details
+	campaign, err := app.store.CampaignInterace.GetCampaign(ctx, ID)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, WriteError("internal server error"))
 		return
 	}
-	// successfully retreived the brand campaign
-	c.JSON(http.StatusOK, WriteResponse(campaigns))
+	if campaign.BrandId != Entity.GetID() && Entity.GetRole() != "admin" {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+
+	// delete the campaign
+	if err := app.store.CampaignInterace.ActivateCampaign(ctx, ID); err != nil {
+		c.JSON(http.StatusInternalServerError, WriteError("internal server error"))
+		return
+	}
+	// invalidate the active campaign
+	app.cache.AddActiveCampaign(ctx, campaign.Id)
+	// successfully delted the campaign
+	c.JSON(http.StatusNoContent, WriteResponse("campaign activated"))
 }
 
 func (app *Application) StopCampaign(c *gin.Context) {
@@ -126,7 +196,7 @@ func (app *Application) StopCampaign(c *gin.Context) {
 	}
 	// invalidate the active campaign
 	app.cache.RemoveActiveCampaign(ctx, campaign.Id)
-	// successfully delted the campaign
+	// successfully deleted the campaign
 	c.JSON(http.StatusNoContent, WriteResponse("campaign ended"))
 }
 
@@ -182,44 +252,64 @@ func (app *Application) GetUserCampaigns(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	UserID := c.Query("userid")
+	UserID := c.Param("userid")
 	if ok := uuid.Validate(UserID); ok != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid request"))
 		return
 	}
-
+	cursor := c.Query("cursor")
+	var lastSeq string
+	if cursor != "" {
+		seqBytes, err := base64.RawStdEncoding.DecodeString(cursor)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, WriteError("bad request parameters"))
+		}
+		lastSeq = string(seqBytes)
+	}
 	// check the cache first
-	res, err := app.cache.GetUserCampaigns(ctx, UserID)
+	res, err := app.cache.GetUserCampaigns(ctx, UserID, cursor)
 	if err == nil {
 		// cache hit
-		campaigns, err := app.store.CampaignInterace.GetMultipleCampaigns(ctx, res)
+		output, err := app.store.CampaignInterace.GetMultipleCampaigns(ctx, res)
 		if err != nil {
 			// server error
 			c.JSON(http.StatusInternalServerError, WriteError("internal server error"))
 			return
 		}
-		c.JSON(http.StatusOK, WriteResponse(campaigns))
+		c.JSON(http.StatusOK, WriteResponse(FeedResponse{
+			Campaigns: output,
+			Meta: Meta{
+				Cursor:  cursor,
+				HasMore: true,
+			},
+		}))
 		return
 	}
-
-	campaigns, err := app.store.CampaignInterace.GetUserCampaigns(ctx, UserID)
+	output, next, hasMore, err := app.store.CampaignInterace.GetUserCampaigns(ctx, UserID, FeedLimit, lastSeq)
 	if err != nil {
-		// server error
-		c.JSON(http.StatusInternalServerError, WriteError("internal server error"))
+		c.JSON(http.StatusInternalServerError, WriteError("server error"))
 		return
 	}
-
 	// cache the user campaigns
-	campaignIDs := make([]string, len(campaigns))
-	for _, v := range campaigns {
+	campaignIDs := make([]string, len(output))
+	for _, v := range output {
 		campaignIDs = append(campaignIDs, v.Id)
 	}
-	err = app.cache.SetUserCampaigns(ctx, UserID, campaignIDs)
+	var buf []byte
+	nextCursor := base64.RawStdEncoding.EncodeToString(fmt.Appendf(buf, "%d", next))
+	err = app.cache.SetUserCampaigns(ctx, UserID, nextCursor, campaignIDs)
 	if err != nil {
 		log.Printf("error caching the user campaigns: %s", err.Error())
 	}
-	// successfully retreived the brand campaign
-	c.JSON(http.StatusOK, WriteResponse(campaigns))
+	// return the campaign feed
+	c.JSON(http.StatusOK, WriteResponse(FeedResponse{
+		Campaigns: output,
+		Meta: Meta{
+			Cursor:  nextCursor,
+			HasMore: hasMore,
+		},
+	}))
+
 }
 
 func (app *Application) UpdateCampaign(c *gin.Context) {
@@ -272,24 +362,29 @@ func (app *Application) UpdateCampaign(c *gin.Context) {
 
 func (app *Application) GetCampaignFeed(c *gin.Context) {
 	ctx := c.Request.Context()
-	limit, err := strconv.Atoi(c.Query("limit"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, WriteError("invalid query"))
-		return
+	cursor := c.Query("cursor")
+	var lastSeq string
+	if cursor != "" {
+		seqBytes, err := base64.RawStdEncoding.DecodeString(cursor)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, WriteError("bad request parameters"))
+		}
+		lastSeq = string(seqBytes)
 	}
-	offset, err := strconv.Atoi(c.Query("offset"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
-		return
-	}
-	output, err := app.store.CampaignInterace.GetRecentCampaigns(ctx, offset, limit)
+	output, next, hasMore, err := app.store.CampaignInterace.GetRecentCampaigns(ctx, FeedLimit, lastSeq)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, WriteError("server error"))
 		return
 	}
-
+	var buf []byte
 	// return the campaign feed
-	c.JSON(http.StatusOK, WriteResponse(output))
+	c.JSON(http.StatusOK, WriteResponse(FeedResponse{
+		Campaigns: output,
+		Meta: Meta{
+			Cursor:  base64.RawStdEncoding.EncodeToString(fmt.Appendf(buf, "%d", next)),
+			HasMore: hasMore,
+		},
+	}))
 }
 
 func (app *Application) GetCampaign(c *gin.Context) {
@@ -301,7 +396,7 @@ func (app *Application) GetCampaign(c *gin.Context) {
 	}
 
 	// check cache
-	var campaignResponse *db.Campaign
+	var campaignResponse *db.CampaignResp
 	err := app.cache.GetCampaign(ctx, campaign_id, campaignResponse)
 	if err == nil {
 		c.JSON(http.StatusOK, WriteResponse(campaignResponse))

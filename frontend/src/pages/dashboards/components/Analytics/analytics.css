@@ -1,0 +1,119 @@
+/* ==========================================
+   ANALYTICS PAGE
+   ========================================== */
+
+.analytics-chart-container {
+    background-color: white;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(142, 182, 155, 0.3);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.analytics-section-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-deep);
+    margin-bottom: 1.5rem;
+    font-family: "Momo Trust Display", sans-serif;
+}
+
+.analytics-chart-placeholder {
+    height: 16rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(218, 241, 222, 0.4);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(142, 182, 155, 0.2);
+    color: var(--text-dark);
+}
+
+.analytics-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+}
+
+.analytics-card {
+    background-color: white;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(142, 182, 155, 0.3);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    padding: 1.5rem;
+}
+
+.analytics-card-title {
+    font-weight: 600;
+    color: var(--text-deep);
+    margin-bottom: 1rem;
+}
+
+.analytics-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.analytics-list-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem;
+    background-color: rgba(218, 241, 222, 0.4);
+    border-radius: 0.5rem;
+}
+
+.analytics-list-item-label {
+    font-size: 0.875rem;
+    color: var(--text-deep);
+}
+
+.analytics-list-item-value {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--primary-accent);
+}
+
+.analytics-progress-item {
+    margin-bottom: 0.75rem;
+}
+
+.analytics-progress-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.25rem;
+}
+
+.analytics-progress-label {
+    font-size: 0.875rem;
+    color: var(--text-dark);
+}
+
+.analytics-progress-percentage {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--primary-accent);
+}
+
+.analytics-progress-bar {
+    height: 0.5rem;
+    background-color: var(--bg-light);
+    border-radius: 9999px;
+    overflow: hidden;
+}
+
+.analytics-progress-fill {
+    height: 100%;
+    background-color: var(--primary-accent);
+    border-radius: 9999px;
+    transition: width 0.3s ease;
+}
+
+/* Tablet (768px and up) */
+@media (min-width: 768px) {
+    .analytics-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}

@@ -102,6 +102,7 @@ type Store struct {
 	}
 	BrandInterface interface {
 		GetBrandById(context.Context, string) (*Brand, error)
+		GetBrandByEmail(context.Context, string) (*Brand, error)
 		GetBrandsByFilter(context.Context, string, any) ([]Brand, error)
 		RegisterBrand(context.Context, *Brand) error
 		DeregisterBrand(context.Context, string) error
@@ -113,13 +114,14 @@ type Store struct {
 	CampaignInterace interface {
 		LaunchCampaign(context.Context, *Campaign) error
 		EndCampaign(context.Context, string) error
+		ActivateCampaign(context.Context, string) error
 		UpdateCampaign(context.Context, string, UpdateCampaign) error
-		GetRecentCampaigns(context.Context, int, int) ([]Campaign, error)
-		GetBrandCampaigns(context.Context, string) ([]Campaign, error)
-		GetUserCampaigns(context.Context, string) ([]Campaign, error)
-		GetCampaign(context.Context, string) (*Campaign, error)
+		GetRecentCampaigns(ctx context.Context, limit int, cursorSeq string) ([]CampaignResp, int64, bool, error)
+		GetBrandCampaigns(ctx context.Context, brandID string, limit int, cursorSeq string) ([]CampaignResp, int64, bool, error)
+		GetUserCampaigns(ctx context.Context, brandID string, limit int, cursorSeq string) ([]CampaignResp, int64, bool, error)
+		GetCampaign(context.Context, string) (*CampaignResp, error)
 		DeleteCampaign(context.Context, string) error
-		GetMultipleCampaigns(ctx context.Context, campaignIDs []string) ([]Campaign, error)
+		GetMultipleCampaigns(ctx context.Context, campaignIDs []string) ([]CampaignResp, error)
 	}
 	TicketInterface interface {
 		OpenTicket(context.Context, *Ticket) error
@@ -201,14 +203,20 @@ func NewStore(db *sql.DB) *Store {
 	}
 }
 
-func (s *Store) GetEntity(ctx context.Context, id string) (AuthenticatedEntity, error) {
-	u, err := s.UserInterface.GetUserById(ctx, id)
-	if err == nil {
-		return u, nil
-	}
-	b, err := s.BrandInterface.GetBrandById(ctx, id)
-	if err == nil {
-		return b, nil
+func (s *Store) GetEntity(ctx context.Context, token string) (AuthenticatedEntity, error) {
+	entity := token[:2]
+	id := token[3:]
+	switch entity {
+	case "us":
+		u, err := s.UserInterface.GetUserById(ctx, id)
+		if err == nil {
+			return u, nil
+		}
+	case "br":
+		b, err := s.BrandInterface.GetBrandById(ctx, id)
+		if err == nil {
+			return b, nil
+		}
 	}
 	return nil, ErrInvalidId
 }

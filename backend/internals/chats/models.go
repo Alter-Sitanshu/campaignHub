@@ -1,8 +1,11 @@
 package chats
 
 import (
+	"context"
 	"database/sql"
+	"log"
 	"sync"
+	"time"
 
 	"github.com/Alter-Sitanshu/campaignHub/internals/cache"
 	"github.com/gorilla/websocket"
@@ -33,6 +36,7 @@ type MessageRequest struct {
 }
 
 type Message struct {
+	ClientID       string `json:"client_id"`
 	ID             string `json:"id"`
 	ConversationID string `json:"conversation_id"`
 	SenderID       string `json:"sender_id"`
@@ -42,8 +46,19 @@ type Message struct {
 	CreatedAt      string `json:"created_at"`
 }
 
+type MessageResp struct {
+	ID             string    `json:"id"`
+	ConversationID string    `json:"conversation_id"`
+	SenderID       string    `json:"sender_id"`
+	MessageType    string    `json:"message_type"`
+	Content        any       `json:"content"`
+	IsRead         bool      `json:"is_read"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
 type IncomingMessage struct {
 	// Type is to check if the message is for a conversation or a campaign specific chat
+	ClientID       string `json:"client_id"`
 	Type           string `json:"type"`
 	ConversationID string `json:"conversation_id,omitempty"`
 	Content        any    `json:"content,omitempty"`
@@ -66,13 +81,25 @@ type Conversation struct {
 	// campaign_connected: means this conversation was created because of a campaign
 	// application by the user which got accepted by the brand.
 	// In this case, we can have additional logic like:
-	CampaignID string `json:"campaign_id,omitempty"` // ID of the campaign if type is campaign_connected
+	CampaignID *string `json:"campaign_id,omitempty"` // ID of the campaign if type is campaign_connected
 
 	// make the conversation dead after the campaign expires/ends if campaign connected
 	// status can be active or dead
 	Status        string `json:"status"`
 	CreatedAt     string `json:"created_at"`
 	LastMessageAt string `json:"last_message_at"`
+}
+
+type ConversationResponse struct {
+	ID            string  `json:"id"`
+	ParticipantID string  `json:"participant_id"`
+	Participant   string  `json:"participant_name"`
+	Type          string  `json:"type"`
+	CampaignID    *string `json:"campaign_id,omitempty"` // ID of the campaign if type is campaign_connected
+	Status        string  `json:"status"`
+	CreatedAt     string  `json:"created_at"`
+	LastMessage   *string `json:"last_message"`
+	LastMessageAt string  `json:"last_message_at"`
 }
 
 type BroadcastMessage struct {
@@ -93,12 +120,18 @@ type Hub struct {
 	followersMu    sync.RWMutex
 	// Example: brandFollowers["nike-id"]["creator-1"] = client pointer / error
 
+	// message buffer
+	msgBuffer map[string][]Message
+	msgBufMu  sync.RWMutex
+	// Which messages to flush once user exists the chat room
+	// Example: msgBuffer["conversation-123"] -> [Message1, Message2] then flush once the user exists
+
 	// Message Queue Channels
 	register       chan *Client           // New connections
 	unregister     chan *Client           // Disconnections
 	processMessage chan *MessageRequest   // Incoming messages
 	broadcast      chan *BroadcastMessage // Outgoing messages
-	store          *HubStore              // Database store
+	Store          *HubStore              // Database Store
 	cache          *cache.Service         // Simple REDIS instance
 	stopOnce       sync.Once              // Guard against multiple close attempts concurrently
 	stop           chan struct{}          // signalling to stop the Hub instance
@@ -108,12 +141,47 @@ func NewHub(db *sql.DB, appCache *cache.Service) *Hub {
 	return &Hub{
 		clients:        make(map[string]*Client),
 		brandFollowers: make(map[string]map[string]*Client),
+		msgBuffer:      make(map[string][]Message),
 		register:       make(chan *Client),
 		unregister:     make(chan *Client),
 		processMessage: make(chan *MessageRequest, 256),
 		broadcast:      make(chan *BroadcastMessage, 256),
-		store:          &HubStore{db: db},
+		Store:          &HubStore{db: db},
 		cache:          appCache,
 		stop:           make(chan struct{}),
 	}
+}
+
+// Register allows other packages to register a client with the hub.
+func (h *Hub) Register(client *Client) {
+	h.register <- client
+}
+
+// Unregister allows other packages to unregister a client from the hub.
+func (h *Hub) Unregister(client *Client) {
+	h.unregister <- client
+}
+
+// SubmitMessage forwards an incoming message request to the hub for processing.
+func (h *Hub) SubmitMessage(req *MessageRequest) {
+	h.processMessage <- req
+}
+
+func (h *Hub) FlushMessages(clientID string) {
+	clientConversationIds := h.Store.getConversationIdtoFlush(context.TODO(), clientID)
+	if clientConversationIds == nil {
+		log.Printf("err no conversation found to flush for <%s>\n", clientID)
+		return
+	}
+	h.msgBufMu.RLock()
+	for _, id := range clientConversationIds {
+		flushBuf := h.msgBuffer[id]
+		if flushBuf == nil {
+			continue
+		}
+
+		h.Store.SaveMessages(context.Background(), flushBuf)
+		delete(h.msgBuffer, id)
+	}
+	log.Printf("flushed conversation buffer for cleint<%s>\n", clientID)
 }

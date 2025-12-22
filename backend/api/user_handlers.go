@@ -38,7 +38,7 @@ type UserResponse struct {
 	Email          string     `json:"email" binding:"required"`
 	IsVerified     bool       `json:"is_verified" binding:"required"`
 	Gender         string     `json:"gender" binding:"required"`
-	Amount         float64    `json:"amount" binding:"required,min=0"`
+	Amount         float64    `json:"amount,omitempty"`
 	Age            int        `json:"age" binding:"required"`
 	ProfilePicture string     `json:"profile_picture"`
 	PlatformLinks  []db.Links `json:"links" binding:"required"`
@@ -96,7 +96,7 @@ func (app *Application) CreateUser(c *gin.Context) {
 		return
 	}
 	// Create the user verification JWT Token
-	tokenSub := user.Id
+	tokenSub := fmt.Sprintf("us-%s", user.Id)
 	token, err := app.jwtMaker.CreateToken(
 		app.cfg.ISS, app.cfg.AUD, tokenSub, time.Hour,
 	)
@@ -109,7 +109,7 @@ func (app *Application) CreateUser(c *gin.Context) {
 	InvitationReq := mailer.EmailRequest{
 		To:      user.Email,
 		Subject: "Verify your account",
-		Body:    mailer.InviteBody(user.Email, "users", token),
+		Body:    mailer.InviteBody(user.Email, token),
 	}
 	// Implementing a retry fallback
 	tries := 1

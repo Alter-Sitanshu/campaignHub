@@ -23,7 +23,8 @@ var (
 )
 
 const (
-	MessageTimeout = 10 * time.Second
+	MessageTimeout          = 10 * time.Second
+	ConversationBufferLimit = 50
 )
 
 type ServerMessage struct {
@@ -66,6 +67,14 @@ func (h *Hub) Run() {
 
 // Closes the hub routine
 func (h *Hub) Stop() {
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
+	for _, buf := range h.msgBuffer {
+		if len(buf) > 0 {
+			h.Store.SaveMessages(ctx, buf)
+		}
+	}
 	h.stopOnce.Do(func() { close(h.stop) })
 }
 
@@ -87,7 +96,7 @@ func (h *Hub) handleRegister(client *Client) error {
 	h.clients[id] = client
 
 	// Load the clients data
-	followedBrands, err := h.store.LoadFollowedBrands(ctx, id)
+	followedBrands, err := h.Store.LoadFollowedBrands(ctx, id)
 	if err != nil {
 		return ErrGettingInterests
 	} else {
@@ -184,7 +193,7 @@ func (h *Hub) handleMessage(req *MessageRequest) {
 // 1-to-1 Chat Message
 func (h *Hub) handleChatMessage(ctx context.Context, req *MessageRequest) error {
 	// Verify access
-	conv, err := h.store.GetConversationByID(ctx, req.Message.ConversationID)
+	conv, err := h.Store.GetConversationByID(ctx, req.Message.ConversationID)
 	if err != nil {
 		log.Printf("Error fetching conversation: %v", err)
 		return err
@@ -197,6 +206,7 @@ func (h *Hub) handleChatMessage(ctx context.Context, req *MessageRequest) error 
 
 	// Save message
 	msg := Message{
+		ClientID:       req.Message.ClientID,
 		ID:             uuid.New().String(),
 		ConversationID: req.Message.ConversationID,
 		SenderID:       string(req.Client.ID),
@@ -205,16 +215,25 @@ func (h *Hub) handleChatMessage(ctx context.Context, req *MessageRequest) error 
 		IsRead:         false,
 	}
 
-	if err := h.store.SaveMessage(ctx, &msg); err != nil {
-		log.Printf("Error saving message: %s\n", err.Error())
-		return ErrMessageSaveFailed
+	// First do the saving -> send the recepient the message
+	h.msgBufMu.Lock()
+	buf := h.msgBuffer[msg.ConversationID]
+	if buf == nil {
+		buf = make([]Message, 0, ConversationBufferLimit)
 	}
 
-	// Update conversation timestamp
-	if err := h.store.UpdateLastMessageAt(ctx, conv.ID); err != nil {
-		log.Printf("Error updating conversation timestamp: %s", err.Error())
-		return ErrLastMessageUpdate
+	buf = append(buf, msg)
+	// Flush if full
+	if len(buf) >= ConversationBufferLimit {
+		flushBuf := make([]Message, len(buf))
+		copy(flushBuf, buf)
+
+		go h.Store.SaveMessages(context.Background(), flushBuf)
+		buf = make([]Message, 0, ConversationBufferLimit)
 	}
+
+	h.msgBuffer[msg.ConversationID] = buf
+	h.msgBufMu.Unlock()
 
 	// Determine recipient (1-to-1 routing)
 	recipientID := conv.ParticipantTwo
@@ -222,7 +241,7 @@ func (h *Hub) handleChatMessage(ctx context.Context, req *MessageRequest) error 
 		recipientID = conv.ParticipantOne
 	}
 
-	msg.CreatedAt = time.Now().String()[:19] // Simplified timestamp
+	msg.CreatedAt = time.Now().Format(time.RFC3339) // Simplified timestamp
 
 	log.Printf(
 		"Message from %s to %s in conversation %s\n",
@@ -233,7 +252,19 @@ func (h *Hub) handleChatMessage(ctx context.Context, req *MessageRequest) error 
 		Type:   "direct",
 		UserID: recipientID,
 		Payload: map[string]any{
-			"type":    "new_message",
+			"type":    "message:new",
+			"message": msg,
+		},
+	}
+
+	// Acknowledge to sender that message was received and stored. Include the
+	// client's temp id in the message (msg.ClientID) so the frontend can reconcile
+	// optimistic UI entries.
+	h.broadcast <- &BroadcastMessage{
+		Type:   "direct",
+		UserID: string(req.Client.ID),
+		Payload: map[string]any{
+			"type":    "message:ack",
 			"message": msg,
 		},
 	}
@@ -244,7 +275,7 @@ func (h *Hub) handleChatMessage(ctx context.Context, req *MessageRequest) error 
 // Read Receipt Handler
 func (h *Hub) handleMarkRead(ctx context.Context, req *MessageRequest) error {
 	// Verify access
-	conv, err := h.store.GetConversationByID(ctx, req.Message.ConversationID)
+	conv, err := h.Store.GetConversationByID(ctx, req.Message.ConversationID)
 	if err != nil {
 		log.Printf("Error fetching conversation: %v", err)
 		return err
@@ -256,7 +287,7 @@ func (h *Hub) handleMarkRead(ctx context.Context, req *MessageRequest) error {
 	}
 
 	// Mark messages as read
-	if err := h.store.MarkMessagesAsRead(ctx, req.Message.ConversationID, req.Client.ID); err != nil {
+	if err := h.Store.MarkMessagesAsRead(ctx, req.Message.ConversationID, req.Client.ID); err != nil {
 		log.Printf("error marking read: %s", err.Error())
 		return ErrMarkReadFailed
 	}
@@ -282,7 +313,7 @@ func (h *Hub) handleMarkRead(ctx context.Context, req *MessageRequest) error {
 // Typing Indicator Handler
 func (h *Hub) handleTyping(ctx context.Context, req *MessageRequest) error {
 	// Verify access
-	conv, err := h.store.GetConversationByID(ctx, req.Message.ConversationID)
+	conv, err := h.Store.GetConversationByID(ctx, req.Message.ConversationID)
 	if err != nil {
 		log.Printf("Error fetching conversation: %v", err)
 		return err
@@ -397,7 +428,7 @@ func (h *Hub) handleFollowBrand(ctx context.Context, req *MessageRequest) {
 	req.Client.FollowedBrands[brandID] = true
 	h.followersMu.Unlock()
 	log.Printf("Client %s followed brand %s\n", req.Client.ID, brandID)
-	err := h.store.FollowBrand(ctx, req.Client.ID, brandID)
+	err := h.Store.FollowBrand(ctx, req.Client.ID, brandID)
 	if err != nil {
 		log.Printf("error writing follow: %s\n", err.Error())
 	}
@@ -430,7 +461,7 @@ func (h *Hub) handleUnfollowBrand(ctx context.Context, req *MessageRequest) {
 	delete(req.Client.FollowedBrands, brandID)
 
 	h.followersMu.Unlock()
-	if err := h.store.UnfollowBrand(ctx, req.Client.ID, brandID); err != nil {
+	if err := h.Store.UnfollowBrand(ctx, req.Client.ID, brandID); err != nil {
 		// Log the invalid request
 		log.Printf("error unfollow request for brand: %s, by client: %s\n", brandID, req.Client.ID)
 		// undo the in-memory delete

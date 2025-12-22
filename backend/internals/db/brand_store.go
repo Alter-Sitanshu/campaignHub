@@ -15,15 +15,16 @@ type BrandStore struct {
 
 // Brand Model
 type Brand struct {
-	Id        string `json:"id"`
-	Name      string `json:"name"`
-	Email     string `json:"email"`
-	Sector    string `json:"sector"`
-	Password  PassW  `json:"-"`
-	Website   string `json:"website"`
-	Address   string `json:"address"`
-	Campaigns int    `json:"campaign_count"`
-	CreatedAt string `json:"created_at"`
+	Id         string `json:"id"`
+	Name       string `json:"name"`
+	Email      string `json:"email"`
+	Sector     string `json:"sector"`
+	Password   PassW  `json:"-"`
+	Website    string `json:"website"`
+	Address    string `json:"address"`
+	Campaigns  int    `json:"campaign_count"`
+	CreatedAt  string `json:"created_at"`
+	IsVerified bool   `json:"is_verified"`
 }
 
 type BrandUpdatePayload struct {
@@ -65,7 +66,8 @@ func (b *BrandStore) ChangePassword(ctx context.Context, id, new_pass string) er
 
 func (b *BrandStore) GetBrandById(ctx context.Context, id string) (*Brand, error) {
 	query := `
-		SELECT id, name, email, password, sector, website, address, campaigns, created_at
+		SELECT id, name, email, password, sector, website,
+		address, campaigns, created_at,is_verified
 		FROM brands
 		WHERE id = $1
 	`
@@ -81,10 +83,41 @@ func (b *BrandStore) GetBrandById(ctx context.Context, id string) (*Brand, error
 		&brand.Address,
 		&brand.Campaigns,
 		&brand.CreatedAt,
+		&brand.IsVerified,
 	)
 	if err != nil {
 		// Loggging error
 		log.Printf("Brand fetch error: %v\n", err.Error())
+		return nil, err
+	}
+
+	return &brand, nil
+}
+
+func (b *BrandStore) GetBrandByEmail(ctx context.Context, email string) (*Brand, error) {
+	query := `
+		SELECT id, name, email, password, sector, website, address,
+		campaigns, created_at, is_verified
+		FROM brands
+		WHERE email = $1
+	`
+	var brand Brand
+	// Scan the brand fetched
+	err := b.db.QueryRowContext(ctx, query, email).Scan(
+		&brand.Id,
+		&brand.Name,
+		&brand.Email,
+		&brand.Password.hashed_pass,
+		&brand.Sector,
+		&brand.Website,
+		&brand.Address,
+		&brand.Campaigns,
+		&brand.CreatedAt,
+		&brand.IsVerified,
+	)
+	if err != nil {
+		// Loggging error
+		log.Printf("brand fetch error: %v\n", err.Error())
 		return nil, err
 	}
 
@@ -106,7 +139,10 @@ func (b *BrandStore) GetBrandsByFilter(ctx context.Context, filter_type string, 
 		return nil, errors.New("filter not allowed")
 	}
 
-	query := "SELECT id, name, email, sector, website, address, campaigns, created_at FROM brands " + condition
+	query := fmt.Sprintf(
+		"SELECT id, name, email, sector, website, address, campaigns, created_at FROM brands %s AND is_verified=true",
+		condition,
+	)
 	rows, err := b.db.QueryContext(ctx, query, arg)
 	if err != nil {
 		log.Printf("Filtering brand error: %v\n", err.Error())

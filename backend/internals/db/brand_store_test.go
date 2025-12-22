@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"testing"
 )
@@ -12,13 +13,17 @@ func TestGetBrand(t *testing.T) {
 	mockBrand := &Brand{
 		Id:        "0001",
 		Name:      "MockBrand",
-		Email:     "mockbrand@gmail.com",
+		Email:     fmt.Sprintf("%s@mockbrand.com", "0001"),
 		Sector:    "skin_care",
 		Website:   "mockbrand.com",
 		Address:   "Guwahati",
 		Campaigns: 0,
 	}
 	mockBrand.Password.Hash("random_pass")
+	// ensure any pre-existing brand with this id is removed to avoid duplicate key errors
+	MockBrandStore.DeregisterBrand(ctx, mockBrand.Id)
+	// also ensure no other brand exists with this email
+	MockBrandStore.DeregisterBrand(ctx, "0001")
 	err := MockBrandStore.RegisterBrand(ctx, mockBrand)
 	if err != nil {
 		t.Fail()
@@ -72,13 +77,15 @@ func TestCreateBrand(t *testing.T) {
 		mockBrand := &Brand{
 			Id:        "0001",
 			Name:      "MockBrand",
-			Email:     "mockbrand@gmail.com",
+			Email:     fmt.Sprintf("%s@mockbrand.com", "0001"),
 			Sector:    "skin_care",
 			Website:   "mockbrand.com",
 			Address:   "Guwahati",
 			Campaigns: 0,
 		}
 		mockBrand.Password.Hash("random_pass")
+		// ensure no pre-existing brand with this id
+		MockBrandStore.DeregisterBrand(ctx, mockBrand.Id)
 		err := MockBrandStore.RegisterBrand(ctx, mockBrand)
 		if err != nil {
 			t.Fail()
@@ -94,13 +101,15 @@ func TestUpdateBrand(t *testing.T) {
 	mockBrand := &Brand{
 		Id:        "0001",
 		Name:      "MockBrand",
-		Email:     "mockbrand@gmail.com",
+		Email:     fmt.Sprintf("%s@mockbrand.com", "0001"),
 		Sector:    "skin_care",
 		Website:   "mockbrand.com",
 		Address:   "Guwahati",
 		Campaigns: 0,
 	}
 	mockBrand.Password.Hash("random_pass")
+	// ensure no pre-existing brand with this id
+	MockBrandStore.DeregisterBrand(ctx, mockBrand.Id)
 	MockBrandStore.RegisterBrand(ctx, mockBrand)
 
 	// Mock the changes to be made

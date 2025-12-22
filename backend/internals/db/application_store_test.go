@@ -2,10 +2,11 @@ package db
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 func destroyApplications(ctx context.Context, applIDs []string) {
@@ -19,7 +20,7 @@ func SeedApplications(ctx context.Context, campIDs []string, uid string) []strin
 	var ids []string
 	tx, _ := MockApplicationStore.db.BeginTx(ctx, nil)
 	for i < len(campIDs) {
-		id := fmt.Sprintf("010%d", i)
+		id := uuid.New().String()
 		query := `
 			INSERT INTO applications (id, campaign_id, creator_id)
 			VALUES ($1, $2, $3)
@@ -52,7 +53,7 @@ func TestCreateApplications(t *testing.T) {
 	generateBrand(bid)
 
 	// launch a dummy campaign
-	camp := SeedCampaign(ctx, bid, 1)
+	camp := SeedCampaign(ctx, bid, ActiveStatus, 1)
 	defer func() {
 		destroyCampaign(ctx, camp)
 		destroyBrand(bid)
@@ -119,7 +120,7 @@ func TestGetCreatorApplications(t *testing.T) {
 	// create a dummy brand
 	generateBrand(bid)
 
-	campIDs := SeedCampaign(ctx, bid, 10)
+	campIDs := SeedCampaign(ctx, bid, ActiveStatus, 10)
 	applIDs := SeedApplications(ctx, campIDs, uid)
 
 	defer func() {
@@ -174,7 +175,7 @@ func TestGetCampaignApplications(t *testing.T) {
 	// create a dummy brand
 	generateBrand(bid)
 
-	campIDs := SeedCampaign(ctx, bid, 1)
+	campIDs := SeedCampaign(ctx, bid, ActiveStatus, 1)
 	applIDs := SeedApplications(ctx, campIDs, uid)
 
 	defer func() {
@@ -228,7 +229,7 @@ func TestDestroyApplications(t *testing.T) {
 	generateCreator(ctx, uid)
 	// generate the dummy brand
 	generateBrand(bid)
-	campIDs := SeedCampaign(ctx, bid, 3)
+	campIDs := SeedCampaign(ctx, bid, ActiveStatus, 3)
 	applIDs := SeedApplications(ctx, campIDs, uid)
 	// clean up before exit
 	defer func() {
@@ -267,7 +268,7 @@ func TestGetApplication(t *testing.T) {
 	generateBrand(bid)
 
 	// generate the campaigns
-	campIDs := SeedCampaign(ctx, bid, 1)
+	campIDs := SeedCampaign(ctx, bid, ActiveStatus, 1)
 	appl_id := SeedApplications(ctx, campIDs, uid)
 	//clean up the entries
 	defer func() {
@@ -297,14 +298,14 @@ func TestGetApplication(t *testing.T) {
 func TestSetStatus(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	// generate a dummy creator and brand
-	uid := "dummy_user_01"
-	bid := "dummy_brand_01"
+	uid := "status_dummy_user_01"
+	bid := "status_dummy_brand_01"
 
 	generateCreator(ctx, uid)
 	generateBrand(bid)
 
 	// generate the campaigns
-	campIDs := SeedCampaign(ctx, bid, 1)
+	campIDs := SeedCampaign(ctx, bid, ActiveStatus, 1)
 	appl_id := SeedApplications(ctx, campIDs, uid)
 	//clean up the entries
 	defer func() {

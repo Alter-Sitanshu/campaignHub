@@ -41,13 +41,13 @@ func TestLoadFollowedBrands(t *testing.T) {
 
 	t.Run("OK", func(t *testing.T) {
 		for _, id := range bids {
-			err := MockHub.store.FollowBrand(ctx, creatorID, id)
+			err := MockHub.Store.FollowBrand(ctx, creatorID, id)
 			if err != nil {
 				log.Printf("failed at creation of follow: %q\n", err.Error())
 				t.Fatal()
 			}
 		}
-		res, err := MockHub.store.LoadFollowedBrands(ctx, creatorID)
+		res, err := MockHub.Store.LoadFollowedBrands(ctx, creatorID)
 		if err != nil {
 			t.Fail()
 		}
@@ -83,28 +83,33 @@ func TestGetConversation(t *testing.T) {
 			ParticipantTwo: creatorTwo,
 			Type:           Direct,
 		}
-		err := MockHub.store.CreateConversation(ctx, conv)
+		err := MockHub.Store.CreateConversation(ctx, conv)
 		if err != nil {
 			t.Fail()
 		}
-		got, err := MockHub.store.GetConversationByID(ctx, conv.ID)
+		got, err := MockHub.Store.GetConversationByID(ctx, conv.ID)
 		if err != nil {
 			t.Fail()
 		}
-		if got.ID != conv.ID {
-			log.Printf("got: %q, want: %q\n", got.ID, conv.ID)
+		if got == nil {
+			log.Println("nil conversation")
 			t.Fail()
+		} else {
+			if got.ID != conv.ID {
+				log.Printf("got: %q, want: %q\n", got.ID, conv.ID)
+				t.Fail()
+			}
 		}
-		MockHub.store.DeleteConversation(ctx, conv.ID)
+		MockHub.Store.DeleteConversation(ctx, conv.ID)
 	})
 	t.Run("empty conversation id", func(t *testing.T) {
-		_, err := MockHub.store.GetConversationByID(ctx, "")
+		_, err := MockHub.Store.GetConversationByID(ctx, "")
 		if err == nil {
 			t.Fail()
 		}
 	})
 	t.Run("invalid id", func(t *testing.T) {
-		_, err := MockHub.store.GetConversationByID(ctx, "invalid-id")
+		_, err := MockHub.Store.GetConversationByID(ctx, "invalid-id")
 		if err == nil {
 			t.Fail()
 		}
@@ -137,7 +142,7 @@ func TestFollowUnfollow(t *testing.T) {
 		// follow all the brands first
 		before, after := 10, 5
 		for i := range bids {
-			err := MockHub.store.FollowBrand(ctx, creator, bids[i])
+			err := MockHub.Store.FollowBrand(ctx, creator, bids[i])
 			if err != nil {
 				log.Printf("failed at creation of follow for %q: %q\n", bids[i], err.Error())
 				t.FailNow()
@@ -145,20 +150,20 @@ func TestFollowUnfollow(t *testing.T) {
 				log.Printf("created: %q -> %q\n", creator, bids[i])
 			}
 		}
-		listBefore, _ := MockHub.store.LoadFollowedBrands(ctx, creator)
+		listBefore, _ := MockHub.Store.LoadFollowedBrands(ctx, creator)
 		if len(listBefore) != before {
 			log.Printf("followed all brands, got: %d, want: %d\n", len(listBefore), before)
 			t.Fail()
 		}
 		// unfollow the last 5
 		for i := 5; i < 10; i++ {
-			err := MockHub.store.UnfollowBrand(ctx, creator, bids[i])
+			err := MockHub.Store.UnfollowBrand(ctx, creator, bids[i])
 			if err != nil {
 				log.Printf("failed at unfollow\n")
 				t.Fail()
 			}
 		}
-		listAfter, _ := MockHub.store.LoadFollowedBrands(ctx, creator)
+		listAfter, _ := MockHub.Store.LoadFollowedBrands(ctx, creator)
 		if len(listAfter) != after {
 			log.Printf("unfollowed last 5 brands, got: %d, want: %d", len(listAfter), after)
 			t.Fail()
@@ -191,10 +196,10 @@ func TestConcurrentMessaging(t *testing.T) {
 			Type:           Direct,
 		}
 		// open a conversation
-		MockHub.store.CreateConversation(ctx, conv)
+		MockHub.Store.CreateConversation(ctx, conv)
 		defer func() {
 			ClearMessages(ctx)
-			MockHub.store.DeleteConversation(ctx, conv.ID)
+			MockHub.Store.DeleteConversation(ctx, conv.ID)
 		}()
 		var wg sync.WaitGroup
 		for i := range iters {
@@ -213,12 +218,12 @@ func TestConcurrentMessaging(t *testing.T) {
 					MessageType:    "txt",
 					Content:        []byte("Hello world"),
 				}
-				MockHub.store.SaveMessage(ctx, msg)
+				MockHub.Store.SaveMessage(ctx, msg)
 				wg.Done()
 			}(sender)
 		}
 		wg.Wait()
-		msg, err := MockHub.store.GetConversationMessages(ctx, conv.ID, 0, 5)
+		msg, _, _, err := MockHub.Store.GetConversationMessages(ctx, time.Time{}, "", conv.ID, 5)
 		if err != nil {
 			t.Fail()
 		}
@@ -236,7 +241,7 @@ func TestConcurrentMessaging(t *testing.T) {
 			MessageType:    "txt",
 			Content:        []byte("Hello world"),
 		}
-		err := MockHub.store.SaveMessage(ctx, msg)
+		err := MockHub.Store.SaveMessage(ctx, msg)
 		if err == nil {
 			t.Fail()
 		}
@@ -250,9 +255,9 @@ func TestConcurrentMessaging(t *testing.T) {
 			Type:           Direct,
 		}
 		// open a conversation
-		MockHub.store.CreateConversation(ctx, conv)
+		MockHub.Store.CreateConversation(ctx, conv)
 		defer func() {
-			MockHub.store.DeleteConversation(ctx, conv.ID)
+			MockHub.Store.DeleteConversation(ctx, conv.ID)
 		}()
 		msg := &Message{
 			ID:             "mock_message_001",
@@ -261,7 +266,7 @@ func TestConcurrentMessaging(t *testing.T) {
 			MessageType:    "nan type",
 			Content:        []byte("Hello world"),
 		}
-		err := MockHub.store.SaveMessage(ctx, msg)
+		err := MockHub.Store.SaveMessage(ctx, msg)
 		if err == nil {
 			log.Printf("message should have failed\n")
 			t.Fail()
@@ -276,9 +281,9 @@ func TestConcurrentMessaging(t *testing.T) {
 			Type:           Direct,
 		}
 		// open a conversation
-		MockHub.store.CreateConversation(ctx, conv)
+		MockHub.Store.CreateConversation(ctx, conv)
 		defer func() {
-			MockHub.store.DeleteConversation(ctx, conv.ID)
+			MockHub.Store.DeleteConversation(ctx, conv.ID)
 		}()
 		msg := &Message{
 			ID:             "mock_message_001",
@@ -287,7 +292,7 @@ func TestConcurrentMessaging(t *testing.T) {
 			MessageType:    "nan type",
 			Content:        nil,
 		}
-		err := MockHub.store.SaveMessage(ctx, msg)
+		err := MockHub.Store.SaveMessage(ctx, msg)
 		if err == nil {
 			log.Printf("message should have failed\n")
 			t.Fail()

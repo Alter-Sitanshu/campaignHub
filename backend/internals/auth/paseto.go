@@ -47,8 +47,8 @@ func (p *PASETOMaker) VerifyToken(token string) (*Payload, error) {
 }
 
 // creates a paseto token based on the claims
-func (p *PASETOMaker) CreateToken(iss, aud, email string, dur time.Duration) (string, error) {
-	payload, err := NewPayload(iss, aud, email, dur)
+func (p *PASETOMaker) CreateToken(iss, aud, objID string, dur time.Duration) (string, error) {
+	payload, err := NewPayload(iss, aud, objID, dur)
 	if err != nil {
 		log.Printf("error creating PASETO payload\n")
 		return "", err

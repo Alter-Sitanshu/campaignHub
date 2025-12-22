@@ -68,7 +68,7 @@ func (app *Application) CreateSubmission(c *gin.Context) {
 		return
 	}
 	// making the submission object
-	formattedTime := time.Now().Format("2006-01-02 15:04:05-07:00") // Format using a reference time
+	formattedTime := time.Now().Format(time.RFC3339) // Format using a reference time
 	submission := db.Submission{
 		Id:          uuid.New().String(),
 		CreatorId:   payload.CreatorId,

@@ -81,6 +81,7 @@ CREATE TABLE campaigns (
   platform varchar(20) NOT NULL,
   doc_link varchar(255),
   status int NOT NULL,
+  seq BIGSERIAL,
   created_at timestamptz DEFAULT now(),
   CONSTRAINT fk_campaign_status FOREIGN KEY (status) REFERENCES status (id),
   CONSTRAINT fk_campaign_brand FOREIGN KEY (brand_id) REFERENCES brands (id)

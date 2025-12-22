@@ -1,0 +1,48 @@
+.pricing-section {
+  background-color: white; /* fallback for brand-bg-light */
+  padding: 5rem 0;
+  text-align: center;
+}
+
+.pricing-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.pricing-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-deep, #0b2b26);
+  margin-bottom: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .pricing-title {
+    font-size: 2.5rem;
+  }
+}
+
+.pricing-subtitle {
+  font-size: 1.125rem;
+  color: var(--text-dark, #163832);
+  max-width: 600px;
+  margin: 0 auto 2.5rem auto;
+}
+
+.pricing-button {
+  background-color: var(--primary-accent);
+  color: #fff;
+  padding: 1rem 2.5rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: 1.125rem;
+  text-decoration: none;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.pricing-button:hover {
+  background-color: var(--text-dark, #163832);
+  transform: translateY(-4px);
+}

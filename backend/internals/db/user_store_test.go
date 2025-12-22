@@ -331,13 +331,13 @@ func TestVerifyUser(t *testing.T) {
 	t.Run("verifying a valid user", func(t *testing.T) {
 		uid := generateCreator(ctx, uid)
 		defer destroyCreator(ctx, uid)
-		err := MockUserStore.VerifyUser(ctx, "users", uid)
+		err := MockUserStore.VerifyUser(ctx, "us", uid)
 		if err != nil {
 			t.Fail()
 		}
 	})
 	t.Run("verifying an invalid user", func(t *testing.T) {
-		err := MockUserStore.VerifyUser(ctx, "users", "NA")
+		err := MockUserStore.VerifyUser(ctx, "us", "NA")
 		if err == nil {
 			t.Fail()
 		}

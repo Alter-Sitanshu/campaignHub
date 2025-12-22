@@ -1,0 +1,148 @@
+.separation {
+    background: var(--bg-light, #f3f9f9);
+    height: 2px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    box-sizing: border-box;
+}
+
+.bar {
+    background: black;
+    border-radius: 50%;
+    width: 400px;
+}
+
+.comparison {
+    background: var(--bg-light, #f3f9f9);
+    padding: 5rem 1.5rem;
+    width: 100%;
+    font-family: "Momo Trust Display", sans-serif;
+    box-sizing: border-box;
+}
+
+.comparison-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.comparison-title {
+    font-size: 1.875rem;
+    font-weight: 700;
+    text-align: center;
+    color: var(--text-dark);
+    margin: 0 0 4rem 0;
+    line-height: 1.2;
+}
+
+.comparison-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+}
+
+.previous,
+.after {
+    padding: 2rem;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(142, 182, 155, 0.3);
+}
+
+.previous {
+    background: rgba(172, 17, 17, 0.1);
+    border-color: rgba(220, 17, 17, 0.3);
+}
+
+.after {
+    background: rgba(16, 44, 37, 0.2);
+    border-color: rgba(68, 212, 114, 0.3);
+}
+
+.previous h3,
+.after h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0 0 1.5rem 0;
+}
+
+.previous h3 {
+    color: #ff6f6f;
+}
+
+.after h3 {
+    color: var(--text-dark);
+}
+
+.comparison-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.list-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    color: var(--text-dark);
+    font-family: 'Inter', sans-serif;
+    font-size: 1rem;
+    line-height: 1.6;
+    font-weight: 400;
+}
+
+.icon-cross {
+    color: #ef4444;
+    font-weight: 700;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+}
+
+.icon-check {
+    color: #22c55e;
+    font-weight: 700;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+}
+
+/* Tablet breakpoint (768px and up) */
+@media (min-width: 768px) {
+    .comparison {
+        padding: 7rem 1.5rem;
+    }
+
+    .comparison-title {
+        font-size: 2.25rem;
+    }
+
+    .comparison-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 2rem;
+    }
+
+    .previous h3,
+    .after h3 {
+        font-size: 1.5rem;
+    }
+}
+
+/* Desktop breakpoint (1024px and up) */
+@media (min-width: 1024px) {
+    .comparison {
+        padding: 6rem 1.5rem;
+    }
+
+    .comparison-title {
+        font-size: 2.5rem;
+        margin-bottom: 4rem;
+    }
+
+    .comparison-grid {
+        max-width: 64rem;
+        margin: 0 auto;
+    }
+}

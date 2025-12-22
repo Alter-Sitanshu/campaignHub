@@ -11,12 +11,15 @@ import (
 )
 
 func generateCreator(ctx context.Context, mockUserId string) string {
+	// ensure user doesn't already exist
+	destroyCreator(ctx, mockUserId)
+
 	query := `
 		INSERT INTO users (id, first_name, last_name, email, password, gender, age, role)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
 	args := []any{
-		mockUserId, "mock_first_name", "mock_last_name", "email@gmail.com",
+		mockUserId, "mock_first_name", "mock_last_name", fmt.Sprintf("%s@mockuser.com", mockUserId),
 		"password", "O", 20, "LVL1",
 	}
 	MockUserStore.db.ExecContext(ctx, query, args...)
@@ -30,7 +33,7 @@ func destroyCreator(ctx context.Context, id string) {
 	MockUserStore.db.ExecContext(ctx, query, id)
 }
 
-func SeedSubmissions(ctx context.Context, num, status int) []string {
+func SeedSubmissions(ctx context.Context, campid string, num, status int) []string {
 	i := 0
 	var ids []string
 	tx, _ := MockSubStore.db.BeginTx(ctx, nil)
@@ -46,7 +49,7 @@ func SeedSubmissions(ctx context.Context, num, status int) []string {
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 		`
 		args := []any{
-			id, "0001", "0100", "mock_url", status,
+			id, "0001", campid, "mock_url", status,
 			"Test_Title", "youtube", "testvid001", "example.com", 1000, 100,
 			"available", 0.0, 5,
 		}
@@ -80,7 +83,7 @@ func TestMakeSubmission(t *testing.T) {
 	generateBrand(bid)
 
 	// mock campaign
-	camp := SeedCampaign(ctx, bid, 1)
+	camp := SeedCampaign(ctx, bid, ActiveStatus, 1)
 	defer func() {
 		destroyCampaign(ctx, camp)
 		destroyBrand(bid)
@@ -118,7 +121,7 @@ func TestFindSubmission(t *testing.T) {
 	generateBrand(bid)
 
 	// mock campaign
-	camp := SeedCampaign(ctx, bid, 1)
+	camp := SeedCampaign(ctx, bid, ActiveStatus, 1)
 
 	// mock submission
 	sub := Submission{
@@ -167,10 +170,10 @@ func TestFilteringSubmissions(t *testing.T) {
 	generateBrand(bid)
 
 	// mock campaign
-	camp := SeedCampaign(ctx, bid, 1)
+	camp := SeedCampaign(ctx, bid, ActiveStatus, 1)
 
 	// mock submissions
-	ids := SeedSubmissions(ctx, 10, DraftStatus)
+	ids := SeedSubmissions(ctx, camp[0], 10, DraftStatus)
 	log.Printf("%d", len(ids))
 	defer func() {
 		destroySubmissions(ctx, ids)
@@ -211,10 +214,10 @@ func TestUpdateSubmissions(t *testing.T) {
 	generateBrand(bid)
 
 	// mock campaign
-	camp := SeedCampaign(ctx, bid, 1)
+	camp := SeedCampaign(ctx, bid, ActiveStatus, 1)
 
 	// mock submissions
-	ids := SeedSubmissions(ctx, 1, DraftStatus)
+	ids := SeedSubmissions(ctx, camp[0], 1, DraftStatus)
 	defer func() {
 		destroySubmissions(ctx, ids)
 		destroyCampaign(ctx, camp)
@@ -266,7 +269,7 @@ func TestDeleteSub(t *testing.T) {
 	generateBrand(bid)
 
 	// mock campaign
-	camp := SeedCampaign(ctx, bid, 1)
+	camp := SeedCampaign(ctx, bid, ActiveStatus, 1)
 
 	// mock submission
 	sub := Submission{
@@ -303,7 +306,7 @@ func TestChangeViews(t *testing.T) {
 	bid := uuid.New().String()
 	generateBrand(bid)
 	// mock campaign
-	camp := SeedCampaign(ctx, bid, 1)
+	camp := SeedCampaign(ctx, bid, ActiveStatus, 1)
 	// mock submission
 	sub := Submission{
 		Id:         "0001",
@@ -362,7 +365,7 @@ func TestGetSubmissionsForSync(t *testing.T) {
 	generateBrand(bid)
 
 	// launch a campaign
-	campaignIds := SeedCampaign(ctx, bid, 1)
+	campaignIds := SeedCampaign(ctx, bid, ActiveStatus, 1)
 
 	// cleanup
 	defer func() {
@@ -375,7 +378,7 @@ func TestGetSubmissionsForSync(t *testing.T) {
 	t.Run("Time before sync_frequency", func(t *testing.T) {
 		// submissions created
 		SubsCount := 10
-		submissionIds := SeedSubmissions(ctx, SubsCount, ActiveStatus)
+		submissionIds := SeedSubmissions(ctx, campaignIds[0], SubsCount, ActiveStatus)
 		polling_subs, err := MockSubStore.GetSubmissionsForSync(ctx)
 		if err != nil {
 			log.Printf("could not get submissions for polling\n")

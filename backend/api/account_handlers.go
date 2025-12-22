@@ -29,7 +29,7 @@ func (app *Application) CreateAccount(c *gin.Context) {
 		return
 	}
 
-	formattedTime := time.Now().Format("2006-01-02 15:04:05-07:00")
+	formattedTime := time.Now().Format(time.RFC3339)
 	acc := db.Account{
 		Id:       uuid.New().String(),
 		HolderId: payload.HolderId,

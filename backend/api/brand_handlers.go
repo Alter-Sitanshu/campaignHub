@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -71,7 +72,7 @@ func (app *Application) CreateBrand(c *gin.Context) {
 	}
 	// Mail the brand to a custom url to verify them
 	// Create the brand verification JWT Token
-	tokenSub := brand.Id
+	tokenSub := fmt.Sprintf("br-%s", brand.Id)
 	token, err := app.jwtMaker.CreateToken(
 		app.cfg.ISS, app.cfg.AUD, tokenSub, time.Hour,
 	)
@@ -84,7 +85,7 @@ func (app *Application) CreateBrand(c *gin.Context) {
 	InvitationReq := mailer.EmailRequest{
 		To:      brand.Email,
 		Subject: "Verify your account",
-		Body:    mailer.InviteBody(brand.Email, "brands", token),
+		Body:    mailer.InviteBody(brand.Email, token),
 	}
 	// Implementing a retry fallback
 	tries := 1

@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/Alter-Sitanshu/campaignHub/internals/db"
 	"github.com/Alter-Sitanshu/campaignHub/internals/mailer"
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // Just a dummy function that helps in checking if the server is working fine
@@ -19,12 +21,6 @@ func (app *Application) HealthCheck(c *gin.Context) {
 // Account verification route handler
 func (app *Application) Verification(c *gin.Context) {
 	ctx := c.Request.Context()
-	entity := c.Param("entity")
-	// check if the entity parameter is valid
-	if entity != "users" && entity != "brands" {
-		c.JSON(http.StatusBadRequest, WriteError("bad request"))
-		return
-	}
 	// extract the token from the query
 	token := c.Query("token")
 	payload, err := app.jwtMaker.VerifyToken(token)
@@ -38,7 +34,8 @@ func (app *Application) Verification(c *gin.Context) {
 		}
 		return
 	}
-	TokenID := payload.Sub // The ID of the user
+	entity := payload.Sub[:2]
+	TokenID := payload.Sub[3:]
 	// User verified -> create session -> Redirect to welcome page
 	err = app.store.UserInterface.VerifyUser(ctx, entity, TokenID)
 	if err != nil {
@@ -47,7 +44,7 @@ func (app *Application) Verification(c *gin.Context) {
 	}
 	// --> Create a Session Payload
 	SessionToken, err := app.pasetoMaker.CreateToken(app.cfg.ISS,
-		app.cfg.AUD, TokenID, SessionTimeout,
+		app.cfg.AUD, payload.Sub, SessionTimeout,
 	)
 	if err != nil {
 		log.Printf("error generating session for(%v): %v\n", payload.Sub, err.Error())
@@ -65,55 +62,113 @@ func (app *Application) Verification(c *gin.Context) {
 		true,  // HttpOnly
 	)
 	// TODO: Redirect the user to Welcome Screen
-	c.Redirect(http.StatusFound, "http://localhost:8080/")
+	c.JSON(http.StatusOK, "OK")
 }
 
-// Login handler
+// Login handler sets the SessionToken as `us-UUID` or `br-UUID`
 func (app *Application) Login(c *gin.Context) {
 	ctx := c.Request.Context()
 	var payload struct {
 		Email    string `json:"email" binding:"required"`
 		Password string `json:"password" binding:"required"`
+		Entity   string `json:"entity" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&payload); err != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
 		return
 	}
-	user, err := app.store.UserInterface.GetUserByEmail(ctx, payload.Email)
-	if err != nil {
-		if err == db.ErrNotFound {
-			// bad request error
-			c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
+	var SessionToken string
+	type resp struct {
+		Id       string `json:"id"`
+		Username string `json:"username"`
+		Email    string `json:"email"`
+	}
+	var response resp
+	switch payload.Entity {
+	case "users":
+		user, err := app.store.UserInterface.GetUserByEmail(ctx, payload.Email)
+		if err != nil {
+			if err == db.ErrNotFound {
+				// bad request error
+				c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
+				return
+			}
+			// server error
+			log.Printf("could not find user: %v", err.Error()) // log to fix the error
+			c.JSON(http.StatusInternalServerError, WriteError("server error. try again"))
 			return
 		}
-		// server error
-		log.Printf("could not find user: %v", err.Error()) // log to fix the error
-		c.JSON(http.StatusInternalServerError, WriteError("server error. try again"))
-		return
-	}
-	err = user.Password.Compare(payload.Password)
-	if err != nil {
-		if errors.Is(err, db.ErrInvalidPass) {
-			c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
+		err = user.Password.Compare(payload.Password)
+		if err != nil {
+			if errors.Is(err, db.ErrInvalidPass) || errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
+				c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
+				return
+			}
+			// server error
+			log.Printf("could not compare password: %v", err.Error()) // log to fix the error
+			c.JSON(http.StatusInternalServerError, WriteError("server error"))
 			return
 		}
-		// server error
-		log.Printf("could not compare password: %v", err.Error()) // log to fix the error
-		c.JSON(http.StatusInternalServerError, WriteError("server error"))
-		return
-	}
-	if !user.IsVerified {
-		c.JSON(http.StatusUnauthorized, WriteError("please verify your email to login"))
-		return
-	}
-	// --> Create a Session Payload
-	SessionToken, err := app.pasetoMaker.CreateToken(app.cfg.ISS,
-		app.cfg.AUD, payload.Email, SessionTimeout,
-	)
-	if err != nil {
-		log.Printf("error generating session for(%v): %v\n", payload.Email, err.Error())
-		c.JSON(http.StatusInternalServerError, WriteError("try again"))
-		return
+		if !user.IsVerified {
+			c.JSON(http.StatusUnauthorized, WriteError("please verify your email to login"))
+			return
+		}
+		// --> Create a Session Payload
+		SessionToken, err = app.pasetoMaker.CreateToken(app.cfg.ISS,
+			app.cfg.AUD, fmt.Sprintf("us-%s", user.Id), SessionTimeout,
+		)
+		if err != nil {
+			log.Printf("error generating session for(%v): %v\n", payload.Email, err.Error())
+			c.JSON(http.StatusInternalServerError, WriteError("try again"))
+			return
+		}
+		response = resp{
+			Id:       user.Id,
+			Username: user.FirstName,
+			Email:    user.Email,
+		}
+	case "brands":
+		brand, err := app.store.BrandInterface.GetBrandByEmail(ctx, payload.Email)
+		if err != nil {
+			if err == db.ErrNotFound {
+				// bad request error
+				c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
+				return
+			}
+			// server error
+			log.Printf("could not find brand: %v", err.Error()) // log to fix the error
+			c.JSON(http.StatusInternalServerError, WriteError("server error. try again"))
+			return
+		}
+		err = brand.Password.Compare(payload.Password)
+		if err != nil {
+			if errors.Is(err, db.ErrInvalidPass) || errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
+				c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
+				return
+			}
+			// server error
+			log.Printf("could not compare password: %v", err.Error()) // log to fix the error
+			c.JSON(http.StatusInternalServerError, WriteError("server error"))
+			return
+		}
+		if !brand.IsVerified {
+			c.JSON(http.StatusUnauthorized, WriteError("please verify your email to login"))
+			return
+		}
+		// --> Create a Session Payload
+		SessionToken, err = app.pasetoMaker.CreateToken(app.cfg.ISS,
+			app.cfg.AUD, fmt.Sprintf("br-%s", brand.Id), SessionTimeout,
+		)
+		if err != nil {
+			log.Printf("error generating session for(%v): %v\n", payload.Email, err.Error())
+			c.JSON(http.StatusInternalServerError, WriteError("try again"))
+			return
+		}
+		response = resp{
+			Id:       brand.Id,
+			Username: brand.Name,
+			Email:    brand.Email,
+		}
 	}
 	// --> Assign it to the cookie
 	c.SetCookie(
@@ -125,8 +180,7 @@ func (app *Application) Login(c *gin.Context) {
 		false, // Secure (HTTPS only)(TODO : Change later)
 		true,  // HttpOnly
 	)
-	// TODO: Redirect the user to Welcome Screen
-	c.Redirect(http.StatusFound, "http://localhost:8080/")
+	c.JSON(http.StatusOK, WriteResponse(response))
 }
 
 func (app *Application) ForgotPassword(c *gin.Context) {

@@ -16,7 +16,6 @@ import (
 	"github.com/Alter-Sitanshu/campaignHub/services/platform"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/requestid"
-
 	_ "github.com/gin-contrib/secure"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/time/rate"
@@ -104,20 +103,21 @@ const (
 )
 
 func (app *Application) AddRoutes(addr string, router *gin.Engine) {
-	api := router.Group("/api/v1")
 	// Public routes
-	api.GET("/", app.HealthCheck)
-	// query parameter: token | entity should be in ["users", "brands"]
-	api.GET("/verify/:entity", app.Verification)
-	api.POST("/login", app.Login)
-	api.POST("/users/signup", app.CreateUser)
-	api.POST("/brands/signup", app.CreateBrand)
+	base := router.Group("/api/v1")
+	base.GET("/", app.HealthCheck)
+	base.GET("/ws", app.AuthMiddleware(), app.WebSocketHandler)
+	// query parameter: token: Example /verify/?token =
+	base.GET("/verify", app.Verification)
+	base.POST("/login", app.Login)
+	base.POST("/users/signup", app.CreateUser)
+	base.POST("/brands/signup", app.CreateBrand)
 	// entity should be in ["users", "brands"]
-	api.POST("/forgot_password/request/:entity", app.ForgotPassword)
-	api.POST("/forgot_password/confirm/:entity", app.ResetPassword) // query parameter token
+	base.POST("/forgot_password/request/:entity", app.ForgotPassword)
+	base.POST("/forgot_password/confirm/:entity", app.ResetPassword) // query parameter token
 
 	// Users routes
-	users := api.Group("/users", app.AuthMiddleware())
+	users := base.Group("/users", app.AuthMiddleware())
 	{
 		users.GET("/me", app.GetCurrentUser)
 		users.GET("/:id", app.GetUserById)
@@ -134,7 +134,7 @@ func (app *Application) AddRoutes(addr string, router *gin.Engine) {
 	}
 
 	// Brand routes
-	brands := api.Group("/brands", app.AuthMiddleware())
+	brands := base.Group("/brands", app.AuthMiddleware())
 	{
 		brands.GET("/:brand_id", app.GetBrand)
 		brands.DELETE("/:brand_id", app.DeleteBrand)
@@ -143,30 +143,31 @@ func (app *Application) AddRoutes(addr string, router *gin.Engine) {
 	}
 
 	// campaign routes
-	campaigns := api.Group("/campaigns", app.AuthMiddleware())
+	campaigns := base.Group("/campaigns", app.AuthMiddleware())
 	{
-		campaigns.GET("", app.GetCampaignFeed) // query parametes: limit, offset
+		campaigns.GET("/feed", app.GetCampaignFeed) // query parametes: cursor
 		campaigns.GET("/:campaign_id", app.GetCampaign)
-		campaigns.GET("/user/:userid", app.GetUserCampaigns) // parameter: user_id
-		campaigns.GET("/brand/:brandid", app.GetBrandCampaigns)
+		campaigns.GET("/user/:userid", app.GetUserCampaigns)    // query parameters: cursor
+		campaigns.GET("/brand/:brandid", app.GetBrandCampaigns) // query parameters: cursor
 		campaigns.POST("", app.CreateCampaign)
-		campaigns.PUT("/:campaign_id", app.StopCampaign)
+		campaigns.PUT("/stop/:campaign_id", app.StopCampaign)
+		campaigns.PUT("/activate/:campaign_id", app.ActivateCampaign)
 		campaigns.DELETE("/:campaign_id", app.DeleteCampaign)
 		campaigns.PATCH("/:campaign_id", app.UpdateCampaign)
 	}
 
-	applications := api.Group("/applications", app.AuthMiddleware())
+	applications := base.Group("/applications", app.AuthMiddleware())
 	{
 		applications.GET(":application_id", app.GetApplication)
 		applications.GET("/campaigns/:campaign_id", app.GetCampaignApplications)
 		applications.GET("/my-applications", app.GetCreatorApplications)        // query: offset, limit
 		applications.PATCH("/status/:application_id", app.SetApplicationStatus) // query: status
 		applications.DELETE("/delete/:application_id", app.DeleteApplication)
-		applications.POST("", app.CreateApplication)
+		applications.POST("/:campaign_id", app.CreateApplication)
 	}
 
 	// tickets routes
-	tickets := api.Group("/tickets", app.AuthMiddleware())
+	tickets := base.Group("/tickets", app.AuthMiddleware())
 	{
 		tickets.GET("", app.GetRecentTickets) // query: status("open"/"close"), limit, offset
 		tickets.GET("/:ticket_id", app.GetTicket)
@@ -176,7 +177,7 @@ func (app *Application) AddRoutes(addr string, router *gin.Engine) {
 	}
 
 	// submissions routes
-	submission := api.Group("/submissions", app.AuthMiddleware())
+	submission := base.Group("/submissions", app.AuthMiddleware())
 	{
 		submission.GET("", app.FilterSubmissions)               // query: creator_id, campaign_id, time
 		submission.GET("/my-submissions", app.GetMySubmissions) // query: time
@@ -187,7 +188,7 @@ func (app *Application) AddRoutes(addr string, router *gin.Engine) {
 	}
 
 	// accounts routes
-	accounts := api.Group("/accounts", app.AuthMiddleware())
+	accounts := base.Group("/accounts", app.AuthMiddleware())
 	{
 		accounts.GET("", app.GetAllAccounts)
 		accounts.GET("/:acc_id", app.GetUserAccount)
@@ -196,17 +197,25 @@ func (app *Application) AddRoutes(addr string, router *gin.Engine) {
 		accounts.PUT("/accounts/:acc_id", app.DisableUserAccount)
 	}
 
+	// messaging routes
+	conversations := base.Group("/private/conversations", app.AuthMiddleware())
+	{
+		conversations.GET("", app.GetEntityConversations)
+		// query parameters timestamp and cursor
+		conversations.GET(":conversation/messages", app.GetConversationMessages)
+	}
+
 	app.server = &http.Server{
 		Addr:    addr,             // address the server listens on
 		Handler: router.Handler(), // HTTP handler to invoke, in this case, the Gin router
 	}
 }
 
-func NewApplication(addr string, store *db.Store, cfg *Config, PASETO, JWT auth.TokenMaker,
+func NewApplication(addr string, store *db.Store, cfg *Config, JWT, PASETO auth.TokenMaker,
 	mailer *mailer.MailService, cacheService *cache.Service, factory *platform.Factory,
 	appHub *chats.Hub, workers *workers.AppWorkers, s3Store *b2.B2Storage,
 ) *Application {
-	gin.SetMode(gin.DebugMode) // TODO: change to release mode in production
+	gin.SetMode(gin.TestMode) // TODO: change to release mode in production
 	router := gin.Default()
 
 	app := Application{
@@ -223,7 +232,7 @@ func NewApplication(addr string, store *db.Store, cfg *Config, PASETO, JWT auth.
 	}
 
 	// rate limiter
-	limiter := rate.NewLimiter(rate.Limit(1000), 500)
+	limiter := rate.NewLimiter(rate.Limit(100), 50)
 	// Attach the limiter to the router
 	router.Use(app.RateLimitter(limiter))
 
@@ -232,6 +241,7 @@ func NewApplication(addr string, store *db.Store, cfg *Config, PASETO, JWT auth.
 		AllowOrigins: []string{
 			"https://campaignhub.com",
 			"https://www.campaignhub.com",
+			"http://localhost:5173", // for dev
 			"http://localhost:5173", // for dev
 		},
 		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -252,7 +262,17 @@ func NewApplication(addr string, store *db.Store, cfg *Config, PASETO, JWT auth.
 	// 	FrameDeny:          true, // Prevent clickjacking
 	// 	ContentTypeNosniff: true, // Stop MIME-type sniffing
 	// 	BrowserXssFilter:   true, // Basic browser XSS protection
+	// router.Use(secure.New(secure.Config{
+	// 	FrameDeny:          true, // Prevent clickjacking
+	// 	ContentTypeNosniff: true, // Stop MIME-type sniffing
+	// 	BrowserXssFilter:   true, // Basic browser XSS protection
 
+	// 	// Forcing HTTPS
+	// 	SSLRedirect:          true,
+	// 	SSLProxyHeaders:      map[string]string{"X-Forwarded-Proto": "https"},
+	// 	STSSeconds:           31536000, // 1 year
+	// 	STSIncludeSubdomains: true,
+	// 	STSPreload:           true,
 	// 	// Forcing HTTPS
 	// 	SSLRedirect:          true,
 	// 	SSLProxyHeaders:      map[string]string{"X-Forwarded-Proto": "https"},
@@ -269,7 +289,18 @@ func NewApplication(addr string, store *db.Store, cfg *Config, PASETO, JWT auth.
 	// 		"connect-src 'self' wss://api.campaignhub.com https://api.campaignhub.com; " +
 	// 		"style-src 'self' 'unsafe-inline'; " +
 	// 		"font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com;",
+	// 	// Content Security Policy (CSP) For handling the Media/Chats
+	// 	// TODO: change values to match the CDN, API, and frontend origins.
+	// 	ContentSecurityPolicy: "default-src 'self'; " +
+	// 		"img-src 'self' data: blob: https://cdn.campaignhub.com; " +
+	// 		"media-src 'self' blob: https://cdn.campaignhub.com; " +
+	// 		"script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+	// 		"connect-src 'self' wss://api.campaignhub.com https://api.campaignhub.com; " +
+	// 		"style-src 'self' 'unsafe-inline'; " +
+	// 		"font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com;",
 
+	// 	ReferrerPolicy: "strict-origin-when-cross-origin", // prevent leaking full URLs
+	// }))
 	// 	ReferrerPolicy: "strict-origin-when-cross-origin", // prevent leaking full URLs
 	// }))
 

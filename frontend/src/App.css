@@ -1,0 +1,21 @@
+@import url('https://fonts.googleapis.com/css2?family=Momo+Trust+Display&display=swap');
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  font-family: 'Inter', sans-serif;
+  background: rgb(255, 255, 255);
+}
+
+[class^="code-40"] {
+  color: red;
+}
+
+[class^="code-50"] {
+  color: blue;
+}
+
+[class^="code-30"] {
+  color: yellow;
+}

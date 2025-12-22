@@ -1,0 +1,109 @@
+/* Features Section */
+.features-section {
+    background-color: white;
+    padding: 5rem 1.5rem;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.features-container {
+    margin: 0 auto;
+}
+
+.features-header {
+    text-align: center;
+    margin-bottom: 4rem;
+}
+
+.features-title {
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: var(--text-deep);
+    margin-bottom: 1rem;
+    line-height: 1.2;
+    font-family: "Momo Trust Display", sans-serif;
+}
+
+.features-subtitle {
+    font-size: 1.125rem;
+    color: var(--text-dark);
+    max-width: 42rem;
+    margin: 0 auto;
+    line-height: 1.6;
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+}
+
+.feature-card {
+    background-color: rgba(218, 241, 222, 0.4);
+    padding: 2rem;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(142, 182, 155, 0.3);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-0.5rem);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.feature-icon {
+    background-color: var(--primary-accent);
+    color: white;
+    width: 4rem;
+    height: 4rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.feature-icon .icon {
+    width: 2rem;
+    height: 2rem;
+}
+
+.feature-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-deep);
+    margin-bottom: 0.75rem;
+    font-family: "Momo Trust Display", sans-serif;
+}
+
+.feature-description {
+    color: var(--text-dark);
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* Tablet breakpoint (768px and up) */
+@media (min-width: 768px) {
+    .features-section {
+        padding: 7rem 1.5rem;
+    }
+
+    .features-title {
+        font-size: 2.25rem;
+    }
+
+    .features-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2rem;
+    }
+}
+
+/* Desktop breakpoint (1024px and up) */
+@media (min-width: 1024px) {
+    .features-section {
+        padding: 8rem 1.5rem;
+    }
+}
