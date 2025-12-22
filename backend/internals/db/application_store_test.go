@@ -2,10 +2,11 @@ package db
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 func destroyApplications(ctx context.Context, applIDs []string) {
@@ -19,7 +20,7 @@ func SeedApplications(ctx context.Context, campIDs []string, uid string) []strin
 	var ids []string
 	tx, _ := MockApplicationStore.db.BeginTx(ctx, nil)
 	for i < len(campIDs) {
-		id := fmt.Sprintf("010%d", i)
+		id := uuid.New().String()
 		query := `
 			INSERT INTO applications (id, campaign_id, creator_id)
 			VALUES ($1, $2, $3)
@@ -297,8 +298,8 @@ func TestGetApplication(t *testing.T) {
 func TestSetStatus(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	// generate a dummy creator and brand
-	uid := "dummy_user_01"
-	bid := "dummy_brand_01"
+	uid := "status_dummy_user_01"
+	bid := "status_dummy_brand_01"
 
 	generateCreator(ctx, uid)
 	generateBrand(bid)

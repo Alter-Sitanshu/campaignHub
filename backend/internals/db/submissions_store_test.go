@@ -11,12 +11,15 @@ import (
 )
 
 func generateCreator(ctx context.Context, mockUserId string) string {
+	// ensure user doesn't already exist
+	destroyCreator(ctx, mockUserId)
+
 	query := `
 		INSERT INTO users (id, first_name, last_name, email, password, gender, age, role)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
 	args := []any{
-		mockUserId, "mock_first_name", "mock_last_name", "email@gmail.com",
+		mockUserId, "mock_first_name", "mock_last_name", fmt.Sprintf("%s@mockuser.com", mockUserId),
 		"password", "O", 20, "LVL1",
 	}
 	MockUserStore.db.ExecContext(ctx, query, args...)

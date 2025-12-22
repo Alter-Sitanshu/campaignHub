@@ -11,12 +11,15 @@ import (
 )
 
 func generateBrand(bid string) {
+	// ensure any pre-existing brand with this id is removed to avoid duplicate key errors
+	MockBrandStore.DeregisterBrand(context.Background(), bid)
+
 	// I need a base brand which will post campaign
 	// Cause of dependancy of campaigns on brands
 	mockBrand := &Brand{
 		Id:        bid,
 		Name:      "MockBrand",
-		Email:     "mockbrand@gmail.com",
+		Email:     fmt.Sprintf("%s@mockbrand.com", bid),
 		Sector:    "skin_care",
 		Website:   "mockbrand.com",
 		Address:   "Guwahati",
@@ -35,7 +38,7 @@ func SeedCampaign(ctx context.Context, bid string, status, num int) []string {
 	var ids []string
 	tx, _ := MockCampaignStore.db.BeginTx(ctx, nil)
 	for i < num {
-		id := fmt.Sprintf("010%d", i)
+		id := uuid.New().String()
 		query := `
 			INSERT INTO campaigns (id, brand_id, title, budget, cpm, requirements, platform, doc_link, status)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -149,8 +152,8 @@ func TestGetRecentCampaigns(t *testing.T) {
 		log.Printf("got: %d, want %d", len(got), 10)
 		t.Fail()
 	}
-	if len(got) > 0 && got[0].Id != "0109" {
-		log.Printf("sorting failed in campaign feed: top: %s", got[0].Id)
+	if len(got) > 0 && got[0].Id != GenIds[len(GenIds)-1] {
+		log.Printf("sorting failed in campaign feed: top: %s, want: %s", got[0].Id, GenIds[len(GenIds)-1])
 		t.Fail()
 	}
 	for _, v := range GenIds {
