@@ -7,7 +7,7 @@ class WSClient {
     this.handlers = new Map(); // event -> Set of handlers
     this.connected = false;
     this.reconnectInterval = 2000;
-    this._shouldReconnect = true;
+    this._shouldReconnect = false;
   }
 
   connect() {
