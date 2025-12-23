@@ -69,10 +69,7 @@ func main() {
 		},
 		// TODO: Change in Production
 		RedisCfg: api.RedisConfig{
-			Addr:     env.GetString("REDIS_ADDR", "localhost:6379"),
-			Protocol: env.GetInt("REDIS_PROTOCOL", 3),
-			Password: env.GetString("REDIS_PASSWORD", ""),
-			DB:       env.GetInt("REDIS_DB", 0),
+			Url: env.GetString("REDIS_URL", ""),
 		},
 		FactoryCfg: api.FactoryConfig{
 			YouTubeAPIKey: env.GetString("YTAPIKEY", ""),
@@ -144,11 +141,7 @@ func main() {
 		config.MailCfg.Port,
 	)
 	// initialising the cache layer
-	CacheClient, err := cache.NewClient(
-		config.RedisCfg.Addr,
-		config.RedisCfg.Password,
-		config.RedisCfg.DB,
-	)
+	CacheClient, err := cache.NewClient(config.RedisCfg.Url)
 	if err != nil {
 		log.Fatalf("error intialising the cache layer: %v\n", err.Error())
 	}

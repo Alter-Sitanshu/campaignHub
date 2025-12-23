@@ -63,10 +63,7 @@ type FactoryConfig struct {
 }
 
 type RedisConfig struct {
-	Addr     string //localhost:6379
-	Protocol int    // default: 3 RESPv3
-	DB       int    // default: 0 In-Memory Database
-	Password string // default: ""
+	Url string // e.g., rediss://:password@host:6379
 }
 
 type MailConfig struct {

@@ -12,12 +12,12 @@ const (
 	RedisTimeout = time.Second * 5
 )
 
-func NewClient(addr, password string, db int) (*redis.Client, error) {
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     addr,
-		Password: password,
-		DB:       db,
-	})
+func NewClient(url string) (*redis.Client, error) {
+	opts, err := redis.ParseURL(url)
+	if err != nil {
+		return nil, err
+	}
+	rdb := redis.NewClient(opts)
 
 	// Test connection
 	ctx, cancel := context.WithTimeout(context.Background(), RedisTimeout)
