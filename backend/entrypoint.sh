@@ -9,7 +9,7 @@ set -e
 # echo "Postgres is up"
 
 echo "Running migrations..."
-/app/migrate -path /app/migrations -database "$DB_ADDR" -verbose up
+/app/migrate -path /app/migrations -database "$DB_ADDR" -verbose up || true
 
 echo "Starting server..."
 exec "$@"
