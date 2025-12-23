@@ -16,7 +16,7 @@ import (
 	"github.com/Alter-Sitanshu/campaignHub/services/platform"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/requestid"
-	_ "github.com/gin-contrib/secure"
+	"github.com/gin-contrib/secure"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/time/rate"
 )
@@ -212,7 +212,7 @@ func NewApplication(addr string, store *db.Store, cfg *Config, JWT, PASETO auth.
 	mailer *mailer.MailService, cacheService *cache.Service, factory *platform.Factory,
 	appHub *chats.Hub, workers *workers.AppWorkers, s3Store *b2.B2Storage,
 ) *Application {
-	gin.SetMode(gin.TestMode) // TODO: change to release mode in production
+	gin.SetMode(gin.ReleaseMode) // TODO: change to release mode in production
 	router := gin.Default()
 
 	app := Application{
@@ -236,9 +236,7 @@ func NewApplication(addr string, store *db.Store, cfg *Config, JWT, PASETO auth.
 	// Adding CORS
 	router.Use(cors.New(cors.Config{
 		AllowOrigins: []string{
-			"https://campaignhub.com",
-			"https://www.campaignhub.com",
-			"http://localhost:5173", // for dev
+			"https://frogmedia-tawny.vercel.app",
 			"http://localhost:5173", // for dev
 		},
 		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -255,51 +253,33 @@ func NewApplication(addr string, store *db.Store, cfg *Config, JWT, PASETO auth.
 	}))
 
 	// Attaching Security headers
-	// router.Use(secure.New(secure.Config{
-	// 	FrameDeny:          true, // Prevent clickjacking
-	// 	ContentTypeNosniff: true, // Stop MIME-type sniffing
-	// 	BrowserXssFilter:   true, // Basic browser XSS protection
-	// router.Use(secure.New(secure.Config{
-	// 	FrameDeny:          true, // Prevent clickjacking
-	// 	ContentTypeNosniff: true, // Stop MIME-type sniffing
-	// 	BrowserXssFilter:   true, // Basic browser XSS protection
+	router.Use(secure.New(secure.Config{
+		FrameDeny:          true, // Prevent clickjacking
+		ContentTypeNosniff: true, // Stop MIME-type sniffing
+		BrowserXssFilter:   true, // Basic browser XSS protection
 
-	// 	// Forcing HTTPS
-	// 	SSLRedirect:          true,
-	// 	SSLProxyHeaders:      map[string]string{"X-Forwarded-Proto": "https"},
-	// 	STSSeconds:           31536000, // 1 year
-	// 	STSIncludeSubdomains: true,
-	// 	STSPreload:           true,
-	// 	// Forcing HTTPS
-	// 	SSLRedirect:          true,
-	// 	SSLProxyHeaders:      map[string]string{"X-Forwarded-Proto": "https"},
-	// 	STSSeconds:           31536000, // 1 year
-	// 	STSIncludeSubdomains: true,
-	// 	STSPreload:           true,
+		// Forcing HTTPS
+		SSLRedirect:          false,
+		SSLProxyHeaders:      map[string]string{"X-Forwarded-Proto": "https"},
+		STSSeconds:           31536000, // 1 year
+		STSIncludeSubdomains: true,
+		STSPreload:           true,
 
-	// 	// Content Security Policy (CSP) For handling the Media/Chats
-	// 	// TODO: change values to match the CDN, API, and frontend origins.
-	// 	ContentSecurityPolicy: "default-src 'self'; " +
-	// 		"img-src 'self' data: blob: https://cdn.campaignhub.com; " +
-	// 		"media-src 'self' blob: https://cdn.campaignhub.com; " +
-	// 		"script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
-	// 		"connect-src 'self' wss://api.campaignhub.com https://api.campaignhub.com; " +
-	// 		"style-src 'self' 'unsafe-inline'; " +
-	// 		"font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com;",
-	// 	// Content Security Policy (CSP) For handling the Media/Chats
-	// 	// TODO: change values to match the CDN, API, and frontend origins.
-	// 	ContentSecurityPolicy: "default-src 'self'; " +
-	// 		"img-src 'self' data: blob: https://cdn.campaignhub.com; " +
-	// 		"media-src 'self' blob: https://cdn.campaignhub.com; " +
-	// 		"script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
-	// 		"connect-src 'self' wss://api.campaignhub.com https://api.campaignhub.com; " +
-	// 		"style-src 'self' 'unsafe-inline'; " +
-	// 		"font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com;",
-
-	// 	ReferrerPolicy: "strict-origin-when-cross-origin", // prevent leaking full URLs
-	// }))
-	// 	ReferrerPolicy: "strict-origin-when-cross-origin", // prevent leaking full URLs
-	// }))
+		// Content Security Policy (CSP) For handling the Media/Chats
+		ContentSecurityPolicy: `
+			default-src 'self';
+			img-src 'self' data: blob:;
+			media-src 'self' blob:;
+			script-src 'self' 'unsafe-inline';
+			style-src 'self' 'unsafe-inline';
+			font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com;
+			connect-src 'self'
+				https://frogmedia.onrender.com
+				wss://frogmedia.onrender.com
+				https://*.supabase.co
+				wss://*.supabase.co;
+		`,
+	}))
 
 	// Attaching request id headers
 	router.Use(requestid.New())
