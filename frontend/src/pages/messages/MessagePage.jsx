@@ -35,7 +35,7 @@ const MessagePage = () => {
 
   function groupMessagesByDate(msgArr) {
     const groups = {};
-
+    if (!msgArr || msgArr.length == 0) return [];
     msgArr.forEach((msg) => {
       const dateKey = new Date(msg.created_at).toDateString();
       if (!groups[dateKey]) groups[dateKey] = [];
@@ -58,10 +58,17 @@ const MessagePage = () => {
       endpoint += `?timestamp=${timestamp},cursor=${cursor}`;
     }
     const response = await api.get(endpoint);
-    if (response.status != 200) {
+    if (response.status != 200 && response.status != 204) {
       navigate(`/errors/${response.status}`);
     } 
-    setMessages(response.data.data);
+    if (response.status == 204) {
+      setMessages({
+        messages: [],
+        meta: {},
+      });
+    } else {
+      setMessages(response.data.data);
+    }
     setLoadingMessages(false);
   };
 
