@@ -54,7 +54,7 @@ const Dashboard = () => {
         activeCampaigns: 5,
         totalReach: '2.4M',
         engagement: '8.5%',
-        earnings: '$12,450'
+        earnings: '12,450'
     };
 
     const messages = [

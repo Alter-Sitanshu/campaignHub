@@ -48,7 +48,7 @@ const Landing = () => {
                     </div>
                     <div className="hero-img">
                         <div className="hero-img-inner">
-                            <img src={heroBg} alt="" />
+                            <img src={heroBg} alt="hero-bg" loading='lazy'/>
                         </div>
                     </div>
                 </div>

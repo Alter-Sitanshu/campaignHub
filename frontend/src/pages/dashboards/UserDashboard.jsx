@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import SubCard from "../../components/Card/SubCard";
 import Profile from "./components/Profile/Profile";
 import Overview from "./components/Overview/Overview";
-import Messages from "./components/Messages/Messages";
+import MessagesPage from "../messages/MessagePage";
 import Analytics from "./components/Analytics/Analytics";
 import Feed from "./components/Feed/Feed";
 import { useAuth } from "../../AuthContext";
@@ -24,14 +24,6 @@ const UserDashboard = () => {
     const handleLogout = () => {
         logout();
     }
-
-    // Mock data
-    const stats = {
-        activeCampaigns: 5,
-        totalReach: '2.4M',
-        engagement: '8.5%',
-        earnings: '$12,450'
-    };
     
     const submissions = [
     {
@@ -191,7 +183,7 @@ const UserDashboard = () => {
                         </div>
                     </header>
                     <main className="content-area">
-                        {activeTab === "overview" && ( <Overview stats={stats} campaigns={submissions.slice(0, 5)} isUser={true}/>)}
+                        {activeTab === "overview" && ( <Overview campaigns={submissions.slice(0, 5)} isUser={true}/>)}
                         {activeTab === "submissions" && (
                             <div>
                                 <div className="campaigns-page-header">

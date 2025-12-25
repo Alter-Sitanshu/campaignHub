@@ -86,7 +86,7 @@ const SubCard = ({ sub }) => {
                 <path fill="currentColor" d="M12 8c-2.2 0-4 1.3-4 3v1a2 2 0 002 2h4a2 2 0 002-2v-1c0-1.7-1.8-3-4-3z" />
               </svg>
               <div>
-                <div className="metric-number">${Number(sub.earnings ?? 0).toFixed(2)}</div>
+                <div className="metric-number">&#8377;{Number(sub.earnings ?? 0).toFixed(2)}</div>
                 <div className="metric-label">earnings</div>
               </div>
             </div>

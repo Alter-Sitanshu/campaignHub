@@ -21,10 +21,14 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('user', JSON.stringify(userData));
   };
 
-  const logout = () => {
+  const logout = async () => {
     setUser(null);
     localStorage.removeItem('user');
-    cookieStore.removeItem('session');
+    await cookieStore.delete({
+      name: 'session',
+      domain: 'frogmedia.onrender.com',
+      path: '/'
+    });
   };
 
   return (
