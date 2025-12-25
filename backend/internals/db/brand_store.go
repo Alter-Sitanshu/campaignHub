@@ -34,6 +34,15 @@ type BrandUpdatePayload struct {
 	Address *string `json:"address"`
 }
 
+type BrandStat struct {
+	BrandId           string  `json:"brand_id"`
+	Name              string  `json:"name"`
+	TotalCampaigns    int     `json:"total_campaigns"`
+	TotalApplications int     `json:"total_applications"`
+	TotalTransactions int     `json:"total_transactions"`
+	TotalSpent        float64 `json:"total_spent"`
+}
+
 // Function to change the password of a brand
 // Validate the brandid before calling the function
 func (b *BrandStore) ChangePassword(ctx context.Context, id, new_pass string) error {
@@ -173,6 +182,41 @@ func (b *BrandStore) GetBrandsByFilter(ctx context.Context, filter_type string, 
 	return result, nil
 }
 
+// Disabled security of verifying email
+func (b *BrandStore) RegisterBrandNoVerify(ctx context.Context, new_brand *Brand) error {
+	tx, err := b.db.BeginTx(ctx, nil)
+	if err != nil {
+		log.Printf("Error Beginning transaction: %v\n", err.Error())
+		return err
+	}
+	query := `
+		INSERT INTO brands (id, name, email, sector, password, website, address, campaigns, is_verified)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`
+	_, err = tx.ExecContext(ctx, query,
+		new_brand.Id,
+		new_brand.Name,
+		new_brand.Email,
+		new_brand.Sector,
+		new_brand.Password.hashed_pass,
+		new_brand.Website,
+		new_brand.Address,
+		new_brand.Campaigns,
+		true,
+	)
+	if err != nil {
+		// Logging to debug and check
+		log.Printf("Error onboarding brand: %v\n", err.Error())
+		return err
+	}
+
+	// CREATE THE BRAND'S ACCOUNT
+	// Prompt the brand to create account if it tries to launch a campaign
+	// Successfully onboarded brand
+	tx.Commit()
+	return nil
+}
+
 // Onboard a brand onto the platform
 func (b *BrandStore) RegisterBrand(ctx context.Context, new_brand *Brand) error {
 	tx, err := b.db.BeginTx(ctx, nil)
@@ -291,4 +335,43 @@ func (b *BrandStore) UpdateBrand(ctx context.Context, brand_id string, payload B
 
 	// successfully updated brand details
 	return nil
+}
+
+func (b *BrandStore) GetStats(ctx context.Context, brand_id string) (*BrandStat, error) {
+	var output BrandStat
+	query := `
+		SELECT
+		b.id AS brand_id,
+		b.name AS brand_name,
+		COUNT(DISTINCT camp.id) AS total_campaigns,
+		COUNT(DISTINCT a.id)    AS total_applications,
+
+		COUNT(DISTINCT t.id)    AS total_transactions,
+		COALESCE(SUM(t.amount), 0) AS total_spend
+
+		FROM brands b
+
+		LEFT JOIN campaigns camp
+			ON camp.brand_id = b.id
+
+		LEFT JOIN applications a
+			ON a.campaign_id = camp.id
+
+		LEFT JOIN transactions t
+			ON t.from_id = b.id
+		WHERE b.id = $1
+	`
+	err := b.db.QueryRowContext(ctx, query, brand_id).Scan(
+		&output.BrandId,
+		&output.Name,
+		&output.TotalCampaigns,
+		&output.TotalApplications,
+		&output.TotalTransactions,
+		&output.TotalSpent,
+	)
+	if err != nil {
+		log.Printf("error getting brand stats: %v\n", err.Error())
+		return nil, err
+	}
+	return &output, nil
 }

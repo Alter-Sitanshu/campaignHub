@@ -44,6 +44,39 @@ type UserResponse struct {
 	PlatformLinks  []db.Links `json:"links" binding:"required"`
 }
 
+func (app *Application) CreateUserNoVerify(c *gin.Context) {
+	ctx := c.Request.Context()
+	var err error // error for the functions used while creating a user
+	var payload UserPaylaod
+	// Checking for required fields
+	if err = c.ShouldBindJSON(&payload); err != nil {
+		c.JSON(http.StatusBadRequest, WriteError(err.Error()))
+		return
+	}
+	// Unpacking the payload to a user object
+	user := db.User{
+		Id:            uuid.New().String(),
+		FirstName:     payload.FirstName,
+		LastName:      payload.LastName,
+		Email:         payload.Email,
+		Gender:        payload.Gender,
+		Age:           payload.Age,
+		Role:          defaultUserLVL,
+		PlatformLinks: payload.PlatformLinks,
+	}
+	if err = user.Password.Hash(payload.Password); err != nil {
+		log.Printf("could not hash the password: %v\n", err.Error())
+		c.JSON(http.StatusInternalServerError, WriteError("Server Error"))
+		return
+	}
+	if err = app.store.UserInterface.CreateUserWithoutVerification(ctx, &user); err != nil {
+		log.Printf("could create user: %v\n", err.Error())
+		c.JSON(http.StatusInternalServerError, WriteError("Server Error"))
+		return
+	}
+	c.JSON(http.StatusCreated, WriteResponse("OK"))
+}
+
 func (app *Application) CreateUser(c *gin.Context) {
 	ctx := c.Request.Context()
 	var err error        // error for the functions used while creating a user
@@ -572,4 +605,19 @@ func (app *Application) GetUserProfilePic(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, WriteResponse(signedURL))
+}
+
+func (app *Application) GetUserStats(c *gin.Context) {
+	ctx := c.Request.Context()
+	userID := c.Param("id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, WriteError("user id param missing"))
+		return
+	}
+	stats, err := app.store.UserInterface.GetStats(ctx, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, WriteError(err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, WriteResponse(stats))
 }

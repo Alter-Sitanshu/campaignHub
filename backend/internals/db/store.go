@@ -88,12 +88,14 @@ type Store struct {
 		GetUserById(context.Context, string) (*User, error)
 		GetUserByEmail(context.Context, string) (*User, error)
 		CreateUser(context.Context, *User) error
+		CreateUserWithoutVerification(context.Context, *User) error
 		DeleteUser(context.Context, string) error
 		UpdateUser(context.Context, string, UpdatePayload) error
 		VerifyUser(ctx context.Context, entity, id string) error
 		ChangePassword(ctx context.Context, id, new_pass string) error
 		GetUserProfilePicture(ctx context.Context, id string) string
 		SetUserProfilePicture(ctx context.Context, id, fileKey string) error
+		GetStats(ctx context.Context, user_id string) (*UserStat, error)
 
 		// TODO: Implement the follow/unfollow brand option(AT LAST)
 		// FollowBrand(context.Context, string, string) error
@@ -105,9 +107,11 @@ type Store struct {
 		GetBrandByEmail(context.Context, string) (*Brand, error)
 		GetBrandsByFilter(context.Context, string, any) ([]Brand, error)
 		RegisterBrand(context.Context, *Brand) error
+		RegisterBrandNoVerify(context.Context, *Brand) error
 		DeregisterBrand(context.Context, string) error
 		UpdateBrand(context.Context, string, BrandUpdatePayload) error
 		ChangePassword(ctx context.Context, id, new_pass string) error
+		GetStats(ctx context.Context, brand_id string) (*BrandStat, error)
 		// ctx, from_id, to_id, type(withdraw/deposit), amount, tx
 		// ExecTransaction(context.Context, string, string, string, float32, sql.Tx) error
 	}

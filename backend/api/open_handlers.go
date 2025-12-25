@@ -13,6 +13,12 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type resp struct {
+	Id       string `json:"id"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
+}
+
 // Just a dummy function that helps in checking if the server is working fine
 func (app *Application) HealthCheck(c *gin.Context) {
 	c.JSON(http.StatusOK, WriteResponse("Server Running !"))
@@ -57,9 +63,9 @@ func (app *Application) Verification(c *gin.Context) {
 		SessionToken,
 		CookieExp,
 		"/",
-		"frogmedia.onrender.com", // For Development (TODO : Change to domain)
-		true,                     // Secure (HTTPS only)(TODO : Change later)
-		true,                     // HttpOnly
+		"",    // For Development (TODO : Change to domain)
+		false, // Secure (HTTPS only)(TODO : Change later)
+		true,  // HttpOnly
 	)
 	// TODO: Redirect the user to Welcome Screen
 	c.JSON(http.StatusOK, "OK")
@@ -78,11 +84,7 @@ func (app *Application) Login(c *gin.Context) {
 		return
 	}
 	var SessionToken string
-	type resp struct {
-		Id       string `json:"id"`
-		Username string `json:"username"`
-		Email    string `json:"email"`
-	}
+
 	var response resp
 	switch payload.Entity {
 	case "users":
@@ -177,7 +179,7 @@ func (app *Application) Login(c *gin.Context) {
 		CookieExp,
 		"/",
 		"frogmedia.onrender.com", // For Development (TODO : Change to domain)
-		true,                     // Secure (HTTPS only)(TODO : Change later)
+		false,                    // Secure (HTTPS only)(TODO : Change later)
 		true,                     // HttpOnly
 	)
 	c.JSON(http.StatusOK, WriteResponse(response))

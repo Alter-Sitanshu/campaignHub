@@ -54,6 +54,15 @@ type UpdatePayload struct {
 	Gender    *string `json:"gender"`
 }
 
+type UserStat struct {
+	UserID            string  `json:"user_id"`
+	TotalCampaigns    int     `json:"total_campaigns"`
+	TotalApplications int     `json:"total_applications"`
+	TotalSubmissions  int     `json:"total_submissions"`
+	TotalTransactions int     `json:"total_transactions"`
+	TotalEarning      float64 `json:"total_earning"`
+}
+
 // Function to change the user password
 // Validate the uuid before calling the function
 func (u *UserStore) ChangePassword(ctx context.Context, id, new_pass string) error {
@@ -200,6 +209,42 @@ func (u *UserStore) GetUserByEmail(ctx context.Context, email string) (*User, er
 	link_store := &LinkStore{db: u.db}
 	user.PlatformLinks = link_store.GetLinks(ctx, user.Id)
 	return &user, nil
+}
+
+// Function to create a new user
+func (u *UserStore) CreateUserWithoutVerification(ctx context.Context, user *User) error {
+	query := `
+		INSERT INTO users (id, first_name, last_name, email, password, gender, age, role, is_verified)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`
+	_, err := u.db.ExecContext(ctx, query,
+		user.Id,
+		user.FirstName,
+		user.LastName,
+		user.Email,
+		user.Password.hashed_pass,
+		user.Gender,
+		user.Age,
+		user.Role,
+		true,
+	)
+	if err != nil {
+		// For Debugging
+		log.Printf("Error creating a user: %v\n", err.Error())
+		return err
+	}
+	// Open an account for user
+	// Ask them to open an account only when they want to join a campaign
+	// Add their Platform Links
+	if user.PlatformLinks != nil {
+		var link_store *LinkStore = &LinkStore{db: u.db}
+		err = link_store.AddLinks(ctx, user.Id, user.PlatformLinks)
+		if err != nil {
+			log.Printf("error adding platform links: %v", err.Error())
+			return err
+		}
+	}
+	return nil
 }
 
 // Function to create a new user
@@ -387,6 +432,46 @@ func (u *UserStore) SetUserProfilePicture(ctx context.Context, id, fileKey strin
 	return nil
 	// if the insertion fails in db but succeeds in S3 Bucket
 	// there will be inconsistency but the app won't crash as fallback will save
+}
+
+func (u *UserStore) GetStats(ctx context.Context, user_id string) (*UserStat, error) {
+	var output UserStat
+	query := `
+			SELECT
+			u.id AS user_id,
+
+			COUNT(DISTINCT a.id) AS total_applications,
+			COUNT(DISTINCT s.id) AS total_submissions,
+
+			COUNT(DISTINCT t.id) AS total_transactions,
+			COALESCE(SUM(t.amount), 0) AS total_earnings
+
+		FROM users u
+
+		LEFT JOIN applications a
+			ON a.creator_id = u.id
+
+		LEFT JOIN submissions s
+			ON s.creator_id = u.id
+
+		LEFT JOIN transactions t
+			ON t.to_id = u.id
+
+		GROUP BY u.id
+		HAVING u.id = $1
+	`
+	err := u.db.QueryRowContext(ctx, query, user_id).Scan(
+		&output.UserID,
+		&output.TotalApplications,
+		&output.TotalSubmissions,
+		&output.TotalTransactions,
+		&output.TotalEarning,
+	)
+	if err != nil {
+		log.Printf("error getting user stats: %v\n", err.Error())
+		return nil, err
+	}
+	return &output, nil
 }
 
 // ----------  LinkStore Implementation ---------------

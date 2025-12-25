@@ -89,6 +89,10 @@ func (app *Application) GetConversationMessages(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, WriteError("could not load messages"))
 		return
 	}
+	if len(output) == 0 || output == nil {
+		c.JSON(http.StatusNoContent, WriteError("No messages Found"))
+		return
+	}
 	var buf []byte
 	c.JSON(http.StatusOK, WriteResponse(MessageResponse{
 		Messages: output,

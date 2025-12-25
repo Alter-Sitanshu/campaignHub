@@ -59,11 +59,7 @@ func main() {
 		ISS: env.GetString("ISS", "admin"),
 		AUD: env.GetString("AUD", "admin"),
 		MailCfg: api.MailConfig{
-			Host:        "smtp.gmail.com",
-			Port:        587,
-			Username:    env.GetString("MAIL_USERNAME", "admin"),
-			Password:    env.GetString("MAIL_PASS", ""),
-			From:        env.GetString("FROM_ACC", ""),
+			ApiKey:      env.GetString("RESEND_API_KEY", ""),
 			Support:     env.GetString("MAIL_SUPPORT", ""),
 			MailRetries: 5,
 		},
@@ -133,13 +129,7 @@ func main() {
 		log.Fatalf("error making paseto maker: %v\n", err.Error())
 	}
 	// initialising the mailer service
-	mailer := mailer.NewMailService(
-		config.MailCfg.From,
-		config.MailCfg.Host,
-		config.MailCfg.Username,
-		config.MailCfg.Password,
-		config.MailCfg.Port,
-	)
+	mailer := mailer.NewMailService(config.MailCfg.ApiKey)
 	// initialising the cache layer
 	CacheClient, err := cache.NewClient(config.RedisCfg.Url)
 	if err != nil {

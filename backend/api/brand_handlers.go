@@ -30,6 +30,37 @@ type BrandResponse struct {
 	Address string `json:"address" binding:"required"`
 }
 
+func (app *Application) CreateBrandNoVerify(c *gin.Context) {
+	ctx := c.Request.Context()
+	var err error // error for the functions used while creating a brand
+	var payload BrandPaylaod
+	// Checking for required fields
+	if err = c.ShouldBindJSON(&payload); err != nil {
+		c.JSON(http.StatusBadRequest, WriteError(err.Error()))
+		return
+	}
+	// Unpacking the payload to a user object
+	brand := db.Brand{
+		Id:      uuid.New().String(),
+		Name:    payload.Name,
+		Email:   payload.Email,
+		Sector:  payload.Sector,
+		Website: payload.Website,
+		Address: payload.Address,
+	}
+	if err = brand.Password.Hash(payload.Password); err != nil {
+		log.Printf("could not hash the password: %v\n", err.Error())
+		c.JSON(http.StatusInternalServerError, WriteError("Server Error"))
+		return
+	}
+	if err = app.store.BrandInterface.RegisterBrandNoVerify(ctx, &brand); err != nil {
+		log.Printf("could not register brand: %v\n", err.Error())
+		c.JSON(http.StatusInternalServerError, WriteError("Server Error"))
+		return
+	}
+	c.JSON(http.StatusCreated, WriteResponse("OK"))
+}
+
 func (app *Application) CreateBrand(c *gin.Context) {
 	ctx := c.Request.Context()
 	var err error        // error for the functions used while creating a brand
@@ -241,4 +272,19 @@ func (app *Application) UpdateBrand(c *gin.Context) {
 
 	// successfully retreived the user
 	c.JSON(http.StatusOK, WriteResponse(brandResponse))
+}
+
+func (app *Application) GetBrandStats(c *gin.Context) {
+	ctx := c.Request.Context()
+	brandID := c.Param("id")
+	if brandID == "" {
+		c.JSON(http.StatusBadRequest, WriteError("brand id param missing"))
+		return
+	}
+	stats, err := app.store.BrandInterface.GetStats(ctx, brandID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, WriteError(err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, WriteResponse(stats))
 }

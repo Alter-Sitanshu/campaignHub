@@ -67,11 +67,7 @@ type RedisConfig struct {
 }
 
 type MailConfig struct {
-	Host        string // e.g., "smtp.gmail.com"
-	Port        int    // e.g., 587
-	Username    string
-	Password    string // The app password for the Gmail
-	From        string // sender email address
+	ApiKey      string
 	Support     string // tickets are sent to this address
 	Expiry      time.Duration
 	MailRetries int
@@ -93,7 +89,7 @@ type TokenConfig struct {
 
 const (
 	defaultUserLVL       = "LVL1"
-	SessionTimeout       = time.Hour * 24 * 7 // Timeout of 7 Days
+	SessionTimeout       = time.Hour * 24 * 1 // Timeout of 1 Day
 	CookieExp            = 3600 * 24 * 7      // 7 Days
 	ResetTokenExpiry     = time.Minute * 15   // 15 Minutes
 	DefaultSyncFrequency = 5                  // in minutes
@@ -107,8 +103,8 @@ func (app *Application) AddRoutes(addr string, router *gin.Engine) {
 	// query parameter: token: Example /verify/?token =
 	base.GET("/verify", app.Verification)
 	base.POST("/login", app.Login)
-	base.POST("/users/signup", app.CreateUser)
-	base.POST("/brands/signup", app.CreateBrand)
+	base.POST("/users/signup", app.CreateUserNoVerify)
+	base.POST("/brands/signup", app.CreateBrandNoVerify)
 	// entity should be in ["users", "brands"]
 	base.POST("/forgot_password/request/:entity", app.ForgotPassword)
 	base.POST("/forgot_password/confirm/:entity", app.ResetPassword) // query parameter token
@@ -128,6 +124,7 @@ func (app *Application) AddRoutes(addr string, router *gin.Engine) {
 		users.POST("/profile_picture/confirm", app.ConfirmProfilePicUpload)
 		// query parameter id(user id)
 		users.GET("/profile_picture/download/", app.GetUserProfilePic)
+		users.GET("/stats/:id", app.GetUserStats)
 	}
 
 	// Brand routes
@@ -137,6 +134,7 @@ func (app *Application) AddRoutes(addr string, router *gin.Engine) {
 		brands.DELETE("/:brand_id", app.DeleteBrand)
 		brands.PATCH("/:brand_id", app.UpdateBrand)
 		brands.GET("/campaigns/:brand_id", app.GetBrandCampaigns) // parameter: brandid
+		brands.GET("/stats/:id", app.GetBrandStats)
 	}
 
 	// campaign routes
