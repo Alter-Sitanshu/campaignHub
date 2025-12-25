@@ -63,9 +63,9 @@ func (app *Application) Verification(c *gin.Context) {
 		SessionToken,
 		CookieExp,
 		"/",
-		"",    // For Development (TODO : Change to domain)
-		false, // Secure (HTTPS only)(TODO : Change later)
-		true,  // HttpOnly
+		"frogmedia.onrender.com", // For Development (TODO : Change to domain)
+		true,                     // Secure (HTTPS only)(TODO : Change later)
+		true,                     // HttpOnly
 	)
 	// TODO: Redirect the user to Welcome Screen
 	c.JSON(http.StatusOK, "OK")
@@ -179,7 +179,7 @@ func (app *Application) Login(c *gin.Context) {
 		CookieExp,
 		"/",
 		"frogmedia.onrender.com", // For Development (TODO : Change to domain)
-		false,                    // Secure (HTTPS only)(TODO : Change later)
+		true,                     // Secure (HTTPS only)(TODO : Change later)
 		true,                     // HttpOnly
 	)
 	c.JSON(http.StatusOK, WriteResponse(response))
