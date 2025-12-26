@@ -12,11 +12,11 @@ jobs:
     runs-on: ubuntu-latest
 
     services:
-      mailhog:
-        image: mailhog/mailhog
-        ports:
-          - 1025:1025   # SMTP PORT
-          - 8025:8025   # Web UI PORT
+      # mailhog:
+      #   image: mailhog/mailhog
+      #   ports:
+      #     - 1025:1025   # SMTP PORT
+      #     - 8025:8025   # Web UI PORT
       postgres:
         image: postgres:12
         env:
@@ -51,12 +51,12 @@ jobs:
 
       - name: Run migrations
         env:
-          MAKEDB: postgres://root:${{ secrets.POSTGRES_PASSWORD }}25@localhost:5432/campaignhub?sslmode=disable
+          DB_ADDR: postgres://root:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/campaignhub?sslmode=disable
         run: make migrateup
 
       - name: Run tests
         env:
-          DB_ADDR: postgres://root:${{ secrets.POSTGRES_PASSWORD }}25@localhost:5432/campaignhub?sslmode=disable
+          DB_ADDR: postgres://root:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/campaignhub?sslmode=disable
           DB_HOST: postgres
           DB_PORT: 5432
           DB_USER: postgres

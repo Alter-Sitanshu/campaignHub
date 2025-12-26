@@ -58,14 +58,15 @@ func (app *Application) Verification(c *gin.Context) {
 		return
 	}
 	// --> Assign it to the cookie
+	c.SetSameSite(http.SameSiteNoneMode)
 	c.SetCookie(
 		"session",
 		SessionToken,
 		CookieExp,
 		"/",
-		"frogmedia.onrender.com", // For Development (TODO : Change to domain)
-		true,                     // Secure (HTTPS only)(TODO : Change later)
-		true,                     // HttpOnly
+		"",
+		true, // Secure (HTTPS only)
+		true, // HttpOnly
 	)
 	// TODO: Redirect the user to Welcome Screen
 	c.JSON(http.StatusOK, "OK")
@@ -173,14 +174,15 @@ func (app *Application) Login(c *gin.Context) {
 		}
 	}
 	// --> Assign it to the cookie
+	c.SetSameSite(http.SameSiteNoneMode)
 	c.SetCookie(
 		"session",
 		SessionToken,
 		CookieExp,
 		"/",
-		"frogmedia.onrender.com", // For Development (TODO : Change to domain)
-		true,                     // Secure (HTTPS only)(TODO : Change later)
-		true,                     // HttpOnly
+		"",
+		true, // Secure (HTTPS only)
+		true, // HttpOnly
 	)
 	c.JSON(http.StatusOK, WriteResponse(response))
 }
