@@ -9,8 +9,8 @@ import (
 
 var upgrader websocket.Upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
-		// TODO: Implement proper origin checking in production
-		return true // Allow all origins for simplicity; adjust as needed for security
+		origin := r.Header.Get("Origin")
+		return origin == "https://frogmedia-tawny.vercel.app"
 	},
 }
 

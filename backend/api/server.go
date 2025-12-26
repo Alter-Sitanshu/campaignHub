@@ -235,7 +235,6 @@ func NewApplication(addr string, store *db.Store, cfg *Config, JWT, PASETO auth.
 	router.Use(cors.New(cors.Config{
 		AllowOrigins: []string{
 			"https://frogmedia-tawny.vercel.app",
-			"http://localhost:5173", // for dev
 		},
 		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders: []string{
