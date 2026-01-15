@@ -4,7 +4,7 @@ import SignUp from './pages/auth/SignUp';
 import SignIn from './pages/auth/SignIn';
 import Landing from './pages/landing/Landing';
 import BrandSignUp from './pages/auth/BrandSignUp';
-import UserVerification from './pages/auth/UserVerification';
+import OAuthCallback from './pages/auth/OAuthCallback';
 import BrandDashboard from "./pages/dashboards/BrandDashboard";
 import UserDashboard from './pages/dashboards/UserDashboard';
 import ErrorPage from './pages/errors/ErrorPage';
@@ -12,6 +12,7 @@ import ErrorPage from './pages/errors/ErrorPage';
 import { AuthProvider } from './AuthContext';
 import { SocketProvider } from './SocketContext';
 import MessagePage from './pages/messages/MessagePage';
+import AccountBarrier from './pages/auth/AccountBarrier';
 
 
 
@@ -26,8 +27,9 @@ function App() {
             <Route path='/' element={<Landing />}></Route>
             
             {/* auth pages */}
-            <Route path="/auth/verify" element={<UserVerification />}></Route>
+            <Route path='/auth/accounts' element={<AccountBarrier />}></Route>
             <Route path="/auth/sign_in" element={<SignIn />}></Route>
+            <Route path="/auth/verify" element={<OAuthCallback />}></Route>
             <Route path="/auth/users/sign_up" element={<SignUp />}></Route>
             <Route path="/auth/brands/sign_up" element={<BrandSignUp />}></Route>
             <Route path="/:entity/dashboard/:id/messages" element={ <MessagePage /> }></Route>

@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import './SignUp.css';
 import { useNavigate } from 'react-router-dom';
 import { signup } from '../../api';
+import { useAuth } from '../../AuthContext';
 
 export default function SignupPage() {
   // will use this to navigate to the creator page
   const navigate = useNavigate();
+  const {supabase, login} = useAuth();
 
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -22,6 +24,27 @@ export default function SignupPage() {
   });
 
   useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      const user = session?.user;
+        if (!user || !user.email) {
+          navigate("/auth/accounts?entity=users");
+        } else {
+          // Populate formData here
+          const full_name = user.user_metadata?.full_name?.split(" ") || [];
+          const first_name = full_name[0]?.toLowerCase() || '';
+          const last_name = full_name.length > 1 ? full_name.slice(1).join(' ').toLowerCase() : '';
+          setFormData(prev => ({
+            ...prev,
+            first_name: first_name,
+            last_name: last_name,
+            email: user.email,
+          }));
+        }
+      });
+    return () => subscription.unsubscribe(); // Cleanup
+  }, []);
+
+  useEffect(() => {
     const currentErrors = getStepErrors();
     setErrors(currentErrors);
     setIsStepValid(Object.keys(currentErrors).length === 0);
@@ -30,12 +53,9 @@ export default function SignupPage() {
   const getStepErrors = () => {
     const newErrors = {};
     if (step === 1) {
-      const { first_name, last_name, email, password } = formData;
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
+      const { first_name, last_name, password } = formData;
       if (!first_name.trim()) newErrors.first_name = 'First name is required';
       if (!last_name.trim()) newErrors.last_name = 'Last name is required';
-      if (!emailRegex.test(email)) newErrors.email = 'Enter a valid email';
       if (password) {
           if (password.trim().length < 6) {
               newErrors.password = 'Password must be at least 6 characters long';
@@ -125,7 +145,8 @@ export default function SignupPage() {
     };
     const resp = await signup(payload, "users");
     if (resp.type !== "error") {
-      navigate("/auth/sign_in");
+      login({ id: resp.id, username: formData.first_name, email: formData.email, entity: "users" });
+      navigate(`/users/dashboard/${resp.id}`);
     } else {
       navigate(`/errors/${resp.status}/`);
     }
@@ -156,12 +177,10 @@ export default function SignupPage() {
                       type="text"
                       id="first_name"
                       name="first_name"
-                      placeholder="John"
-                      value={formData.first_name}
                       onChange={handleChange}
+                      value={formData.first_name}
                       spellCheck={false}
                     />
-                    {errors.first_name && <small className="error-text">{errors.first_name}</small>}
                   </div>
                   <div className="form-group">
                     <label htmlFor="last_name">Last Name</label>
@@ -169,12 +188,10 @@ export default function SignupPage() {
                       type="text"
                       id="last_name"
                       name="last_name"
-                      placeholder="Doe"
-                      value={formData.last_name}
                       onChange={handleChange}
+                      value={formData.last_name}
                       spellCheck={false}
                     />
-                    {errors.last_name && <small className="error-text">{errors.last_name}</small>}
                   </div>
                   <div className="form-group">
                     <label htmlFor="email">Email</label>
@@ -182,12 +199,10 @@ export default function SignupPage() {
                       type="email"
                       id="email"
                       name="email"
-                      placeholder="john@example.com"
                       value={formData.email}
-                      onChange={handleChange}
+                      readOnly={true}
                       spellCheck={false}
                     />
-                    {errors.email && <small className="error-text">{errors.email}</small>}
                   </div>
                   <div className="form-group">
                     <label htmlFor="password">Password</label>

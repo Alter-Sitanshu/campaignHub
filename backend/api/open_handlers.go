@@ -187,6 +187,87 @@ func (app *Application) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, WriteResponse(response))
 }
 
+// OAuthCallback handles social logins (Google, etc.). It accepts a JSON payload
+// with provider, email, optional first_name/last_name and entity (users|brands).
+// If the user/brand does not exist it return unauthorised, then
+// creates a session token cookie (same flow as Login) and returns basic user info.
+func (app *Application) OAuthCallback(c *gin.Context) {
+	ctx := c.Request.Context()
+	var payload struct {
+		Provider  string `json:"provider" binding:"required"`
+		Email     string `json:"email" binding:"required"`
+		FirstName string `json:"first_name"`
+		LastName  string `json:"last_name"`
+		Entity    string `json:"entity" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		c.JSON(http.StatusBadRequest, WriteError("bad request"))
+		return
+	}
+
+	if payload.Entity != "users" && payload.Entity != "brands" {
+		c.JSON(http.StatusBadRequest, WriteError("invalid entity"))
+		return
+	}
+
+	var response resp
+	var sessionToken string
+	switch payload.Entity {
+	case "users":
+		user, err := app.store.UserInterface.GetUserByEmail(ctx, payload.Email)
+		if err != nil {
+			if err == db.ErrNotFound {
+				c.JSON(http.StatusUnauthorized, WriteError("user not found"))
+				return
+			} else {
+				// unexpected server error
+				c.JSON(http.StatusInternalServerError, WriteError("server error"))
+				return
+			}
+		}
+		// create session for user
+		sess, err := app.pasetoMaker.CreateToken(app.cfg.ISS, app.cfg.AUD, fmt.Sprintf("us-%s", user.Id), SessionTimeout)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, WriteError("server error"))
+			return
+		}
+		sessionToken = sess
+		response = resp{Id: user.Id, Username: user.FirstName, Email: user.Email}
+	case "brands":
+		brand, err := app.store.BrandInterface.GetBrandByEmail(ctx, payload.Email)
+		if err != nil {
+			if err == db.ErrNotFound {
+				c.JSON(http.StatusUnauthorized, WriteError("user not found"))
+				return
+			} else {
+				c.JSON(http.StatusInternalServerError, WriteError("server error"))
+				return
+			}
+		}
+		// create session for brand
+		sess, err := app.pasetoMaker.CreateToken(app.cfg.ISS, app.cfg.AUD, fmt.Sprintf("br-%s", brand.Id), SessionTimeout)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, WriteError("server error"))
+			return
+		}
+		sessionToken = sess
+		response = resp{Id: brand.Id, Username: brand.Name, Email: brand.Email}
+	}
+
+	// Assign session cookie to the response (same as Login)
+	c.SetSameSite(http.SameSiteNoneMode)
+	c.SetCookie(
+		"session",
+		sessionToken,
+		CookieExp,
+		"/",
+		"",
+		true, // secure
+		true, // httpOnly
+	)
+	c.JSON(http.StatusOK, WriteResponse(response))
+}
+
 func (app *Application) ForgotPassword(c *gin.Context) {
 	ctx := c.Request.Context()
 	entity := c.Param("entity")

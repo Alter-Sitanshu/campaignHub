@@ -68,7 +68,8 @@ CREATE TABLE brands (
 
 CREATE TABLE status (
   id int PRIMARY KEY,
-  name varchar(10) NOT NULL CHECK (name IN ('active','draft','expired'))
+  name varchar(10) NOT NULL
+  --'e.g., draft, active, expired, pending'
 );
 
 CREATE TABLE campaigns (
@@ -142,7 +143,7 @@ CREATE INDEX idx_submissions_campaign_status ON submissions (campaign_id, status
 
 
 INSERT INTO status (id, name)
-VALUES (0, 'draft'), (1, 'active'), (3, 'expired');
+VALUES (0, 'draft'), (1, 'active'), (3, 'expired'), (2, 'pending');
 
 INSERT INTO tx_status (id, name)
 VALUES (0, 'failed'), (1, 'success');

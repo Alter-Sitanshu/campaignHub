@@ -43,6 +43,7 @@ var (
 	ErrDupliName        = errors.New("name taken")
 	ErrInvalidPass      = errors.New("invalid password")
 	ErrInvalidId        = errors.New("invalid id")
+	ErrInvalidArgs      = errors.New("invalid args")
 	ErrInvalidStatus    = errors.New("invalid application status")
 	ErrPasswordTooShort = fmt.Errorf("password should be minimum of length  %d", MinPassLen)
 )
@@ -120,7 +121,7 @@ type Store struct {
 		EndCampaign(context.Context, string) error
 		ActivateCampaign(context.Context, string) error
 		UpdateCampaign(context.Context, string, UpdateCampaign) error
-		GetRecentCampaigns(ctx context.Context, limit int, cursorSeq string) ([]CampaignResp, int64, bool, error)
+		GetRecentCampaigns(ctx context.Context, limit int, cursorSeq, id string) ([]CampaignResp, int64, bool, error)
 		GetBrandCampaigns(ctx context.Context, brandID string, limit int, cursorSeq string) ([]CampaignResp, int64, bool, error)
 		GetUserCampaigns(ctx context.Context, brandID string, limit int, cursorSeq string) ([]CampaignResp, int64, bool, error)
 		GetCampaign(context.Context, string) (*CampaignResp, error)
@@ -162,7 +163,7 @@ type Store struct {
 	}
 	ApplicationInterface interface {
 		GetApplicationByID(ctx context.Context, appl_id string) (ApplicationResponse, error)
-		GetCreatorApplications(ctx context.Context, creator_id string, offset, limit int) ([]ApplicationResponse, error)
+		GetCreatorApplications(ctx context.Context, creator_id string, offset, limit int) ([]ApplicationFeedResponse, bool, error)
 		GetCampaignApplications(ctx context.Context, campaign_id string, offset, limit int) ([]ApplicationResponse, error)
 		CreateApplication(ctx context.Context, appl CampaignApplication) error
 		SetApplicationStatus(ctx context.Context, appl_id string, status int) error

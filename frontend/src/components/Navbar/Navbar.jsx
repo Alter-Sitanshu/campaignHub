@@ -16,7 +16,7 @@ const Navbar = () => {
                     <a href="#features" className="navbar-link">Features</a>
                     <a href="#how-it-works" className="navbar-link">How It Works</a>
                     <a href="#pricing" className="navbar-link">Pricing</a>
-                    <a href="/auth/users/sign_up" className="navbar-cta">
+                    <a href="/auth/accounts?entity=users" className="navbar-cta">
                         Get Started
                     </a>
                 </div>
@@ -36,7 +36,7 @@ const Navbar = () => {
                 <a href="#features" className="mobile-menu-link">Features</a>
                 <a href="#how-it-works" className="mobile-menu-link">How It Works</a>
                 <a href="#pricing" className="mobile-menu-link">Pricing</a>
-                <a href="/auth/sign_up" className="mobile-menu-cta">
+                <a href="/auth/accounts?entity=users" className="mobile-menu-cta">
                     Get Started
                 </a>
             </div>

@@ -514,16 +514,24 @@ func (app *Application) GetMySubmissions(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
+	if string(Entity.GetEntityType()) != "user" {
+		c.JSON(http.StatusBadRequest, WriteError("service not available for non users"))
+		return
+	}
 	UserID := Entity.GetID()
 	limit, err := strconv.Atoi(c.Query("limit"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, WriteError("bad request on query limit"))
 		return
 	}
-	offset, err := strconv.Atoi(c.Query("offset"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, WriteError("bad request on query limit"))
-		return
+	offset_ := c.Query("offset")
+	var offset int = 0
+	if offset_ != "" {
+		offset, err = strconv.Atoi(offset_)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, WriteError("bad request on query offset"))
+			return
+		}
 	}
 	time_ := c.Query("time")
 	// check the time format
@@ -538,7 +546,7 @@ func (app *Application) GetMySubmissions(c *gin.Context) {
 	// check cache for the user submissions
 	subids, err := app.cache.GetCreatorSubmissions(ctx, UserID)
 	// Cache Hit
-	if err == nil {
+	if err == nil && len(subids) != 0 {
 		var output []Submission
 		submissions, err := app.store.SubmissionInterface.FindMySubmissions(ctx, time_, subids, limit, offset)
 		if err != nil {

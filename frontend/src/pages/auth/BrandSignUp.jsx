@@ -20,6 +20,24 @@ const BrandSignUp = () => {
     const [ step, setStep ] = useState(1);
 
     useEffect(() => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        const user = session?.user;
+            if (!user || !user.email) {
+            navigate("/auth/accounts?entity=brands");
+            } else {
+            // Populate formData here
+            const full_name = user.user_metadata?.full_name;
+            setFormData(prev => ({
+                ...prev,
+                name: full_name,
+                email: user.email,
+            }));
+            }
+        });
+        return () => subscription.unsubscribe(); // Cleanup
+    }, []);
+
+    useEffect(() => {
         const err = getErrors();
         setErrors(err);
         setIsValid(Object.keys(err).length === 0);
@@ -37,7 +55,8 @@ const BrandSignUp = () => {
         }
         const resp = await signup(payload, "brands");
         if (resp.type !== "error") {
-            navigate("/auth/sign_in");
+            login({ id: resp.id, username: formData.first_name, email: formData.email, entity: "users" });
+            navigate(`/brands/dashboard/${resp.id}`);
         } else {
             navigate(`/errors/${resp.status}/`);
         }
@@ -53,7 +72,6 @@ const BrandSignUp = () => {
         const newErrors = {};
 
         // --- Common regex patterns ---
-        const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
         const urlRegex = /^(https?:\/\/)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(:\d+)?(\/\S*)?$/;
 
         if (step === 1) {
@@ -64,13 +82,6 @@ const BrandSignUp = () => {
                 newErrors.name = 'Name is required';
             } else if (name.trim().length < 2) {
                 newErrors.name = 'Name must be at least 2 characters long';
-            }
-
-            // Email
-            if (!email || !email.trim()) {
-                newErrors.email = 'Email is required';
-            } else if (!emailRegex.test(email.trim())) {
-                newErrors.email = 'Enter a valid email address';
             }
 
             // Password
@@ -162,12 +173,10 @@ const BrandSignUp = () => {
                         type="email"
                         id="email"
                         name="email"
-                        placeholder="john@example.com"
                         value={formData.email}
-                        onChange={handleChange}
                         spellCheck={false}
+                        readOnly={true}
                         />
-                        {errors.email && <small className="error-text">{errors.email}</small>}
                     </div>
                     <div className="form-group">
                         <label htmlFor="password">Password</label>

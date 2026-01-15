@@ -293,6 +293,7 @@
     border: 1px solid rgba(142, 182, 155, 0.3);
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     padding: 1.5rem;
+    min-height: 20rem;
 }
 
 .campaigns-section-title {
@@ -300,6 +301,7 @@
     font-weight: 600;
     color: var(--text-deep);
     margin-bottom: 1rem;
+    margin-top: 0;
     font-family: "Momo Trust Display", sans-serif;
 }
 
@@ -437,11 +439,19 @@
 
 .campaigns-table-container,
 .submissions-table-container {
+    position: relative;
     background-color: white;
     border-radius: 0.5rem;
     border: 1px solid rgba(142, 182, 155, 0.3);
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     overflow: hidden;
+    min-height: 40rem;
+}
+
+.empty-container-text {
+    margin: auto;
+    width: fit-content;
+    color: rgba(84, 84, 84, 0.7);
 }
 
 .submissions-table-container {
@@ -449,7 +459,44 @@
 }
 
 .campaigns-table-wrapper {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 1.1rem;
     overflow-x: auto;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+}
+
+.page-buttons-box {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    margin-top: 2rem;
+    column-gap: 1rem;
+}
+
+.page-button {
+    padding: 0.3rem 1rem;
+    border: none;
+    border-radius: 0.3rem;
+    color: white;
+    background-color: var(--text-deep);
+    transition: all 200ms ease-in-out;
+}
+
+.page-button:hover {
+    cursor: pointer;
+    background-color: var(--bg-medium-light);
+}
+
+.page-button:disabled {
+    cursor: not-allowed;
+    background-color: grey;
 }
 
 .campaigns-table {

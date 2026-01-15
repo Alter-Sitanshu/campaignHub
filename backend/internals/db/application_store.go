@@ -31,6 +31,14 @@ type ApplicationResponse struct {
 	CreatedAt  string `json:"created_at"`
 }
 
+type ApplicationFeedResponse struct {
+	Id            string `json:"id"`
+	CampaignTitle string `json:"campaign_name"`
+	Brand         string `json:"brand_name"`
+	Status        int    `json:"status"`
+	CreatedAt     string `json:"created_at"`
+}
+
 func NewApplicationStore(db *sql.DB) *ApplicationStore {
 	return &ApplicationStore{db: db}
 }
@@ -63,47 +71,57 @@ func (s *ApplicationStore) GetApplicationByID(
 
 func (s *ApplicationStore) GetCreatorApplications(
 	ctx context.Context, creator_id string, offset, limit int,
-) ([]ApplicationResponse, error) {
+) ([]ApplicationFeedResponse, bool, error) {
 	if creator_id == "" {
-		return nil, ErrInvalidId
+		return nil, false, ErrInvalidId
 	}
-	var output []ApplicationResponse
+	if offset < 0 || limit < 0 {
+		return nil, false, ErrInvalidArgs
+	}
+	var output []ApplicationFeedResponse
+	var hasMore = false
 	// latest first search
 	query := `
-		SELECT id, campaign_id, creator_id, status, created_at
-		FROM applications
+		SELECT a.id, c.title, b.name, a.status, a.created_at
+		FROM applications a
+		LEFT JOIN campaigns c ON c.id = a.campaign_id
+		LEFT JOIN brands b ON b.id = c.brand_id
 		WHERE creator_id = $1
 		ORDER BY created_at DESC
 		OFFSET $2 LIMIT $3
 	`
 	// trying to get the applications by creator_id
-	rows, err := s.db.QueryContext(ctx, query, creator_id, offset, limit)
+	rows, err := s.db.QueryContext(ctx, query, creator_id, offset, limit+1)
 	// error occured
 	if err != nil {
 		log.Printf("error while getting %s applications: %v", creator_id, err.Error())
-		return nil, err
+		return nil, false, err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var appl ApplicationResponse
+		var appl ApplicationFeedResponse
 		// trying to get the application
 		err := rows.Scan(
 			&appl.Id,
-			&appl.CampaignId,
-			&appl.CreatorId,
+			&appl.CampaignTitle,
+			&appl.Brand,
 			&appl.Status,
 			&appl.CreatedAt,
 		)
 		// error occured
 		if err != nil {
 			log.Printf("error while getting application: %v", err.Error())
-			return nil, err
+			return nil, false, err
 		}
 		output = append(output, appl)
 	}
+	if len(output) > limit {
+		hasMore = true
+		output = output[:limit]
+	}
 
 	// successfully got user applications
-	return output, nil
+	return output, hasMore, nil
 }
 
 func (s *ApplicationStore) GetCampaignApplications(

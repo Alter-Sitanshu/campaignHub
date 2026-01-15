@@ -170,7 +170,7 @@ func (s *SubmissionStore) FindSubmissionsByFilters(
 		args = append(args, *filter.CreatorId)
 		i++
 	}
-	if filter.Time != nil {
+	if filter.Time != nil && *filter.Time != "" {
 		t, err := time.Parse("01-2006", *filter.Time) // "MM-YYYY"
 		if err != nil {
 			return nil, fmt.Errorf("invalid time format: %v", err)
@@ -191,7 +191,7 @@ func (s *SubmissionStore) FindSubmissionsByFilters(
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		// internal server error
-		log.Printf("error filtering submissions: %v", err.Error())
+		log.Printf("error filtering submissions: %v, %v, %v", query, args, err.Error())
 		return nil, err
 	}
 	defer rows.Close()
