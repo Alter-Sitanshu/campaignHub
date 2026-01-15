@@ -7,7 +7,7 @@ CREATE TABLE applications(
     id VARCHAR(36) PRIMARY KEY,
     campaign_id VARCHAR(36) NOT NULL,
     creator_id VARCHAR(36) NOT NULL,
-    status INT DEFAULT 3, --DEFAULT CODE 2 Signifies pending status
+    status INT DEFAULT 2, --DEFAULT CODE 2 Signifies pending status
     created_at TIMESTAMPTZ DEFAULT now(),
 
     CONSTRAINT applications_campaign_creator_unique UNIQUE (campaign_id, creator_id),
