@@ -39,6 +39,17 @@ func GetInt(key string, fallback int) int {
 	return intVal
 }
 
+func GetBool(key string) bool {
+	val, ok := os.LookupEnv(key)
+	if !ok {
+		return false
+	}
+	if val == "true" {
+		return true
+	}
+	return false
+}
+
 func GetString(key, fallback string) string {
 	val, ok := os.LookupEnv(key)
 	if !ok {

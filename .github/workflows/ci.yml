@@ -56,6 +56,7 @@ jobs:
 
       - name: Run tests
         env:
+          WORKFLOW: true
           DB_ADDR: postgres://root:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/campaignhub?sslmode=disable
           DB_HOST: postgres
           DB_PORT: 5432
