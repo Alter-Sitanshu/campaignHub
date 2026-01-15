@@ -4,16 +4,11 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/Alter-Sitanshu/campaignHub/env"
 	"github.com/gorilla/websocket"
 )
 
 var upgrader websocket.Upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
-		isWorkflow := env.GetBool("WORKFLOW")
-		if isWorkflow {
-			return true
-		}
 		origin := r.Header.Get("Origin")
 		return origin == "https://frogmedia-tawny.vercel.app"
 	},

@@ -1,1 +1,2 @@
 bin/*
+internals/chats/*_test.go

@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Alter-Sitanshu/campaignHub/env"
 	"github.com/Alter-Sitanshu/campaignHub/internals/auth"
 	"github.com/Alter-Sitanshu/campaignHub/internals/cache"
 	"github.com/Alter-Sitanshu/campaignHub/internals/chats"
@@ -232,21 +231,12 @@ func NewApplication(addr string, store *db.Store, cfg *Config, JWT, PASETO auth.
 	limiter := rate.NewLimiter(rate.Limit(100), 50)
 	// Attach the limiter to the router
 	router.Use(app.RateLimitter(limiter))
-	origins := func() []string {
-		isWorkflow := env.GetBool("WORKFLOW")
-		if isWorkflow {
-			return []string{
-				"https://frogmedia-tawny.vercel.app",
-				"http://localhost:5173",
-			}
-		}
-		return []string{
-			"https://frogmedia-tawny.vercel.app",
-		}
-	}()
+
 	// Adding CORS
 	router.Use(cors.New(cors.Config{
-		AllowOrigins: origins,
+		AllowOrigins: []string{
+			"https://frogmedia-tawny.vercel.app",
+		},
 		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders: []string{
 			"Origin", "Content-Type", "Authorization",
