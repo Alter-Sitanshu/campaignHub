@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { signup } from "../../api.js";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../AuthContext";
 
 const BrandSignUp = () => {
     const navigate = useNavigate();
+    const { supabase, login } = useAuth();
     const [isLoading, setIsLoading] = useState(false);
     const [ formData, setFormData ] = useState(
         {

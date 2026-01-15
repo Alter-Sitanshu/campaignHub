@@ -11,11 +11,12 @@ const setLogoutHandler = (fn) => {
   logout = fn;
 }
 
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL, 
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY
+);
+
 export const AuthProvider = ({ children }) => {
-  const supabase = createClient(
-    import.meta.env.VITE_SUPABASE_URL, 
-    import.meta.env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY
-  )
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState(null);
