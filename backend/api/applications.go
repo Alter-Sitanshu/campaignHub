@@ -176,16 +176,23 @@ func (app *Application) GetCreatorApplications(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, WriteError("invalid query"))
 		return
 	}
-	appls, err := app.store.ApplicationInterface.GetCreatorApplications(
+	appls, hasMore, err := app.store.ApplicationInterface.GetCreatorApplications(
 		ctx, CreatorID, offset, limit,
 	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, WriteError("internal server error"))
 		return
 	}
+	type Response struct {
+		Applications []db.ApplicationFeedResponse `json:"applications"`
+		HasMore      bool                         `json:"has_more"`
+	}
 
 	// successfully got the creator applications
-	c.JSON(http.StatusOK, WriteResponse(appls))
+	c.JSON(http.StatusOK, WriteResponse(Response{
+		Applications: appls,
+		HasMore:      hasMore,
+	}))
 }
 
 func (app *Application) SetApplicationStatus(c *gin.Context) {

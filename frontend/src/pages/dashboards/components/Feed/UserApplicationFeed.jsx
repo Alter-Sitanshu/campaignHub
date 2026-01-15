@@ -80,13 +80,12 @@ const UserApplicationFeed = () => {
     const fetchApplications = async (page) => {
         try {
             setLoading(true);
-            setError(null);
 
             const endpoint = `/applications/my-applications?offset=${page * pageLimit}&limit=${pageLimit}`;
             const response = await api.get(endpoint);
 
             setSubs(response.data.data.applications);
-            setNext(response.data.data.hasMore);
+            setNext(response.data.data.has_more);
         } catch (err) {
             console.error(err);
             setSubs([]);
@@ -105,7 +104,7 @@ const UserApplicationFeed = () => {
             return 'Rejected';
         case 1:
             return 'Accepted';
-        case 3:
+        case 2:
             return 'Pending';
         default:
             return status;
@@ -122,11 +121,12 @@ const UserApplicationFeed = () => {
             {loading ? <p>Loading applications...</p> : 
             <div className="campaigns-table-container">
                 <div className="campaigns-table-wrapper">
-                    {subs.length > 0 ? <table className="campaigns-table">
+                    {subs?.length > 0 ? <table className="campaigns-table">
                     <thead className="campaigns-table-head">
                         <tr>
                             <th className="campaigns-table-header">S.No</th>
-                            <th className="campaigns-table-header">CampaignID</th>
+                            <th className="campaigns-table-header">Title</th>
+                            <th className="campaigns-table-header">Brand</th>
                             <th className="campaigns-table-header">Status</th>
                             <th className="campaigns-table-header">Created At</th>
 
@@ -134,7 +134,7 @@ const UserApplicationFeed = () => {
                     </thead>
 
                     <tbody className="campaigns-table-body">
-                        {subs.map((sub, index) => (
+                        {subs?.map((sub, index) => (
                                 <tr key={sub.id}
                                     className="campaigns-table-row"
                                 >
@@ -144,9 +144,14 @@ const UserApplicationFeed = () => {
                                     <span className="campaigns-table-text">{(page * 20) + index + 1}</span>
                                     </td>
         
-                                    {/* Campaign ID */}
+                                    {/* Campaign Title */}
                                     <td className="campaigns-table-cell">
-                                    <span className="campaigns-table-text">{sub.campaign_id}</span>
+                                    <span className="campaigns-table-text">{sub.campaign_name}</span>
+                                    </td>
+
+                                    {/* Brand Name */}
+                                    <td className="campaigns-table-cell">
+                                    <span className="campaigns-table-text">{sub.brand_name}</span>
                                     </td>
         
                                     {/* Status */}
@@ -165,12 +170,12 @@ const UserApplicationFeed = () => {
                             ))}
                     </tbody>
                     </table> : <p className="empty-container-text">Start Collaborating today !</p> }
-                    <div className="page-buttons-box" style={{
-                        opacity: subs.length === 0 ? 0 : 1
-                    }}>
-                        <button disabled={loading || page <= 0} onClick={() => {setPage(page - 1)}} className="page-button">Prev</button>
-                        <button disabled={loading || !hasNext} onClick={() => {setPage(page + 1)}} className="page-button">Next</button>
-                    </div>
+                    {subs?.length === 0 ? null : (
+                        <div className="page-buttons-box">
+                            <button disabled={loading || page <= 0} onClick={() => {setPage(page - 1)}} className="page-button">Prev</button>
+                            <button disabled={loading || !hasNext} onClick={() => {setPage(page + 1)}} className="page-button">Next</button>
+                        </div>
+                    )}
                 </div>
             </div> }
         </>

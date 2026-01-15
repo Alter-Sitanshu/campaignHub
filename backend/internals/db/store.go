@@ -43,6 +43,7 @@ var (
 	ErrDupliName        = errors.New("name taken")
 	ErrInvalidPass      = errors.New("invalid password")
 	ErrInvalidId        = errors.New("invalid id")
+	ErrInvalidArgs      = errors.New("invalid args")
 	ErrInvalidStatus    = errors.New("invalid application status")
 	ErrPasswordTooShort = fmt.Errorf("password should be minimum of length  %d", MinPassLen)
 )
@@ -162,7 +163,7 @@ type Store struct {
 	}
 	ApplicationInterface interface {
 		GetApplicationByID(ctx context.Context, appl_id string) (ApplicationResponse, error)
-		GetCreatorApplications(ctx context.Context, creator_id string, offset, limit int) ([]ApplicationResponse, error)
+		GetCreatorApplications(ctx context.Context, creator_id string, offset, limit int) ([]ApplicationFeedResponse, bool, error)
 		GetCampaignApplications(ctx context.Context, campaign_id string, offset, limit int) ([]ApplicationResponse, error)
 		CreateApplication(ctx context.Context, appl CampaignApplication) error
 		SetApplicationStatus(ctx context.Context, appl_id string, status int) error

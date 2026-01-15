@@ -131,7 +131,7 @@ func TestGetCreatorApplications(t *testing.T) {
 		cancel()
 	}()
 	t.Run("OK", func(t *testing.T) {
-		appls, err := MockApplicationStore.GetCreatorApplications(ctx, uid, 0, 10)
+		appls, _, err := MockApplicationStore.GetCreatorApplications(ctx, uid, 0, 10)
 		// errors are not expected
 		if err != nil {
 			t.Fail()
@@ -143,19 +143,19 @@ func TestGetCreatorApplications(t *testing.T) {
 	})
 	t.Run("invalid uid", func(t *testing.T) {
 		// invalids user id requested
-		_, err := MockApplicationStore.GetCreatorApplications(ctx, "", 0, 10)
+		_, _, err := MockApplicationStore.GetCreatorApplications(ctx, "", 0, 10)
 		// errors are expected
 		if err == nil {
 			t.Fail()
 		}
 	})
-	t.Run("negative offset/limit", func(t *testing.T) {
-		_, err := MockApplicationStore.GetCreatorApplications(ctx, uid, -1, 10)
+	t.Run("negative offset or limit", func(t *testing.T) {
+		_, _, err := MockApplicationStore.GetCreatorApplications(ctx, uid, -1, 10)
 		// errors are expected
 		if err == nil {
 			t.Fail()
 		}
-		_, err = MockApplicationStore.GetCreatorApplications(ctx, uid, 0, -1)
+		_, _, err = MockApplicationStore.GetCreatorApplications(ctx, uid, 0, -1)
 		// errors are expected
 		if err == nil {
 			t.Fail()
