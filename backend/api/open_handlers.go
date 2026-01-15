@@ -194,7 +194,6 @@ func (app *Application) Login(c *gin.Context) {
 func (app *Application) OAuthCallback(c *gin.Context) {
 	ctx := c.Request.Context()
 	var payload struct {
-		Provider  string `json:"provider" binding:"required"`
 		Email     string `json:"email" binding:"required"`
 		FirstName string `json:"first_name"`
 		LastName  string `json:"last_name"`
