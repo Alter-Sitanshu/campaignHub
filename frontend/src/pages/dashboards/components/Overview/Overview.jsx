@@ -6,32 +6,8 @@ import { IndianRupeeIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "../../../../api";
 
-const Overview = ({ campaigns, isUser = false }) => {
-    const { user, loading } = useAuth();
-    const [ stats, setStats ] = useState(null);
-
-    const fetchStats = async (id, isUser) => {
-        let endpoint = isUser ? `/users/stats/${id}` : `/brands/stats/${id}`;
-        const resp = await api.get(endpoint);
-        if (resp.status != 200) {
-            alert("could not fetch stats. please reload or re-login");
-            return
-        } else {
-            const data = resp.data.data;
-            let submissionRate = 0.0;
-            if (data.total_submissions) {
-                submissionRate = data.total_submissions / (data.total_applications == 0 ? 1 : data.total_applications);
-            }
-            setStats({...data, "success_rate": submissionRate});
-        }
-    }
-
-    useEffect(() => {
-        if (loading || !user) return;
-
-        fetchStats(user?.id, isUser);
-
-    }, [user])
+const Overview = ({ stats, campaigns, isUser = false }) => {
+    const { user } = useAuth();
 
     if (!stats || !user) {
         return (
@@ -107,16 +83,16 @@ const Overview = ({ campaigns, isUser = false }) => {
                 <h3 className="campaigns-section-title">Recent Campaigns</h3>
                 {!isUser && (
                     <div className="campaigns-list">
-                    {campaigns?.map(campaign => (
+                    {campaigns?.length > 0 ? campaigns?.map(campaign => (
                         <CampaignCard key={campaign.id} campaign={campaign} isBrand={true} />
-                    ))}
+                    )) : <p className="empty-container-text">Start Collaborating today !</p>}
                     </div>
                 )}
                 {isUser && (
                     <div className="campaigns-list">
-                        {campaigns?.map(campaign => (
+                        {campaigns?.length > 0 ? campaigns?.map(campaign => (
                             <SubCard key={`sub-${campaign.submission_id}`} sub={campaign} />
-                        ))}
+                        )) : <p className="empty-container-text">Start Collaborating today !</p>}
                     </div>
                 )}
             </div>

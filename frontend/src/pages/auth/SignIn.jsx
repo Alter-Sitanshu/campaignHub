@@ -3,12 +3,14 @@ import './SignUp.css';
 import { useNavigate } from 'react-router-dom';
 import { signin } from '../../api';
 import { useAuth } from "../../AuthContext";
+import google_icon from "../../assets/google.svg";
+import github_icon from "../../assets/github-mark.png";
 
 // entity is either users/brands
 const SignIn = () => {
-    // will use this to navigate to the creator page
-    const { user, login } = useAuth();
+    const { user, login, loginWith } = useAuth();
     const navigate = useNavigate();
+    // will use this to navigate to the creator page
     const [signupURL, setSignupURL ] = useState("/auth/users/sign_up");
 
     const [isValid, setIsValid] = useState(false);
@@ -68,6 +70,28 @@ const SignIn = () => {
         }
     };
 
+    const handleSignInWithGoogle = async () => {
+        setIsLoading(true);
+        try {
+            await loginWith("google", formData.entity);
+            // The call will usually redirect the browser to the provider.
+        } catch (err) {
+            setIsLoading(false);
+            console.error(err);
+        }
+    }
+
+    const handleSignInWithGithub = async () => {
+        setIsLoading(true);
+        try {
+            await loginWith("github", formData.entity);
+            // The call will usually redirect the browser to the provider.
+        } catch (err) {
+            setIsLoading(false);
+            console.error(err);
+        }
+    }
+
     return (
         <div className='form-page'>
                 
@@ -117,7 +141,7 @@ const SignIn = () => {
                                     Are you a brand?
                                 </label>
                             </div>
-                            <div className="button-group">
+                            <div className="signin-button-group">
                                 <button 
                                     onClick={handleSubmit}
                                     id={!isValid ? 'submit-disabled' : 'submit'}
@@ -125,6 +149,24 @@ const SignIn = () => {
                                     disabled={!isValid || isLoading}
                                     >
                                     {isLoading ? "Signing In..." : "Sign In"}
+                                </button>
+                                <button
+                                    className='signin-provider'
+                                    onClick={handleSignInWithGoogle}
+                                    type="button"
+                                    disabled={isLoading}
+                                >
+                                    <img src={google_icon} alt="" className='logo'/>
+                                    {isLoading ? 'Signing In...' : 'Sign in with Google'}
+                                </button>
+                                <button
+                                    className='signin-provider'
+                                    onClick={handleSignInWithGithub}
+                                    type="button"
+                                    disabled={isLoading}
+                                >
+                                    <img src={github_icon} alt="" className='logo'/>
+                                    {isLoading ? 'Signing In...' : 'Sign in with GitHub'}
                                 </button>
                             </div>
                         </form>

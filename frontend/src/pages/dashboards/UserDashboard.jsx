@@ -7,71 +7,94 @@ import Analytics from "./components/Analytics/Analytics";
 import Feed from "./components/Feed/Feed";
 import { useAuth } from "../../AuthContext";
 import { useNavigate } from "react-router-dom";
+import { api } from "../../api";
+import UserApplicationFeed from "./components/Feed/UserApplicationFeed";
 
 const UserDashboard = () => {
     const navigate = useNavigate();
     const { user, loading, logout } = useAuth();
     const [ activeTab, setActiveTab ] = useState("overview");
+    const [ stats, setStats ] = useState(null);
+    const [ subs, setSubs ] = useState([]);
+    const [ isPageLoading, setIsPageLoading ] = useState(true);
     const [ sidebarOpen, setSidebarOpen ] = useState(false);
+
+    const fetchStats = async (id) => {
+        if (!id) return null;
+        try {
+            const endpoint = `/users/stats/${id}`;
+            const resp = await api.get(endpoint);
+            if (resp.status !== 200) {
+                throw new Error(`Failed to fetch stats: ${resp.status}`);
+            }
+            return resp.data.data;
+        } catch (err) {
+            console.error("fetchStats error:", err);
+            throw err;
+        }
+    }
+
+    const fetchSubmissions = async () => {
+        try {
+            // limit is mandatory, offset and time filters are optional
+            const endpoint = "/submissions/my-submissions?limit=10";
+            const resp = await api.get(endpoint);
+            if (resp.status !== 200) {
+                throw new Error(`Failed to fetch submissions: ${resp.status}`);
+            }
+            return resp.data.data || [];
+        } catch (err) {
+            console.error("fetchSubmissions error:", err);
+            return [];
+        }
+    }
 
     useEffect(() => {
         if (user === null) {
             navigate("/auth/sign_in");
         }
-    }, [loading, user, navigate]);
-    if (loading) return <div>Loading...</div>;
+    }, [loading, user]);
+
+    // page loading api calls
+    useEffect(() => {
+        if (loading) return;
+        if (!user) return;
+
+        let mounted = true;
+        const load = async () => {
+            setIsPageLoading(true);
+            try {
+                const [statsResp, submissionsResp] = await Promise.all([
+                    fetchStats(user.id),
+                    fetchSubmissions()
+                ]);
+                if (!mounted) return;
+                if (statsResp) {
+                    let submissionRate = 0.0;
+                    if (statsResp.total_submissions) {
+                        submissionRate = statsResp.total_submissions / (statsResp.total_applications == 0 ? 1 : statsResp.total_applications);
+                    }
+                    setStats({...statsResp, "success_rate": submissionRate});
+                }
+                setSubs(submissionsResp || []);
+            } catch (err) {
+                console.error("Error loading dashboard data:", err);
+            } finally {
+                if (mounted) setIsPageLoading(false);
+            }
+        };
+
+        load();
+
+        return () => { mounted = false; };
+    }, [user, loading]);
+
+    if (loading || isPageLoading) return <div>Loading...</div>;
 
     const handleLogout = () => {
         logout();
     }
-    
-    const submissions = [
-    {
-        "submission_id": "subm_102",
-        "creator_id": "creator_44",
-        "campaign_id": "camp_2002",
-        "platform": "instagram",
-        "video_id": "ig_reel_92ac",
-        "title": "Day in the Life | Behind the Scenes",
-        "views": 98200,
-        "like_count": 5400,
-        "thumbnail": {
-            "url": "",
-        },
-        "uploaded_at": "2025-01-20T17:45:00Z",
-        "status": 0,
-        "video_status": "active",
-        "earnings": 53.10,
-        "last_synced_at": "2025-02-18T09:21:00Z",
-        "created_at": "2025-02-15T12:08:00Z",
-        "url": "https://instagram.com/reel/ig_reel_92ac"
-    },{
-        "submission_id": "subm_101",
-        "creator_id": "creator_44",
-        "campaign_id": "camp_2002",
-        "platform": "youtube",
-        "video_id": "yt_9xa27gh",
-        "title": "My Morning Routine as a Creator",
-        "views": 18420,
-        "like_count": 1290,
-        "thumbnail": {
-            "url": "",
-        },
-        "uploaded_at": "2025-01-12T10:32:00Z",
-        "status": 1,
-        "video_status": "active",
-        "earnings": 24.75,
-        "last_synced_at": "2025-02-18T14:10:00Z",
-        "created_at": "2025-02-13T08:55:00Z",
-        "url": "https://youtube.com/watch?v=yt_9xa27gh"
-    }];
 
-    const messages = [
-        { id: 1, brand: 'EcoWear', preview: 'Can we schedule a call to discuss...', time: '2h ago', unread: true },
-        { id: 2, brand: 'TechGadgets', preview: 'The content looks great! Just one...', time: '5h ago', unread: false },
-        { id: 3, brand: 'HealthPlus', preview: 'Payment has been processed...', time: '1d ago', unread: true },
-        { id: 3, brand: 'HealthPlus', preview: 'Payment has been processed...', time: '1d ago', unread: false },
-    ];
     if (!user) return null;
     return (
         <>
@@ -102,6 +125,16 @@ const UserDashboard = () => {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                                 </svg>
                                 <span className="sidebar-nav-label">Submissions</span>
+                            </button>
+                            {/* Applications of user */}
+                            <button
+                                onClick={() => setActiveTab('applications')}
+                                className={`sidebar-nav-button ${activeTab === 'applications' ? 'nav-button-active' : ''}`}
+                                >
+                                <svg className="sidebar-nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                </svg>
+                                <span className="sidebar-nav-label">Applications</span>
                             </button>
                             {/* Messages View Button */}
                             <button
@@ -183,7 +216,7 @@ const UserDashboard = () => {
                         </div>
                     </header>
                     <main className="content-area">
-                        {activeTab === "overview" && ( <Overview campaigns={submissions.slice(0, 5)} isUser={true}/>)}
+                        {activeTab === "overview" && ( <Overview stats={stats} campaigns={subs} isUser={true}/>)}
                         {activeTab === "submissions" && (
                             <div>
                                 <div className="campaigns-page-header">
@@ -194,14 +227,15 @@ const UserDashboard = () => {
                                 </div>
                                 <div className="submissions-table-container">
                                     <div className="submissions-table-wrapper">
-                                        {submissions.slice(0, 10).map((sub, i) => (
+                                        {subs.length > 0 ? subs.map((sub, i) => (
                                             <SubCard key={`sub-${i}`} sub={sub} />
-                                        ))}
+                                        )): <p className="empty-container-text">Start Collaborating with brands today !</p>}
                                     </div>
                                 </div>
                             </div>
                         )}
-                        {activeTab === 'messages' && navigate(`/users/dashboard/${user.id}/messages`)}
+                        {activeTab === 'applications' && (<UserApplicationFeed />)}
+                        {activeTab === 'messages' && navigate(`/userss/dashboard/${user.id}/messages`)}
                         {activeTab === 'analytics' && (<Analytics />)}
                         {activeTab === 'feed' && (<Feed />)}
                         {activeTab === 'profile' && (<Profile entity={"users"}/>)}

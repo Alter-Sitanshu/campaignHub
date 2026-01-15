@@ -143,7 +143,7 @@ func TestGetRecentCampaigns(t *testing.T) {
 		cancel()
 	}()
 	GenIds := SeedCampaign(ctx, bid, ActiveStatus, 10)
-	got, _, _, err := MockCampaignStore.GetRecentCampaigns(ctx, 10, "")
+	got, _, _, err := MockCampaignStore.GetRecentCampaigns(ctx, 10, "", "")
 	if err != nil {
 		log.Printf("Fetching error in campaign feed: %v", err.Error())
 		t.Fail()

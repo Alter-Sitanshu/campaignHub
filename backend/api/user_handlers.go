@@ -21,7 +21,7 @@ const (
 
 // User Request Payload
 // gender = M/F or O(other)
-type UserPaylaod struct {
+type UserPayload struct {
 	FirstName     string     `json:"first_name" binding:"required"`
 	LastName      string     `json:"last_name" binding:"required"`
 	Email         string     `json:"email" binding:"required"`
@@ -47,7 +47,7 @@ type UserResponse struct {
 func (app *Application) CreateUserNoVerify(c *gin.Context) {
 	ctx := c.Request.Context()
 	var err error // error for the functions used while creating a user
-	var payload UserPaylaod
+	var payload UserPayload
 	// Checking for required fields
 	if err = c.ShouldBindJSON(&payload); err != nil {
 		c.JSON(http.StatusBadRequest, WriteError(err.Error()))
@@ -71,17 +71,17 @@ func (app *Application) CreateUserNoVerify(c *gin.Context) {
 	}
 	if err = app.store.UserInterface.CreateUserWithoutVerification(ctx, &user); err != nil {
 		log.Printf("could create user: %v\n", err.Error())
-		c.JSON(http.StatusInternalServerError, WriteError("Server Error"))
+		c.JSON(http.StatusInternalServerError, WriteResponse("Server Error"))
 		return
 	}
-	c.JSON(http.StatusCreated, WriteResponse("OK"))
+	c.JSON(http.StatusCreated, WriteResponse(user.Id))
 }
 
 func (app *Application) CreateUser(c *gin.Context) {
 	ctx := c.Request.Context()
 	var err error        // error for the functions used while creating a user
 	var flag bool = true // flag to check if the user is created in the db
-	var payload UserPaylaod
+	var payload UserPayload
 	// Checking for required fields
 	if err = c.ShouldBindJSON(&payload); err != nil {
 		c.JSON(http.StatusBadRequest, WriteError(err.Error()))

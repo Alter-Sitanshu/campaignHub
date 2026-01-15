@@ -186,7 +186,7 @@ func (c *CampaignStore) UpdateCampaign(ctx context.Context, campaign_id string, 
 	return nil
 }
 
-func (c *CampaignStore) GetRecentCampaigns(ctx context.Context, limit int, cursorSeq string,
+func (c *CampaignStore) GetRecentCampaigns(ctx context.Context, limit int, cursorSeq, id string,
 ) ([]CampaignResp, int64, bool, error) {
 	var output []CampaignResp
 	var nextCursor, prevCursor int64
@@ -198,7 +198,9 @@ func (c *CampaignStore) GetRecentCampaigns(ctx context.Context, limit int, curso
         c.requirements, c.platform, c.doc_link, c.status, c.created_at, c.seq
         FROM campaigns c
         LEFT JOIN brands b ON c.brand_id = b.id
-        WHERE c.status = 1
+        WHERE c.status = 1 AND NOT EXISTS (
+            SELECT 1 FROM applications a WHERE a.creator_id = $1 AND a.campaign_id = c.id
+        )
     `
 
 	var rows *sql.Rows
@@ -207,8 +209,8 @@ func (c *CampaignStore) GetRecentCampaigns(ctx context.Context, limit int, curso
 	// 2. Dynamic WHERE Clause
 	// If this is the FIRST page (cursor is zero/empty), we don't filter by time.
 	if cursorSeq == "" {
-		query += ` ORDER BY c.seq DESC LIMIT $1`
-		rows, err = c.db.QueryContext(ctx, query, limit+1)
+		query += ` ORDER BY c.seq DESC LIMIT $2`
+		rows, err = c.db.QueryContext(ctx, query, id, limit+1)
 		if err != nil {
 			log.Printf("Error fetching campaigns: %v\n", err.Error())
 			return nil, 0, false, err
@@ -220,11 +222,11 @@ func (c *CampaignStore) GetRecentCampaigns(ctx context.Context, limit int, curso
 			return nil, 0, false, err
 		}
 		query += `
-			AND c.seq < $1 
+			AND c.seq < $2 
 			ORDER BY  c.seq DESC 
-			LIMIT $2
+			LIMIT $3
 		`
-		rows, err = c.db.QueryContext(ctx, query, cursor, limit+1)
+		rows, err = c.db.QueryContext(ctx, query, id, cursor, limit+1)
 		if err != nil {
 			log.Printf("Error fetching campaigns: %v\n", err.Error())
 			return nil, 0, false, err

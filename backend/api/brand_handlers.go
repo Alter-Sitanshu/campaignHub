@@ -58,7 +58,7 @@ func (app *Application) CreateBrandNoVerify(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, WriteError("Server Error"))
 		return
 	}
-	c.JSON(http.StatusCreated, WriteResponse("OK"))
+	c.JSON(http.StatusCreated, WriteResponse(brand.Id))
 }
 
 func (app *Application) CreateBrand(c *gin.Context) {

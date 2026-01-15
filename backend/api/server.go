@@ -105,6 +105,7 @@ func (app *Application) AddRoutes(addr string, router *gin.Engine) {
 	base.POST("/login", app.Login)
 	base.POST("/users/signup", app.CreateUserNoVerify)
 	base.POST("/brands/signup", app.CreateBrandNoVerify)
+	base.POST("/oauth/callback", app.OAuthCallback)
 	// entity should be in ["users", "brands"]
 	base.POST("/forgot_password/request/:entity", app.ForgotPassword)
 	base.POST("/forgot_password/confirm/:entity", app.ResetPassword) // query parameter token
@@ -235,6 +236,7 @@ func NewApplication(addr string, store *db.Store, cfg *Config, JWT, PASETO auth.
 	router.Use(cors.New(cors.Config{
 		AllowOrigins: []string{
 			"https://frogmedia-tawny.vercel.app",
+			"http://localhost:5173",
 		},
 		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders: []string{

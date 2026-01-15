@@ -38,10 +38,10 @@ const Landing = () => {
                             FrogMedia is the ultimate platform for creators and brands to build authentic, powerful, and profitable partnerships.
                         </p>
                         <div className='hero-button-group'>
-                            <a href="/auth/users/sign_up" className='get-started-button'>
+                            <a href="/auth/accounts?entity=users" className='get-started-button'>
                                 Get Started Free
                             </a>
-                            <a href="/auth/brands/sign_up" className='for-brands-button'>
+                            <a href="/auth/accounts?entity=brands" className='for-brands-button'>
                                 For Brands
                             </a>
                         </div>
@@ -173,7 +173,7 @@ const Landing = () => {
                         Join thousands of top creators and innovative brands building their legacy on FrogMedia.
                         </p>
                         <a
-                        href="/auth/users/sign_up"
+                        href="/auth/accounts?entity=users"
                         className="pricing-button"
                         >
                         Sign Up Now — It's Free

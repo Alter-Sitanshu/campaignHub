@@ -362,6 +362,12 @@ func (app *Application) UpdateCampaign(c *gin.Context) {
 
 func (app *Application) GetCampaignFeed(c *gin.Context) {
 	ctx := c.Request.Context()
+	LogInUser, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	Entity, _ := LogInUser.(db.AuthenticatedEntity)
 	cursor := c.Query("cursor")
 	var lastSeq string
 	if cursor != "" {
@@ -371,7 +377,7 @@ func (app *Application) GetCampaignFeed(c *gin.Context) {
 		}
 		lastSeq = string(seqBytes)
 	}
-	output, next, hasMore, err := app.store.CampaignInterace.GetRecentCampaigns(ctx, FeedLimit, lastSeq)
+	output, next, hasMore, err := app.store.CampaignInterace.GetRecentCampaigns(ctx, FeedLimit, lastSeq, Entity.GetID())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, WriteError("server error"))
 		return
