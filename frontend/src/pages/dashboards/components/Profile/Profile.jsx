@@ -96,9 +96,9 @@ const Profile = ({ entity }) => {
     }
 
     function handleOnChange(e) {
-        newVal = e.target.value;
-        targetKey = e.target.name;
-        setForm({...form, targetKey: newVal});
+        let newVal = e.target.value;
+        let targetKey = e.target.name;
+        setForm({...form, [targetKey]: newVal});
     }
 
     // --------------------------

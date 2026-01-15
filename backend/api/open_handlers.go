@@ -89,7 +89,7 @@ func (app *Application) Login(c *gin.Context) {
 	var response resp
 	switch payload.Entity {
 	case "users":
-		user, err := app.store.UserInterface.GetUserByEmail(ctx, payload.Email)
+		user, err := app.store.UserInterface.GetUserByEmailForAuth(ctx, payload.Email)
 		if err != nil {
 			if err == db.ErrNotFound {
 				// bad request error
@@ -213,7 +213,7 @@ func (app *Application) OAuthCallback(c *gin.Context) {
 	var sessionToken string
 	switch payload.Entity {
 	case "users":
-		user, err := app.store.UserInterface.GetUserByEmail(ctx, payload.Email)
+		user, err := app.store.UserInterface.GetUserByEmailForAuth(ctx, payload.Email)
 		if err != nil {
 			if err == db.ErrNotFound {
 				c.JSON(http.StatusUnauthorized, WriteError("user not found"))
@@ -283,7 +283,7 @@ func (app *Application) ForgotPassword(c *gin.Context) {
 		return
 	}
 	// Send the email a password reset link
-	user, err := app.store.UserInterface.GetUserByEmail(ctx, payload.Email)
+	user, err := app.store.UserInterface.GetUserByEmailForAuth(ctx, payload.Email)
 	if err != nil {
 		c.JSON(http.StatusOK, WriteResponse("If the email is registered, you will receive a password reset link"))
 		return

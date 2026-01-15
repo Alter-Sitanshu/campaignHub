@@ -88,6 +88,7 @@ type Store struct {
 	UserInterface interface {
 		GetUserById(context.Context, string) (*User, error)
 		GetUserByEmail(context.Context, string) (*User, error)
+		GetUserByEmailForAuth(context.Context, string) (*User, error)
 		CreateUser(context.Context, *User) error
 		CreateUserWithoutVerification(context.Context, *User) error
 		DeleteUser(context.Context, string) error

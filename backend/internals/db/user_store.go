@@ -211,6 +211,41 @@ func (u *UserStore) GetUserByEmail(ctx context.Context, email string) (*User, er
 	return &user, nil
 }
 
+// Function to return user pointer and error filtering by email for auth purposes (no amount)
+func (u *UserStore) GetUserByEmailForAuth(ctx context.Context, email string) (*User, error) {
+	// filter by email and join the roles table to get the role name
+	query := `
+		SELECT u.id, u.first_name, u.last_name, u.email,
+		u.password, u.gender, u.age, r.name, u.is_verified, u.created_at
+		FROM users u
+		JOIN roles r ON r.id = u.role
+		WHERE u.email = $1
+	`
+	// Get the user and scan it into the object
+	var user User
+	err := u.db.QueryRowContext(ctx, query, email).Scan(
+		&user.Id,
+		&user.FirstName,
+		&user.LastName,
+		&user.Email,
+		&user.Password.hashed_pass,
+		&user.Gender,
+		&user.Age,
+		&user.Role,
+		&user.IsVerified,
+		&user.CreatedAt,
+	)
+
+	if err != nil {
+		// For Debugging: Comment out later
+		log.Printf("DB Query Error for MailID(%s): %v\n", email, err.Error())
+		return nil, err
+	}
+	link_store := &LinkStore{db: u.db}
+	user.PlatformLinks = link_store.GetLinks(ctx, user.Id)
+	return &user, nil
+}
+
 // Function to create a new user
 func (u *UserStore) CreateUserWithoutVerification(ctx context.Context, user *User) error {
 	query := `

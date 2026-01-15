@@ -50,9 +50,9 @@ export const signup = async (data, entity) => {
             };
         };
         return {
-            "type": "success",
-            "status": response.status,
-            "id": response.data.data.id,
+            type: "success",
+            status: response.status,
+            id: response.data.data,
         };
     } catch {
         return {
