@@ -68,7 +68,8 @@ CREATE TABLE brands (
 
 CREATE TABLE status (
   id int PRIMARY KEY,
-  name varchar(10) NOT NULL COMMENT 'e.g., draft, active, expired, pending'
+  name varchar(10) NOT NULL
+  --'e.g., draft, active, expired, pending'
 );
 
 CREATE TABLE campaigns (
