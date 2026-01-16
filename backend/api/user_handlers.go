@@ -74,6 +74,23 @@ func (app *Application) CreateUserNoVerify(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, WriteResponse("Server Error"))
 		return
 	}
+	// create session for user
+	sessionToken, err := app.pasetoMaker.CreateToken(app.cfg.ISS, app.cfg.AUD, fmt.Sprintf("us-%s", user.Id), SessionTimeout)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, WriteError("server error"))
+		return
+	}
+	// Assign session cookie to the response (same as Login)
+	c.SetSameSite(http.SameSiteNoneMode)
+	c.SetCookie(
+		"session",
+		sessionToken,
+		CookieExp,
+		"/",
+		"",
+		true, // secure
+		true, // httpOnly
+	)
 	c.JSON(http.StatusCreated, WriteResponse(user.Id))
 }
 

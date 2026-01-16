@@ -58,6 +58,23 @@ func (app *Application) CreateBrandNoVerify(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, WriteError("Server Error"))
 		return
 	}
+	// create session for brand
+	sessionToken, err := app.pasetoMaker.CreateToken(app.cfg.ISS, app.cfg.AUD, fmt.Sprintf("br-%s", brand.Id), SessionTimeout)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, WriteError("server error"))
+		return
+	}
+	// Assign session cookie to the response (same as Login)
+	c.SetSameSite(http.SameSiteNoneMode)
+	c.SetCookie(
+		"session",
+		sessionToken,
+		CookieExp,
+		"/",
+		"",
+		true, // secure
+		true, // httpOnly
+	)
 	c.JSON(http.StatusCreated, WriteResponse(brand.Id))
 }
 
