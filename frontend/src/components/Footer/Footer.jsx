@@ -23,8 +23,8 @@ const Footer = () => {
                 <div>
                     <h4 className="footer-heading">Product</h4>
                     <ul className="footer-links">
-                    <li><a href="#">For Creators</a></li>
-                    <li><a href="#">For Brands</a></li>
+                    <li><a href="/auth/accounts/?entity=users">For Creators</a></li>
+                    <li><a href="/auth/accounts/?entity=brands">For Brands</a></li>
                     <li><a href="#features">Features</a></li>
                     <li><a href="#pricing">Pricing</a></li>
                     </ul>
@@ -34,9 +34,7 @@ const Footer = () => {
                 <div>
                     <h4 className="footer-heading">Company</h4>
                     <ul className="footer-links">
-                    <li><a href="#">About Us</a></li>
-                    <li><a href="#">Careers</a></li>
-                    <li><a href="#">Blog</a></li>
+                    <li><a href="/about">About Us</a></li>
                     <li><a href="#">Contact</a></li>
                     </ul>
                 </div>

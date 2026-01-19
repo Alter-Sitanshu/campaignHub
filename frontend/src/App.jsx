@@ -13,6 +13,7 @@ import { AuthProvider } from './AuthContext';
 import { SocketProvider } from './SocketContext';
 import MessagePage from './pages/messages/MessagePage';
 import AccountBarrier from './pages/auth/AccountBarrier';
+import About from './pages/about/About';
 
 
 
@@ -25,6 +26,7 @@ function App() {
           <Routes>
             {/* Landing page */}
             <Route path='/' element={<Landing />}></Route>
+            <Route path='/about' element={<About />}></Route>
             
             {/* auth pages */}
             <Route path='/auth/accounts' element={<AccountBarrier />}></Route>
