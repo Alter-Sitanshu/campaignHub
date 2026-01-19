@@ -13,25 +13,42 @@ const Dashboard = () => {
     const { user, loading, logout } = useAuth();
     const [activeTab, setActiveTab] = useState('overview');
     const [sidebarOpen, setSidebarOpen] = useState(false);
-
-    const [ campaigns, setCampaigns ] = useState(null);
+    const [ isPageLoading, setIsPageLoading ] = useState(true);
+    const [ stats, setStats ] = useState(null);
+    const [ campaigns, setCampaigns ] = useState([]);
 
     const handleLogout = () => {
         logout();
     };
 
-    const loadRecentCampaigns = useCallback(async () => {
-        if (!user?.id) return;
+    const fetchStats = async () => {
+        if (!user) return null;
+        try {
+            const endpoint = `/brands/stats/${user?.id}`;
+            const resp = await api.get(endpoint);
+            if (resp.status !== 200) {
+                throw new Error(`Failed to fetch stats: ${resp.status}`);
+            }
+            return resp.data.data;
+        } catch (err) {
+            console.error("fetchStats error:", err);
+            throw err;
+        }
+    }
+
+    const loadRecentCampaigns = async () => {
+        if (!user?.id) return [];
 
         try {
             const response = await api.get(
                 `/campaigns/brand/${user.id}?cursor=`
             );
-            setCampaigns(response.data.data.campaigns);
+            return response.data.data.campaigns;
         } catch (err) {
             console.error(err);
+            return [];
         }
-    }, [user?.id]);
+    };
 
     useEffect(() => {
         if (loading) return;
@@ -41,28 +58,31 @@ const Dashboard = () => {
             return;
         }
 
-        if (!campaigns) {
-            console.log("loading campaings...");
-            loadRecentCampaigns();
-        }
-    }, [loading, user, campaigns, navigate]);
+        let mounted = true;
+        const load = async () => {
+            setIsPageLoading(true);
+            try {
+                const [statsResp, campaignsResp] = await Promise.all([
+                    fetchStats(),
+                    loadRecentCampaigns()
+                ]);
+                if (!mounted) return;
+                
+                setStats(statsResp);
+                setCampaigns(campaignsResp);
+            } catch (err) {
+                console.error("Error loading dashboard data:", err);
+            } finally {
+                if (mounted) setIsPageLoading(false);
+            }
+        };
+
+        load();
+
+        return () => { mounted = false; };
+    }, [loading, user]);
     
-    if (loading) return <div>Loading...</div>;
-
-    // Mock data
-    const stats = {
-        activeCampaigns: 5,
-        totalReach: '2.4M',
-        engagement: '8.5%',
-        earnings: '12,450'
-    };
-
-    const messages = [
-        { id: 1, brand: 'EcoWear', preview: 'Can we schedule a call to discuss...', time: '2h ago', unread: true },
-        { id: 2, brand: 'TechGadgets', preview: 'The content looks great! Just one...', time: '5h ago', unread: false },
-        { id: 3, brand: 'HealthPlus', preview: 'Payment has been processed...', time: '1d ago', unread: true },
-        { id: 3, brand: 'HealthPlus', preview: 'Payment has been processed...', time: '1d ago', unread: false },
-    ];
+    if (loading || isPageLoading) return <div>Loading...</div>;
 
     
     if (!user) return null;

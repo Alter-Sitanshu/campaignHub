@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X, FileText, IndianRupee, Target, Video } from 'lucide-react';
 import './campaignLaunch.css';
 import { api } from '../../api';
@@ -24,6 +24,12 @@ const CampaignLaunchModal = ({ isOpen, onClose, brandId, fillForm }) => {
   const [errors, setErrors] = useState({});
   const [isValid, setIsValid] = useState(false || fillForm !== null);
   const [ isLoading, setIsLoading ] = useState(false);
+
+  useEffect(() => {
+    let errs = getErrors();
+    setErrors(errs);
+    setIsValid(Object.keys(errs).length === 0);
+  }, [formData]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
