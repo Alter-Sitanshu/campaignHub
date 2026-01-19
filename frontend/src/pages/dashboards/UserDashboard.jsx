@@ -48,18 +48,14 @@ const UserDashboard = () => {
             return [];
         }
     }
-
-    useEffect(() => {
-        if (user === null) {
-            navigate("/auth/sign_in");
-        }
-    }, [loading, user]);
-
+    
     // page loading api calls
     useEffect(() => {
         if (loading) return;
-        if (!user) return;
-
+        if (user === null) {
+            navigate("/auth/sign_in");
+            return;
+        }
         let mounted = true;
         const load = async () => {
             setIsPageLoading(true);
@@ -87,7 +83,8 @@ const UserDashboard = () => {
         load();
 
         return () => { mounted = false; };
-    }, [user, loading]);
+    }, [loading, user]);
+
 
     if (loading || isPageLoading) return <div>Loading...</div>;
 

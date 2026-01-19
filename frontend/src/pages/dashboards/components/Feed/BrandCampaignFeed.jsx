@@ -4,10 +4,16 @@ import { useAuth } from "../../../../AuthContext";
 import CampaignLaunchModal from "../../../campaigns/CampaignLaunchModal";
 import { useState, useEffect } from "react";
 import { api } from "../../../../api";
+import CampaignCard from "../../../../components/Card/CampaignCard";
+import CampaignApplication from "../../../campaigns/CampaignApplications";
+
 
 const BrandCampaignFeed = () => {
     const [ LaunchCampaign, setLaunchCampaign ] = useState(false);
     const [ fillForm, setfillForm ] = useState(null);
+    const [ openApplication, setApplications ] = useState(false);
+    const [ campaign_id , setCampaign ] = useState("");
+    const [width, setWidth] = useState(window.outerWidth);
     const { user } = useAuth();
     const queryClient = useQueryClient();
 
@@ -44,7 +50,14 @@ const BrandCampaignFeed = () => {
         if (inView && hasNextPage && !isFetchingNextPage) {
             fetchNextPage();
         }
-    }, [inView, hasNextPage, isFetchingNextPage]);
+    }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+    // Handle window resize for responsive design
+    useEffect(() => {
+        const handleResize = () => setWidth(window.outerWidth);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     const getStatus = (status) => {
         switch (status) {
@@ -52,6 +65,8 @@ const BrandCampaignFeed = () => {
             return 'Draft';
         case 1:
             return 'Active';
+        case 2:
+            return 'Pending';
         case 3:
             return 'Completed';
         default:
@@ -79,6 +94,56 @@ const BrandCampaignFeed = () => {
         const date = new Date(dateString);
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     };
+
+    if (width < 880) {
+        return (
+            <>
+            <div className="campaigns-page-header">
+                <div className="campaigns-page-header-text">
+                <h3 className="campaigns-page-title">All Campaigns</h3>
+                <p className="campaigns-page-subtitle">Manage your brand partnerships</p>
+                </div>
+                <button className="button-new-campaign" onClick={() => {
+                        setfillForm(null);
+                        setLaunchCampaign(true);
+                    }}
+                >+ New Campaign</button>
+            </div>
+            < CampaignLaunchModal
+                key={fillForm ? fillForm.id : "modal-key"}
+                isOpen={LaunchCampaign}
+                onClose={() => {setLaunchCampaign(false)}}
+                brandId={user.id}
+                fillForm={fillForm}
+            />
+            <div className="campaigns-section">
+                <h3 className="campaigns-section-title">Recent Campaigns</h3>
+                <div className="campaigns-list">
+                    {
+                        data ? data.pages.map((group) => (
+                            group.campaigns?.map((campaign) => (
+                                <CampaignCard
+                                    onClick={() => {
+                                        setApplications(true)
+                                        setCampaign(campaign.id)
+                                    }}
+                                    key={campaign.id} 
+                                    campaign={campaign} 
+                                    isBrand={true} 
+                                />
+                            ))
+                        )) : <p className="empty-container-text">Start Collaborating today !</p>
+                    }
+                </div>
+                <CampaignApplication 
+                    isOpen={openApplication} 
+                    onClose={() => setApplications(false)}
+                    campaign_id={campaign_id}
+                />
+            </div>
+            </>
+        )
+    }
 
     return (
         <>
@@ -126,7 +191,10 @@ const BrandCampaignFeed = () => {
                                     onClick={campaign.status === 0 ? () => {
                                         setfillForm(campaign);
                                         setLaunchCampaign(true);
-                                    } : () => {return}}
+                                    } : () => {
+                                        setApplications(true);
+                                        setCampaign(campaign.id);
+                                    }}
                                 >
         
                                     {/* Id */}
@@ -169,7 +237,7 @@ const BrandCampaignFeed = () => {
                                             handleStatus(campaign.id, campaign.status)
                                         }
                                     }>{
-                                        campaign.status === 0 ? "Go Live" : campaign.status === 1 ? "End" : ""    
+                                        campaign.status === 0 ? "Go Live" : campaign.status === 1 ? "End" : getStatus(campaign.status)    
                                     }</span>
                                     </td>
         
@@ -196,6 +264,11 @@ const BrandCampaignFeed = () => {
                             ))))}
                     </tbody>
                     </table>
+                    <CampaignApplication 
+                        isOpen={openApplication} 
+                        onClose={() => setApplications(false)}
+                        campaign_id={campaign_id}
+                    />
                     {/* Invisible Trigger Div */}
                     <div ref={ref} className="loading-trigger">
                         {isFetchingNextPage ? 'Loading more...' : ''}

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"log"
@@ -24,6 +25,36 @@ type MessageMeta struct {
 type MessageResponse struct {
 	Messages []chats.MessageResp `json:"messages"`
 	Meta     MessageMeta         `json:"meta"`
+}
+
+const (
+	timeOut = time.Second * 5
+)
+
+// handles what to do of the campaign conversation life-cycle
+// if the status given is to Activate -> Opens a new campaign
+// if the status is to End a campaign Cycle -> Invalidates the conversation
+// Participant One is always the user and Two is the brand of the campaign
+func (app *Application) handleCampaignConversation(
+	conv *chats.Conversation, newStatus int,
+) error {
+	if conv.CampaignID == nil {
+		return fmt.Errorf("campaign id is required for conversation")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeOut)
+	defer cancel()
+	switch newStatus {
+	case db.AcceptedStatus:
+		// the accepted status is an application status (1 for accepted)
+		// when the brand accepts an application a new conversation is registered
+		return app.msgHub.Store.CreateConversation(ctx, conv)
+	case db.ExpiredStatus:
+		// the expired status is a campaign status (3 for expired/ended)
+		// when the campaign decides to end a campaign, the conversation closes
+		return app.msgHub.Store.MarkCampaignConversationClosed(ctx, *conv.CampaignID)
+	}
+
+	return nil
 }
 
 func (app *Application) GetEntityConversations(c *gin.Context) {

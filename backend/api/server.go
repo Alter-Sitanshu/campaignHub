@@ -156,8 +156,9 @@ func (app *Application) AddRoutes(addr string, router *gin.Engine) {
 	{
 		applications.GET(":application_id", app.GetApplication)
 		applications.GET("/campaigns/:campaign_id", app.GetCampaignApplications)
-		applications.GET("/my-applications", app.GetCreatorApplications)        // query: offset, limit
-		applications.PATCH("/status/:application_id", app.SetApplicationStatus) // query: status
+		applications.GET("/my-applications", app.GetCreatorApplications) // query: offset, limit
+		applications.PUT("/accept/:application_id", app.AcceptApplication)
+		applications.PUT("/reject/:application_id", app.RejectApplication)
 		applications.DELETE("/delete/:application_id", app.DeleteApplication)
 		applications.POST("/:campaign_id", app.CreateApplication)
 	}

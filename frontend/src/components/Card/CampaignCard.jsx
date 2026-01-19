@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 
 
-const CampaignCard = ({ campaign, isBrand }) => {
+const CampaignCard = ({ campaign, isBrand, onClick }) => {
     const navigate = useNavigate();
     const [ Applied, setApplied ] = useState(false);
     const [ Applying, setApplying ] = useState(false);
@@ -26,6 +26,8 @@ const CampaignCard = ({ campaign, isBrand }) => {
             return 'Draft';
         case 1:
             return 'Active';
+        case 2:
+            return 'Pending';
         case 3:
             return 'Completed';
         default:
@@ -53,16 +55,8 @@ const CampaignCard = ({ campaign, isBrand }) => {
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     };
 
-    const formatCurrency = (amount) => {
-        return new Intl.NumberFormat('en-IN', {
-            style: 'currency',
-            currency: 'INR',
-            maximumFractionDigits: 0
-        }).format(amount);
-    };
-
     return (
-        <div className="campaign-card-wrapper">
+        <div className="campaign-card-wrapper" onClick={onClick}>
             <div className="campaign-card-header">
                 <div className="campaign-header-left">
                     <div>
@@ -111,7 +105,7 @@ const CampaignCard = ({ campaign, isBrand }) => {
                     disabled={Applying || Applied}
                 >{Applied ? "Applied" : Applying ? "Applying..." : "Apply Now"}</button>
                 )}
-                <a href="">Open Details</a>
+                <a href={campaign.doc_link}>Open Details</a>
             </div>
         </div>
     )

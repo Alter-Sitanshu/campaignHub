@@ -24,11 +24,13 @@ type CampaignApplication struct {
 }
 
 type ApplicationResponse struct {
-	Id         string `json:"id"`
-	CampaignId string `json:"campaign_id"`
-	CreatorId  string `json:"creator_id"`
-	Status     string `json:"status"`
-	CreatedAt  string `json:"created_at"`
+	Id          string `json:"id"`
+	CampaignId  string `json:"campaign_id"`
+	BrandId     string `json:"brand_id"`
+	CreatorId   string `json:"creator_id"`
+	CreatorName string `json:"creator_name"`
+	Status      int    `json:"status"`
+	CreatedAt   string `json:"created_at"`
 }
 
 type ApplicationFeedResponse struct {
@@ -48,15 +50,19 @@ func (s *ApplicationStore) GetApplicationByID(
 ) (ApplicationResponse, error) {
 	var appl ApplicationResponse
 	query := `
-		SELECT id, campaign_id, creator_id, status, created_at
-		FROM applications
-		WHERE id = $1
+		SELECT a.id, a.campaign_id, c.brand_id, a.creator_id, u.first_name, a.status, a.created_at
+		FROM applications a
+		LEFT JOIN campaigns c ON c.id = a.campaign_id
+		LEFT JOIN users u ON u.id = a.creator_id
+		WHERE a.id = $1
 	`
 	// trying to get the application by id
 	err := s.db.QueryRowContext(ctx, query, appl_id).Scan(
 		&appl.Id,
 		&appl.CampaignId,
+		&appl.BrandId,
 		&appl.CreatorId,
+		&appl.CreatorName,
 		&appl.Status,
 		&appl.CreatedAt,
 	)
@@ -125,7 +131,7 @@ func (s *ApplicationStore) GetCreatorApplications(
 }
 
 func (s *ApplicationStore) GetCampaignApplications(
-	ctx context.Context, campaign_id string, offset, limit int,
+	ctx context.Context, campaign_id string,
 ) ([]ApplicationResponse, error) {
 	if campaign_id == "" {
 		return nil, ErrInvalidId
@@ -133,14 +139,15 @@ func (s *ApplicationStore) GetCampaignApplications(
 	var output []ApplicationResponse
 	// latest first search
 	query := `
-		SELECT id, campaign_id, creator_id, status, created_at
-		FROM applications
-		WHERE campaign_id = $1
-		ORDER BY created_at DESC
-		OFFSET $2 LIMIT $3
+		SELECT a.id, a.campaign_id, c.brand_id, a.creator_id, u.first_name, a.status, a.created_at
+		FROM applications a
+		LEFT JOIN campaigns c ON c.id = a.campaign_id
+		LEFT JOIN users u ON u.id = a.creator_id
+		WHERE a.campaign_id = $1
+		ORDER BY a.created_at DESC
 	`
 	// trying to get the applications by creator_id
-	rows, err := s.db.QueryContext(ctx, query, campaign_id, offset, limit)
+	rows, err := s.db.QueryContext(ctx, query, campaign_id)
 	// error occured
 	if err != nil {
 		log.Printf("error while getting %s applications: %v", campaign_id, err.Error())
@@ -153,7 +160,9 @@ func (s *ApplicationStore) GetCampaignApplications(
 		err := rows.Scan(
 			&appl.Id,
 			&appl.CampaignId,
+			&appl.BrandId,
 			&appl.CreatorId,
+			&appl.CreatorName,
 			&appl.Status,
 			&appl.CreatedAt,
 		)

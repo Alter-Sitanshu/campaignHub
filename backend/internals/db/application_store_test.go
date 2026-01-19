@@ -186,7 +186,7 @@ func TestGetCampaignApplications(t *testing.T) {
 		cancel()
 	}()
 	t.Run("OK", func(t *testing.T) {
-		appls, err := MockApplicationStore.GetCampaignApplications(ctx, campIDs[0], 0, 10)
+		appls, err := MockApplicationStore.GetCampaignApplications(ctx, campIDs[0])
 		// errors are not expected
 		if err != nil {
 			t.Fail()
@@ -198,24 +198,24 @@ func TestGetCampaignApplications(t *testing.T) {
 	})
 	t.Run("invalid campaign_id", func(t *testing.T) {
 		// invalids campaign id requested
-		_, err := MockApplicationStore.GetCampaignApplications(ctx, "", 0, 10)
+		_, err := MockApplicationStore.GetCampaignApplications(ctx, "")
 		// errors are expected
 		if err == nil {
 			t.Fail()
 		}
 	})
-	t.Run("negative offset/limit", func(t *testing.T) {
-		_, err := MockApplicationStore.GetCampaignApplications(ctx, campIDs[0], -1, 10)
-		// errors are expected
-		if err == nil {
-			t.Fail()
-		}
-		_, err = MockApplicationStore.GetCampaignApplications(ctx, campIDs[0], 0, -1)
-		// errors are expected
-		if err == nil {
-			t.Fail()
-		}
-	})
+	// t.Run("negative offset/limit", func(t *testing.T) {
+	// 	_, err := MockApplicationStore.GetCampaignApplications(ctx, campIDs[0], -1, 10)
+	// 	// errors are expected
+	// 	if err == nil {
+	// 		t.Fail()
+	// 	}
+	// 	_, err = MockApplicationStore.GetCampaignApplications(ctx, campIDs[0], 0, -1)
+	// 	// errors are expected
+	// 	if err == nil {
+	// 		t.Fail()
+	// 	}
+	// })
 }
 
 func TestDestroyApplications(t *testing.T) {

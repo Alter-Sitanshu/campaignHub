@@ -15,6 +15,7 @@
   border-radius: 16px;
   box-shadow: 0 2px 8px rgba(5, 31, 32, 0.4);
   display: flex;
+  margin-bottom: 1rem;
   flex-direction: column;
   transition: all 0.3s ease;
   border: 1px solid rgba(35, 83, 71, 0.8);
@@ -22,6 +23,7 @@
 }
 
 .campaign-card-wrapper:hover {
+  cursor: pointer;
   box-shadow: 0 8px 24px rgba(5, 31, 32, 0.12);
 }
 

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Alter-Sitanshu/campaignHub/internals/chats"
 	"github.com/Alter-Sitanshu/campaignHub/internals/db"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -196,6 +197,9 @@ func (app *Application) StopCampaign(c *gin.Context) {
 	}
 	// invalidate the active campaign
 	app.cache.RemoveActiveCampaign(ctx, campaign.Id)
+	go app.handleCampaignConversation(&chats.Conversation{
+		CampaignID: &campaign.Id,
+	}, db.ExpiredStatus)
 	// successfully deleted the campaign
 	c.JSON(http.StatusNoContent, WriteResponse("campaign ended"))
 }

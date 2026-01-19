@@ -1,0 +1,177 @@
+/* CampaignApplications.css - Mobile First */
+
+.appl-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.appl-container {
+    background-color: white;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.appl-header {
+    padding: 16px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.appl-header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.appl-title {
+    font-size: 1.25rem;
+    font-weight: bold;
+    margin: 0;
+}
+
+.appl-subtitle {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin: 4px 0 0 0;
+}
+
+.appl-close-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+}
+
+.appl-close-icon {
+    width: 20px;
+    height: 20px;
+}
+
+.appl-body {
+    padding: 16px;
+}
+
+.application-overlay-card {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+    background-color: #f9fafb;
+}
+
+.application-info p {
+    margin: 4px 0;
+    font-size: 0.875rem;
+}
+
+.creator-name {
+    font-weight: 500;
+}
+
+.application-type {
+    color: #f48106;
+}
+
+.application-date {
+    color: #696863;
+}
+
+.application-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.status-accepted {
+    color: #10b981;
+}
+
+.status-rejected {
+    color: #ef4444;
+}
+
+
+.approve-btn, .reject-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.approve-btn {
+    background-color: #10b981;
+    color: white;
+}
+
+.approve-btn:hover {
+    background-color: #059669;
+}
+
+.reject-btn {
+    background-color: #ef4444;
+    color: white;
+}
+
+.reject-btn:hover {
+    background-color: #dc2626;
+}
+
+/* Tablet and larger screens */
+@media (min-width: 768px) {
+    .appl-container {
+        width: 80%;
+        max-width: 600px;
+    }
+
+    .application-card {
+        padding: 16px;
+    }
+
+    .application-actions {
+        justify-content: flex-end;
+    }
+}
+
+/* Desktop and larger */
+@media (min-width: 1024px) {
+    .appl-container {
+        width: 70%;
+        max-width: 700px;
+    }
+
+    .appl-body {
+        padding: 20px;
+    }
+
+    .application-card {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .application-info {
+        flex: 1;
+    }
+
+    .application-actions {
+        flex-shrink: 0;
+        margin-top: 0;
+    }
+}

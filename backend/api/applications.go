@@ -4,11 +4,13 @@ package api
 // A creator can apply for a campaign on the portal. Just like LinkedIn
 
 import (
+	"context"
 	"database/sql"
 	"log"
 	"net/http"
 	"strconv"
 
+	"github.com/Alter-Sitanshu/campaignHub/internals/chats"
 	"github.com/Alter-Sitanshu/campaignHub/internals/db"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -122,7 +124,7 @@ func (app *Application) GetCampaignApplications(c *gin.Context) {
 			return
 		default:
 			log.Printf("server error\n")
-			c.JSON(http.StatusInternalServerError, WriteError("internal server error"))
+			c.JSON(http.StatusInternalServerError, WriteError("internal server error. campaign"))
 			return
 		}
 	}
@@ -131,21 +133,11 @@ func (app *Application) GetCampaignApplications(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
-	limit, err := strconv.Atoi(c.Query("limit"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, WriteError("invalid query"))
-		return
-	}
-	offset, err := strconv.Atoi(c.Query("offset"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, WriteError("invalid query"))
-		return
-	}
 	appls, err := app.store.ApplicationInterface.GetCampaignApplications(
-		ctx, campaignID, offset, limit,
+		ctx, campaignID,
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, WriteError("internal server error"))
+		c.JSON(http.StatusInternalServerError, WriteError("internal server error. application"))
 		return
 	}
 
@@ -195,7 +187,7 @@ func (app *Application) GetCreatorApplications(c *gin.Context) {
 	}))
 }
 
-func (app *Application) SetApplicationStatus(c *gin.Context) {
+func (app *Application) AcceptApplication(c *gin.Context) {
 	ctx := c.Request.Context()
 	LogInUser, ok := c.Get("user")
 	if !ok {
@@ -215,37 +207,73 @@ func (app *Application) SetApplicationStatus(c *gin.Context) {
 		return
 	}
 
-	status := c.Query("status")
-	stat, err := strconv.Atoi(status)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, WriteError("status must be integer"))
-		return
-	}
 	// check if the application for the campaign belongs the brand
 	appl, err := app.store.ApplicationInterface.GetApplicationByID(ctx, applID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, WriteError("server error. try again"))
 		return
 	}
-	// get the brand of the campaign
-	camp, err := app.store.CampaignInterace.GetCampaign(ctx, appl.CampaignId)
+	if appl.BrandId != Entity.GetID() && Entity.GetRole() != "admin" {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised access denied"))
+		return
+	}
+	if err = app.setApplicationStatus(ctx, applID, db.AcceptedStatus); err != nil {
+		c.JSON(http.StatusInternalServerError, WriteError("server error. try again"))
+		return
+	}
+	go app.handleCampaignConversation(&chats.Conversation{
+		CampaignID:     &appl.CampaignId,
+		ParticipantOne: appl.CreatorId,
+		ParticipantTwo: appl.BrandId,
+		Type:           chats.CampaignBroad,
+	}, db.AcceptedStatus)
+	c.JSON(http.StatusNoContent, WriteResponse("application accepted"))
+}
+
+func (app *Application) RejectApplication(c *gin.Context) {
+	ctx := c.Request.Context()
+	LogInUser, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	Entity, ok := LogInUser.(db.AuthenticatedEntity)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+
+	applID := c.Param("application_id")
+	if ok := uuid.Validate(applID); ok != nil {
+		log.Printf("error: invalid application access: %v", applID)
+		c.JSON(http.StatusBadRequest, WriteError("application does not exist"))
+		return
+	}
+
+	// check if the application for the campaign belongs the brand
+	appl, err := app.store.ApplicationInterface.GetApplicationByID(ctx, applID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, WriteError("server error. try again"))
 		return
 	}
-	if camp.BrandId != Entity.GetID() && Entity.GetRole() != "admin" {
+	if appl.BrandId != Entity.GetID() && Entity.GetRole() != "admin" {
 		c.JSON(http.StatusUnauthorized, WriteError("unauthorised access denied"))
 		return
 	}
-	// try updating the status
-	err = app.store.ApplicationInterface.SetApplicationStatus(ctx, applID, stat)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, WriteError(err.Error()))
+	if err = app.setApplicationStatus(ctx, applID, db.RejectedStatus); err != nil {
+		c.JSON(http.StatusInternalServerError, WriteError("server error. try again"))
 		return
 	}
+	c.JSON(http.StatusNoContent, WriteResponse("application rejected"))
+}
 
-	// success on updating the status code
-	c.JSON(http.StatusNoContent, WriteResponse("status set successful"))
+func (app *Application) setApplicationStatus(ctx context.Context, applID string, status int) error {
+	// try updating the status
+	err := app.store.ApplicationInterface.SetApplicationStatus(ctx, applID, status)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (app *Application) DeleteApplication(c *gin.Context) {

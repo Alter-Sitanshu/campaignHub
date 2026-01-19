@@ -16,7 +16,7 @@ const (
 	OpenConvStatus  = 1
 	CloseConvStatus = 0
 	Direct          = "direct"
-	CamapignBroad   = "campaign"
+	CampaignBroad   = "campaign"
 )
 
 type Client struct {

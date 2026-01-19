@@ -1,0 +1,76 @@
+.appl-card-box {
+    display: flex;
+    flex-direction: column;
+    row-gap: 1rem;
+    justify-content: flex-start;
+}
+
+.application-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+    background-color: #ffffff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.application-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.application-campaign-name {
+    font-size: 18px;
+    font-weight: bold;
+    color: #333333;
+    margin: 0;
+    flex: 1;
+}
+
+.application-status {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+    color: #ffffff;
+}
+
+.application-status-rejected {
+    background-color: #dc3545;
+}
+
+.application-status-accepted {
+    background-color: #28a745;
+}
+
+.application-status-pending {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.application-status-unknown {
+    background-color: #6c757d;
+}
+
+.application-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.application-brand-name {
+    font-size: 14px;
+    color: #666666;
+    margin: 0;
+}
+
+.application-created-at {
+    font-size: 14px;
+    color: #666666;
+    margin: 0;
+}

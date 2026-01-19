@@ -275,6 +275,23 @@ func (hs *HubStore) MarkConversationClosed(ctx context.Context, ConvID string) e
 	return nil
 }
 
+func (hs *HubStore) MarkCampaignConversationClosed(ctx context.Context, CampaignID string) error {
+	query := `
+		UPDATE conversations
+		SET status = 'closed'
+		WHERE campaign_id = $1
+	`
+	rows, err := hs.db.ExecContext(ctx, query, CampaignID)
+	if count, _ := rows.RowsAffected(); count == 0 {
+		return nil
+	}
+	if err != nil {
+		log.Printf("error: %s", err.Error())
+		return err
+	}
+	return nil
+}
+
 func (hs *HubStore) SaveMessage(ctx context.Context, msg *Message) error {
 	query := `
 		INSERT INTO messages (client_id, id, conversation_id, sender_id, message_type, content, is_read)
