@@ -34,6 +34,13 @@ const (
 	ExpiredStatus int = 3
 )
 
+// macros for application status
+const (
+	AcceptedStatus int = 1
+	PendingStatus  int = 2
+	RejectedStatus int = 0
+)
+
 // macros for db errors
 var (
 	ErrServer           = errors.New("internal server error")
@@ -165,7 +172,7 @@ type Store struct {
 	ApplicationInterface interface {
 		GetApplicationByID(ctx context.Context, appl_id string) (ApplicationResponse, error)
 		GetCreatorApplications(ctx context.Context, creator_id string, offset, limit int) ([]ApplicationFeedResponse, bool, error)
-		GetCampaignApplications(ctx context.Context, campaign_id string, offset, limit int) ([]ApplicationResponse, error)
+		GetCampaignApplications(ctx context.Context, campaign_id string) ([]ApplicationResponse, error)
 		CreateApplication(ctx context.Context, appl CampaignApplication) error
 		SetApplicationStatus(ctx context.Context, appl_id string, status int) error
 		DeleteApplication(ctx context.Context, appl_id string) error

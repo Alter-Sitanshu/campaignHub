@@ -359,7 +359,9 @@ func (b *BrandStore) GetStats(ctx context.Context, brand_id string) (*BrandStat,
 
 		LEFT JOIN transactions t
 			ON t.from_id = b.id
-		WHERE b.id = $1
+			
+		GROUP BY b.id
+		HAVING b.id = $1
 	`
 	err := b.db.QueryRowContext(ctx, query, brand_id).Scan(
 		&output.BrandId,
