@@ -13,16 +13,60 @@ import FeatureCard from '../../components/Card/FeatureCard';
 import StepCard from '../../components/Card/StepCard';
 import { useAuth } from '../../AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { api } from "../../api.js";
 
 const Landing = () => {
     const navigate = useNavigate();
+    const [ coldStart, setColdStart ] = useState(true);
 
     let { user } = useAuth();
     useEffect(() => {
+        let isMounted = true;
+
+        const coldStart = async () => {
+            try {
+                await api.get("/"); // axios throws on non-2xx
+                if (isMounted) {
+                    setColdStart(false);
+                }
+            } catch (err) {
+                if (isMounted) {
+                    console.error("Cold start failed:", err);
+                }
+            }
+        };
+
+        coldStart();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
+    useEffect(() => {
         if(user) {
-            navigate(`${user.entity}/dashboard/${user.id}`)
+            navigate(`${user.entity}/dashboard/${user.id}`);
         }
     }, [user])
+
+    if (coldStart) {
+        return (
+            <div className="form-page">
+                <div style={{ 
+                    textAlign: 'center', paddingTop: '6rem', 
+                    display: 'flex', flexDirection: 'column',
+                    alignItems: 'center' 
+                }}>
+                    <p>Cold starting server. Please wait</p>
+                    <div className="loading-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+            </div>
+        )
+    }
 
     return (
         <>

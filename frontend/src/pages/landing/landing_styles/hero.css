@@ -182,3 +182,35 @@
         max-width: 700px;
     }
 }
+
+.loading-dots {
+    display: inline-block;
+    margin-top: 1rem;
+}
+
+.loading-dots span {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--primary-accent);
+    animation: loading 1.4s infinite ease-in-out both;
+    margin: 0 2px;
+}
+
+.loading-dots span:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.loading-dots span:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+@keyframes loading {
+    0%, 80%, 100% {
+        transform: scale(0);
+    }
+    40% {
+        transform: scale(1);
+    }
+}
