@@ -160,6 +160,6 @@ class WSClient {
 
 // create a singleton instance (use ws:// or wss:// depending on page origin)
 const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-// const host = "frogmedia.onrender.com";
-const host = "localhost:8080";
+const host = "frogmedia.onrender.com";
+// const host = "localhost:8080";
 export const socket = new WSClient(`${protocol}//${host}/api/v1/ws`);
