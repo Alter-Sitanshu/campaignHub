@@ -86,13 +86,14 @@ func (h *Hub) handleRegister(client *Client) error {
 	defer cancel()
 	// client id
 	id := client.ID
-	h.clientsMU.RLock()
-	defer h.clientsMU.RUnlock()
-	if _, exist := h.clients[id]; exist {
-		log.Printf("Client %s already registered\n", id)
-		return ErrRegisteredClient
+	h.clientsMU.Lock()
+	if oldClient, exist := h.clients[id]; exist {
+		log.Printf("Client %s already registered, unregistering old connection\n", id)
+		// Unregister the old client
+		h.handleUnregister(oldClient)
 	}
-	// New connection from client
+	h.clients[id] = client
+	h.clientsMU.Unlock()
 	h.clients[id] = client
 
 	// Load the clients data
@@ -134,14 +135,14 @@ func (h *Hub) handleRegister(client *Client) error {
 // Cleans up the spaces and channels
 // occupied by the disconnected client
 func (h *Hub) handleUnregister(client *Client) {
-	h.clientsMU.RLock()
+	h.clientsMU.Lock()
 	if _, ok := h.clients[client.ID]; ok {
 		// delete the client from the hub
 		delete(h.clients, client.ID)
 		// close the Send channel to stop any further sends
 		close(client.Send)
 	}
-	h.clientsMU.RUnlock()
+	h.clientsMU.Unlock()
 
 	// Remove from all brand follower lists
 	h.followersMu.Lock()
@@ -165,6 +166,9 @@ func (h *Hub) handleMessage(req *MessageRequest) {
 	// Process incoming message from client
 	ctx, cancel := context.WithTimeout(context.Background(), MessageTimeout)
 	defer cancel()
+	if req.Message.Type == "" {
+		req.Message.Type = "chat_message"
+	}
 	switch req.Message.Type {
 	// Handle 1-to-1 chat message
 	case "chat_message":
@@ -186,7 +190,7 @@ func (h *Hub) handleMessage(req *MessageRequest) {
 	case "unfollow_brand":
 		h.handleUnfollowBrand(ctx, req)
 	default:
-		log.Printf("Unknown message type: %s from client: %s", req.Message.Type, req.Client.ID)
+		log.Printf("Unknown message type: %q from client: %s", req.Message.Type, req.Client.ID)
 	}
 }
 

@@ -7,6 +7,8 @@ import (
 	"log"
 	"strconv"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type HubStore struct {
@@ -94,10 +96,11 @@ func (hs *HubStore) GetUserConversations(ctx context.Context, entity, entityID s
 		// TODO: later modify the database service to separate the direct conversations and
 		// campaign conversations. Here assume that the userid will always be in the participant_one
 		query = `
-			SELECT c.id, participant_two, b.name as participant_name , c.type, c.campaign_id, c.status,
+			SELECT c.id, c.participant_two, COALESCE(b.name, u2.first_name) as participant_name , c.type, c.campaign_id, c.status,
 			c.created_at, c.last_message_at, lm.content
 			FROM conversations c
 			LEFT JOIN brands b ON b.id = c.participant_two
+			LEFT JOIN users u2 ON u2.id = c.participant_two
 			LEFT JOIN LATERAL (
 				SELECT m.content
 				FROM messages m
@@ -105,12 +108,12 @@ func (hs *HubStore) GetUserConversations(ctx context.Context, entity, entityID s
 				ORDER BY m.created_at DESC
 				LIMIT 1
 			) lm ON TRUE
-			WHERE participant_one = $1 AND c.type = 'campaign'
+			WHERE c.participant_one = $1 AND (c.type = 'campaign' OR c.type = 'direct')
 			ORDER BY c.last_message_at DESC
 		`
 	case "brand":
 		query = `
-			SELECT c.id, participant_one, u.first_name as participant_name, c.type, c.campaign_id,
+			SELECT c.id, c.participant_one, u.first_name as participant_name, c.type, c.campaign_id,
 			c.status, c.created_at, c.last_message_at, lm.content
 			FROM conversations c
 			LEFT JOIN users u ON u.id = c.participant_one
@@ -121,7 +124,7 @@ func (hs *HubStore) GetUserConversations(ctx context.Context, entity, entityID s
 				ORDER BY m.created_at DESC
 				LIMIT 1
 			) lm ON TRUE
-			WHERE participant_two = $1 AND c.type = 'campaign'
+			WHERE c.participant_two = $1 AND c.type = 'campaign'
 			ORDER BY c.last_message_at DESC
 		`
 	}
@@ -216,6 +219,9 @@ func (hs *HubStore) GetConversationMessages(ctx context.Context, date time.Time,
 }
 
 func (hs *HubStore) CreateConversation(ctx context.Context, conv *Conversation) error {
+	if conv.ID == "" {
+		conv.ID = uuid.NewString()
+	}
 	query := `
 		INSERT INTO conversations
 		(id, participant_one, participant_two, type, campaign_id)

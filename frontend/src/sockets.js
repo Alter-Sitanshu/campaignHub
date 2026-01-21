@@ -8,9 +8,12 @@ class WSClient {
     this.connected = false;
     this.reconnectInterval = 2000;
     this._shouldReconnect = false;
+    this.pingInterval = null;
+    this.pingIntervalMs = 30000; // 30 seconds
   }
 
   connect() {
+    console.log("Websocket sonnection started");
     if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
       return;
     }
@@ -19,11 +22,13 @@ class WSClient {
 
     this.ws.addEventListener("open", () => {
       this.connected = true;
+      this._startPing();
       this._emitLocal("connect");
     });
 
     this.ws.addEventListener("close", () => {
       this.connected = false;
+      this._stopPing();
       this._emitLocal("disconnect");
       if (this._shouldReconnect) {
         setTimeout(() => this.connect(), this.reconnectInterval);
@@ -40,6 +45,7 @@ class WSClient {
 
   close() {
     this._shouldReconnect = false;
+    this._stopPing();
     if (this.ws) this.ws.close();
   }
 
@@ -77,6 +83,22 @@ class WSClient {
       } catch (err) {
         console.error("ws handler error", err);
       }
+    }
+  }
+
+  _startPing() {
+    this._stopPing(); // Clear any existing interval
+    this.pingInterval = setInterval(() => {
+      if (this.connected && this.ws && this.ws.readyState === WebSocket.OPEN) {
+        this.sendEvent("ping", { timestamp: Date.now() });
+      }
+    }, this.pingIntervalMs);
+  }
+
+  _stopPing() {
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
     }
   }
 
@@ -138,5 +160,6 @@ class WSClient {
 
 // create a singleton instance (use ws:// or wss:// depending on page origin)
 const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-const host = "frogmedia.onrender.com";
+// const host = "frogmedia.onrender.com";
+const host = "localhost:8080";
 export const socket = new WSClient(`${protocol}//${host}/api/v1/ws`);

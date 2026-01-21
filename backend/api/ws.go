@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/Alter-Sitanshu/campaignHub/internals/chats"
 	"github.com/Alter-Sitanshu/campaignHub/internals/db"
@@ -36,6 +37,13 @@ func (app *Application) WebSocketHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, WriteError("error: failed to upgrade websocket"))
 		return
 	}
+
+	conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+
+	conn.SetPongHandler(func(string) error {
+		conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		return nil
+	})
 
 	// Create client and register with hub
 	client := &chats.Client{
@@ -83,6 +91,10 @@ func wsReader(app *Application, client *chats.Client) {
 			log.Printf("invalid message payload from client %s: %v", client.ID, err)
 			continue
 		}
+		if incoming.Content == nil || incoming.ClientID == "" {
+			continue
+		}
+		log.Printf("Unmarshaled incoming from client %s: %+v", client.ID, incoming)
 		// Push into hub's processing queue
 		app.msgHub.SubmitMessage(&chats.MessageRequest{Client: client, Message: incoming})
 	}
@@ -90,12 +102,30 @@ func wsReader(app *Application, client *chats.Client) {
 
 // wsWriter writes payloads from the Hub to the client's websocket.
 func wsWriter(client *chats.Client) {
-	for payload := range client.Send {
-		if err := client.Conn.WriteMessage(websocket.TextMessage, payload); err != nil {
-			log.Printf("error writing to client %s: %v", client.ID, err)
-			break
+	ticker := time.NewTicker(30 * time.Second)
+	defer func() {
+		ticker.Stop()
+		client.Conn.Close()
+	}()
+
+	for {
+		select {
+		case <-ticker.C:
+			// Send ping
+			if err := client.Conn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
+				log.Printf("error sending ping to client %s: %v", client.ID, err)
+				return
+			}
+
+		case payload, ok := <-client.Send:
+			if !ok {
+				// Hub closed the channel
+				return
+			}
+			if err := client.Conn.WriteMessage(websocket.TextMessage, payload); err != nil {
+				log.Printf("error writing to client %s: %v", client.ID, err)
+				return
+			}
 		}
 	}
-	// When the send channel is closed, ensure underlying connection is closed
-	client.Conn.Close()
 }
