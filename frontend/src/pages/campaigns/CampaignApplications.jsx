@@ -3,7 +3,8 @@ import { api } from "../../api";
 import { X } from "lucide-react";
 import "./CampaignApplications.css";
 
-const CampaignApplication = ({ isOpen, campaign_id, onClose }) => {
+const CampaignApplication = ({ isOpen, campaign_id, onClose, accepting = false }) => {
+    const [ accept, setAccept ] = useState(accepting);
     const [ loading, setLoading ] = useState(true);
     const [ Message, setMessage ] = useState("Your Applications");
     const [ appls, setAppls ] = useState([]);
@@ -45,6 +46,16 @@ const CampaignApplication = ({ isOpen, campaign_id, onClose }) => {
         }
     };
 
+    const handleStopApplications = async () => {
+        try {
+            await api.put(`/campaigns/stop_applications/${campaign_id}`);
+            setAccept(false);
+        } catch (err) {
+            console.log(err);
+            // Handle error, maybe show message
+        }
+    }
+
     const handleReject = async (applicationId) => {
         try {
             await api.put(`/applications/reject/${applicationId}`);
@@ -67,6 +78,11 @@ const CampaignApplication = ({ isOpen, campaign_id, onClose }) => {
         }
     }, [isOpen]);
 
+    // Sync accept state with accepting prop
+    useEffect(() => {
+        setAccept(accepting);
+    }, [accepting]);
+
     if (!isOpen) return null;
     return (
         <div className="appl-overlay">
@@ -77,9 +93,19 @@ const CampaignApplication = ({ isOpen, campaign_id, onClose }) => {
                         <h2 className="appl-title">{Message}</h2>
                         <p className="appl-subtitle">Campaign Applications Below</p>
                     </div>
-                    <button onClick={onClose} className="appl-close-btn">
-                    <X className="appl-close-icon" />
-                    </button>
+                    <div className="appl-button-group">
+                        {accept ? 
+                            <button 
+                                onClick={handleStopApplications} 
+                                className="stop-applications-btn"
+                                disabled={!accept}
+                            >Stop Applications</button> : <p>Applications Closed</p>
+                        }
+                        <button onClick={onClose} className="appl-close-btn">
+                        <X className="appl-close-icon" />
+                        </button>
+                        
+                    </div>
                 </div>
                 </div>
 

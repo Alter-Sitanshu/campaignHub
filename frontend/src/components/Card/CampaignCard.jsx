@@ -102,8 +102,8 @@ const CampaignCard = ({ campaign, isBrand, onClick }) => {
             </div>
             <div className="campaign-card-footer">
                 {!isBrand && (<button onClick={handleApply}
-                    disabled={Applying || Applied}
-                >{Applied ? "Applied" : Applying ? "Applying..." : "Apply Now"}</button>
+                    disabled={Applying || Applied || !campaign.accepting_applications}
+                >{campaign.accepting_applications ? Applied ? "Applied" : Applying ? "Applying..." : "Apply Now" : "Applications Closed"}</button>
                 )}
                 <a href={campaign.doc_link}>Open Details</a>
             </div>

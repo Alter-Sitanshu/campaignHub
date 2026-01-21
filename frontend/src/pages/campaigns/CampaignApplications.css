@@ -79,6 +79,32 @@
     font-size: 0.875rem;
 }
 
+.appl-button-group {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.appl-button-group p {
+    color: grey;
+    margin: 0;
+}
+
+.stop-applications-btn {
+    padding: 0.4em;
+    border: none;
+    border-radius: 0.3rem;
+    background-color: #ef4444;;
+    color: white;
+    transition: all 0.2s ease-in;
+}
+
+.stop-applications-btn:hover {
+    cursor: pointer;
+    transform: translateY(-1px);
+    background-color: #dc2626;
+}
+
 .creator-name {
     font-weight: 500;
 }

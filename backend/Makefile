@@ -3,7 +3,7 @@ MIGRATION_PATH = database/migrations
 
 .PHONY: startdb migratedown migrateup migrateforce migration server test fresh-test
 startdb:
-	docker run project
+	docker start project
 
 migrateup:
 	@migrate -path $(MIGRATION_PATH) -database ${DB_ADDR} -verbose up

@@ -151,15 +151,52 @@ func (app *Application) ActivateCampaign(c *gin.Context) {
 		return
 	}
 
-	// delete the campaign
+	// activate the campaign
 	if err := app.store.CampaignInterace.ActivateCampaign(ctx, ID); err != nil {
 		c.JSON(http.StatusInternalServerError, WriteError("internal server error"))
 		return
 	}
-	// invalidate the active campaign
+	// validate the active campaign
 	app.cache.AddActiveCampaign(ctx, campaign.Id)
-	// successfully delted the campaign
+	// successfully activated the campaign
 	c.JSON(http.StatusNoContent, WriteResponse("campaign activated"))
+}
+
+func (app *Application) StopApplications(c *gin.Context) {
+	ctx := c.Request.Context()
+	LogInUser, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	Entity, ok := LogInUser.(db.AuthenticatedEntity)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	ID := c.Param("campaign_id")
+	if ok := uuid.Validate(ID); ok != nil {
+		c.JSON(http.StatusBadRequest, WriteError("invalid request"))
+		return
+	}
+	// fetch campaign details
+	campaign, err := app.store.CampaignInterace.GetCampaign(ctx, ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, WriteError("internal server error"))
+		return
+	}
+	if campaign.BrandId != Entity.GetID() && Entity.GetRole() != "admin" {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+
+	// activate the campaign
+	if err := app.store.CampaignInterace.StopApplications(ctx, ID); err != nil {
+		c.JSON(http.StatusInternalServerError, WriteError("internal server error"))
+		return
+	}
+	// successfully stopped the campaign applications
+	c.JSON(http.StatusNoContent, WriteResponse("applications stopped"))
 }
 
 func (app *Application) StopCampaign(c *gin.Context) {

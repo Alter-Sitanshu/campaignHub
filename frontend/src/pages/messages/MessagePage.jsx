@@ -320,6 +320,7 @@ const MessagePage = () => {
                 type="text"
                 placeholder="Type a message..."
                 value={input}
+                disabled={activeConv?.status === 'closed'}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && sendMessage()}
               />
@@ -327,7 +328,7 @@ const MessagePage = () => {
             <button
               className="send-button"
               onClick={sendMessage}
-              disabled={!input.trim()}
+              disabled={!input.trim() || activeConv?.status === 'closed'}
             >
               <Send />
               Send

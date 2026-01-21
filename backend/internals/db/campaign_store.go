@@ -36,10 +36,11 @@ type CampaignResp struct {
 	CPM     float64 `json:"cpm"`
 	Req     string  `json:"requirements"`
 	// added this to segregate the campaigns on the basis of platform
-	Platform  string `json:"platform"`
-	DocLink   string `json:"doc_link"`
-	Status    int    `json:"status"`
-	CreatedAt string `json:"created_at"`
+	Platform       string `json:"platform"`
+	DocLink        string `json:"doc_link"`
+	Status         int    `json:"status"`
+	AcceptingAppls bool   `json:"accepting_applications"`
+	CreatedAt      string `json:"created_at"`
 }
 
 // Update Campaign payload
@@ -106,16 +107,40 @@ func (c *CampaignStore) EndCampaign(ctx context.Context, id string) error {
 
 	query := `
 		UPDATE campaigns
-		SET status = $1
-		WHERE id = $2
+		SET status = $1 AND accepting_applications = $2
+		WHERE id = $3
 	`
-	_, err = tx.ExecContext(ctx, query, ExpiredStatus, id)
+	_, err = tx.ExecContext(ctx, query, ExpiredStatus, false, id)
 	if err != nil {
 		log.Printf("Error occured while closing campaign(%s): %v\n", id, err.Error())
 		return err
 	}
 
 	// successfully ended the campaign
+	return tx.Commit()
+}
+
+// Marks the campaign not accepting applications anymore
+func (c *CampaignStore) StopApplications(ctx context.Context, id string) error {
+	tx, err := c.db.BeginTx(ctx, nil)
+	if err != nil {
+		log.Printf("Error initialising transaction: %v\n", err.Error())
+		return err
+	}
+	defer tx.Rollback()
+
+	query := `
+		UPDATE campaigns
+		SET accepting_applications = $1
+		WHERE id = $2
+	`
+	_, err = tx.ExecContext(ctx, query, false, id)
+	if err != nil {
+		log.Printf("Error occured while stopping campaign(%s) applications: %v\n", id, err.Error())
+		return err
+	}
+
+	// successfully stopped the campaign applications
 	return tx.Commit()
 }
 
@@ -195,7 +220,7 @@ func (c *CampaignStore) GetRecentCampaigns(ctx context.Context, limit int, curso
 	// I added "status = 1" because "Active" campaigns should be on Feed
 	query := `
         SELECT c.id, c.brand_id, b.name AS brand_name, c.title, c.budget, c.cpm, 
-        c.requirements, c.platform, c.doc_link, c.status, c.created_at, c.seq
+        c.requirements, c.platform, c.doc_link, c.status, c.accepting_applications, c.created_at, c.seq
         FROM campaigns c
         LEFT JOIN brands b ON c.brand_id = b.id
         WHERE c.status = 1 AND NOT EXISTS (
@@ -249,6 +274,7 @@ func (c *CampaignStore) GetRecentCampaigns(ctx context.Context, limit int, curso
 			&row.Platform,
 			&row.DocLink,
 			&row.Status,
+			&row.AcceptingAppls,
 			&row.CreatedAt,
 			&nextCursor,
 		)
@@ -278,7 +304,7 @@ func (c *CampaignStore) GetBrandCampaigns(ctx context.Context, brandid string, l
 	)
 	query := `
 		SELECT id, title, budget, cpm, requirements, platform, doc_link, 
-		status, created_at, seq
+		status, accepting_applications, created_at, seq
 		FROM campaigns
 		WHERE brand_id = $1
 	`
@@ -322,6 +348,7 @@ func (c *CampaignStore) GetBrandCampaigns(ctx context.Context, brandid string, l
 			&row.Platform,
 			&row.DocLink,
 			&row.Status,
+			&row.AcceptingAppls,
 			&row.CreatedAt,
 			&nextCursor,
 		)
@@ -423,7 +450,7 @@ func (c *CampaignStore) GetMultipleCampaigns(ctx context.Context, campaignIDs []
 ) ([]CampaignResp, error) {
 	query := `
 		SELECT c.id, c.brand_id, b.name AS brand, c.title, c.budget, c.cpm, 
-		c.requirements, c.platform, c.doc_link, c.status, c.created_at
+		c.requirements, c.platform, c.doc_link, c.status, c.accepting_applications c.created_at
 		FROM campaigns c
 		LEFT JOIN brands b ON c.brand_id = b.id
 		WHERE c.id IN $1
@@ -448,6 +475,7 @@ func (c *CampaignStore) GetMultipleCampaigns(ctx context.Context, campaignIDs []
 			&row.Platform,
 			&row.DocLink,
 			&row.Status,
+			&row.AcceptingAppls,
 			&row.CreatedAt,
 		)
 		if err != nil {
@@ -464,7 +492,7 @@ func (c *CampaignStore) GetMultipleCampaigns(ctx context.Context, campaignIDs []
 func (c *CampaignStore) GetCampaign(ctx context.Context, id string) (*CampaignResp, error) {
 	query := `
 		SELECT c.id, c.brand_id, b.name AS brand, c.title, c.budget, c.cpm, 
-		c.requirements, c.platform, c.doc_link, c.status, c.created_at
+		c.requirements, c.platform, c.doc_link, c.status, c.accepting_applications, c.created_at
 		FROM campaigns c
 		LEFT JOIN brands b ON c.brand_id = b.id
 		WHERE c.id = $1
@@ -481,6 +509,7 @@ func (c *CampaignStore) GetCampaign(ctx context.Context, id string) (*CampaignRe
 		&row.Platform,
 		&row.DocLink,
 		&row.Status,
+		&row.AcceptingAppls,
 		&row.CreatedAt,
 	)
 	if err != nil {

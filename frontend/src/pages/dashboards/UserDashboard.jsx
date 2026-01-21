@@ -232,7 +232,7 @@ const UserDashboard = () => {
                             </div>
                         )}
                         {activeTab === 'applications' && (<UserApplicationFeed />)}
-                        {activeTab === 'messages' && navigate(`/userss/dashboard/${user.id}/messages`)}
+                        {activeTab === 'messages' && navigate(`/users/dashboard/${user.id}/messages`)}
                         {activeTab === 'analytics' && (<Analytics />)}
                         {activeTab === 'feed' && (<Feed />)}
                         {activeTab === 'profile' && (<Profile entity={"users"}/>)}

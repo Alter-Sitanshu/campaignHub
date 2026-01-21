@@ -128,6 +128,7 @@ type Store struct {
 		LaunchCampaign(context.Context, *Campaign) error
 		EndCampaign(context.Context, string) error
 		ActivateCampaign(context.Context, string) error
+		StopApplications(context.Context, string) error
 		UpdateCampaign(context.Context, string, UpdateCampaign) error
 		GetRecentCampaigns(ctx context.Context, limit int, cursorSeq, id string) ([]CampaignResp, int64, bool, error)
 		GetBrandCampaigns(ctx context.Context, brandID string, limit int, cursorSeq string) ([]CampaignResp, int64, bool, error)

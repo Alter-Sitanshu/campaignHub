@@ -13,6 +13,7 @@ const BrandCampaignFeed = () => {
     const [ fillForm, setfillForm ] = useState(null);
     const [ openApplication, setApplications ] = useState(false);
     const [ campaign_id , setCampaign ] = useState("");
+    const [ accept_appl, setAcceptApplication ] = useState(true);
     const [width, setWidth] = useState(window.outerWidth);
     const { user } = useAuth();
     const queryClient = useQueryClient();
@@ -139,6 +140,7 @@ const BrandCampaignFeed = () => {
                     isOpen={openApplication} 
                     onClose={() => setApplications(false)}
                     campaign_id={campaign_id}
+                    accepting={accept_appl}
                 />
             </div>
             </>
@@ -194,6 +196,7 @@ const BrandCampaignFeed = () => {
                                     } : () => {
                                         setApplications(true);
                                         setCampaign(campaign.id);
+                                        setAcceptApplication(campaign.accepting_applications)
                                     }}
                                 >
         
@@ -268,6 +271,7 @@ const BrandCampaignFeed = () => {
                         isOpen={openApplication} 
                         onClose={() => setApplications(false)}
                         campaign_id={campaign_id}
+                        accepting={accept_appl}
                     />
                     {/* Invisible Trigger Div */}
                     <div ref={ref} className="loading-trigger">

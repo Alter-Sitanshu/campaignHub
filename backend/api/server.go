@@ -148,6 +148,7 @@ func (app *Application) AddRoutes(addr string, router *gin.Engine) {
 		campaigns.POST("", app.CreateCampaign)
 		campaigns.PUT("/stop/:campaign_id", app.StopCampaign)
 		campaigns.PUT("/activate/:campaign_id", app.ActivateCampaign)
+		campaigns.PUT("/stop_applications/:campaign_id", app.StopApplications)
 		campaigns.DELETE("/:campaign_id", app.DeleteCampaign)
 		campaigns.PATCH("/:campaign_id", app.UpdateCampaign)
 	}
@@ -236,7 +237,8 @@ func NewApplication(addr string, store *db.Store, cfg *Config, JWT, PASETO auth.
 	// Adding CORS
 	router.Use(cors.New(cors.Config{
 		AllowOrigins: []string{
-			"https://frogmedia-tawny.vercel.app",
+			// "https://frogmedia-tawny.vercel.app",
+			"http://localhost:5173",
 		},
 		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders: []string{
