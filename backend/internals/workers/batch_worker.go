@@ -2,6 +2,7 @@ package workers
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -84,6 +85,13 @@ func (w *BatchWorker) processBatch(ctx context.Context) {
 	// Update creator balances
 	if err := w.repo.BatchInterface.BatchUpdateCreatorBalances(ctx, groupedUpdates.CreatorBalances); err != nil {
 		log.Printf("Batch creator balance update failed: %v", err)
+	} else {
+		// Invalidate user profile cache for all creators so balance is refreshed from DB
+		for creatorID := range groupedUpdates.CreatorBalances {
+			if err := w.cache.Delete(ctx, fmt.Sprintf("user:%s", creatorID)); err != nil {
+				log.Printf("Failed to invalidate profile cache for creator %s: %v", creatorID, err)
+			}
+		}
 	}
 
 	// Update campaign budgets

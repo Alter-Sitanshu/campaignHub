@@ -39,9 +39,8 @@ func (r *BatchRepository) BatchUpdateSubmissions(ctx context.Context, updates []
             earnings = earnings + $2,
             like_count = $3,
             video_title = COALESCE(NULLIF($4, ''), video_title),
-            metadata_last_updated = NOW(),
             last_synced_at = NOW()
-        WHERE id = $6
+        WHERE id = $5
             AND views + $1 >= 0
     `)
 	if err != nil {
@@ -90,9 +89,9 @@ func (r *BatchRepository) BatchUpdateCreatorBalances(ctx context.Context, update
 	defer tx.Rollback()
 
 	stmt, err := tx.PrepareContext(ctx, `
-        UPDATE users 
-        SET balance = balance + $1 
-        WHERE id = $2
+        UPDATE accounts 
+        SET amount = amount + $1 
+        WHERE holder_id = $2
     `)
 	if err != nil {
 		return err

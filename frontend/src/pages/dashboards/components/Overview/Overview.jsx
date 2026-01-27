@@ -5,9 +5,11 @@ import SubCard from "../../../../components/Card/SubCard";
 import { IndianRupeeIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "../../../../api";
+import TicketForm from "../../../../components/Tickets/TicketForm";
 
 const Overview = ({ stats, campaigns, isUser = false }) => {
     const { user } = useAuth();
+    const [isFeedbackOpen, setFeedbackOpen] = useState(false);
 
     if (!stats || !user) {
         return (
@@ -96,6 +98,8 @@ const Overview = ({ stats, campaigns, isUser = false }) => {
                     </div>
                 )}
             </div>
+            <button onClick={() => setFeedbackOpen(true)} className="feedback-btn">Feedback</button>
+            <TicketForm isOpen={isFeedbackOpen} onClose={() => setFeedbackOpen(false)}/>
         </div>
     )
 };
