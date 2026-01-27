@@ -1,6 +1,15 @@
 /* ---------- Card container ---------- */
 .submissions-table-wrapper {
-  padding-top: 0.2rem;
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1.1rem;
+  overflow-x: auto;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
 }
 .sub-card.detailed {
   height: fit-content;
@@ -9,7 +18,7 @@
   display: flex;
   gap: 18px;
   border-radius: 12px;
-  background: var(--bg-light);
+  background: var(--cyber-green);
   color: var(--text-dark);
   border: 1px solid rgba(22,56,50,0.06);
   box-shadow: 0 6px 18px rgba(22,56,50,0.06);

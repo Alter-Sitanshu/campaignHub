@@ -157,7 +157,8 @@ func (app *Application) AddRoutes(addr string, router *gin.Engine) {
 	{
 		applications.GET(":application_id", app.GetApplication)
 		applications.GET("/campaigns/:campaign_id", app.GetCampaignApplications)
-		applications.GET("/my-applications", app.GetCreatorApplications) // query: offset, limit
+		applications.GET("/my-applications", app.GetCreatorApplications)                             // query: offset, limit
+		applications.GET("/my-applications/available", app.GetCreatorApplicationsWithoutSubmissions) // query: offset, limit
 		applications.PUT("/accept/:application_id", app.AcceptApplication)
 		applications.PUT("/reject/:application_id", app.RejectApplication)
 		applications.DELETE("/delete/:application_id", app.DeleteApplication)
@@ -178,7 +179,7 @@ func (app *Application) AddRoutes(addr string, router *gin.Engine) {
 	submission := base.Group("/submissions", app.AuthMiddleware())
 	{
 		submission.GET("", app.FilterSubmissions)               // query: creator_id, campaign_id, time
-		submission.GET("/my-submissions", app.GetMySubmissions) // query: time
+		submission.GET("/my-submissions", app.GetMySubmissions) // query: time, limit, offset
 		submission.GET("/:sub_id", app.GetSubmission)
 		submission.POST("", app.CreateSubmission)
 		submission.DELETE("/:sub_id", app.DeleteSubmission)
@@ -309,14 +310,14 @@ func (app *Application) Run() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	app.workers.SetCancel(cancel)
 	app.wg.Add(3) // One for each service running
+	go func() {
+		defer app.wg.Done()
+		app.workers.Poll.Start(ctx)
+	}()
 	// Start the batch workers go routines
 	go func() {
 		defer app.wg.Done()
 		app.workers.Batch.Start(ctx)
-	}()
-	go func() {
-		defer app.wg.Done()
-		app.workers.Poll.Start(ctx)
 	}()
 
 	// Start the Sockets Hub in a go routine

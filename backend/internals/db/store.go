@@ -148,7 +148,7 @@ type Store struct {
 		MakeSubmission(context.Context, Submission) error
 		DeleteSubmission(context.Context, string) error
 		FindSubmissionById(context.Context, string) (*Submission, error)
-		FindSubmissionsByFilters(context.Context, Filter, int, int) ([]Submission, error)
+		FindSubmissionsByFilters(context.Context, Filter, int, int) ([]Submission, bool, error)
 		FindMySubmissions(ctx context.Context, time_ string, subids []string, limit, offset int) ([]Submission, error)
 		UpdateSubmission(context.Context, UpdateSubmission) error
 		ChangeViews(ctx context.Context, delta int, id string) error
@@ -173,6 +173,7 @@ type Store struct {
 	ApplicationInterface interface {
 		GetApplicationByID(ctx context.Context, appl_id string) (ApplicationResponse, error)
 		GetCreatorApplications(ctx context.Context, creator_id string, offset, limit int) ([]ApplicationFeedResponse, bool, error)
+		GetCreatorApplicationsWithoutSubmissions(ctx context.Context, creator_id string) ([]ApplicationFeedResponse, error)
 		GetCampaignApplications(ctx context.Context, campaign_id string) ([]ApplicationResponse, error)
 		CreateApplication(ctx context.Context, appl CampaignApplication) error
 		SetApplicationStatus(ctx context.Context, appl_id string, status int) error

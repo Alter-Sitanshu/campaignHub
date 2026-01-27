@@ -1,0 +1,84 @@
+/* SubmissionsModal.css */
+
+.submissions-modal .modal-container {
+  max-width: 500px;
+}
+
+.submissions-modal .loading-container {
+  text-align: center;
+  padding: 2rem;
+}
+
+.submissions-modal .loading-spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 3px solid #e5e7eb;
+  border-top-color: #059669;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+.submissions-modal .applications-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.submissions-modal .application-card {
+  padding: 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  background-color: white;
+}
+
+.submissions-modal .application-card:hover {
+  border-color: #059669;
+  background-color: #f0fdf4;
+}
+
+.submissions-modal .application-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.submissions-modal .application-info h4 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.submissions-modal .application-info p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.submissions-modal .application-icon {
+  color: #059669;
+}
+
+.submissions-modal .empty-state {
+  text-align: center;
+  padding: 2rem;
+}
+
+.submissions-modal .empty-state p {
+  color: #6b7280;
+  margin-bottom: 1rem;
+}
+
+.submissions-modal .empty-state p:last-child {
+  font-size: 0.875rem;
+  color: #9ca3af;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

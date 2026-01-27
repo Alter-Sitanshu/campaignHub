@@ -44,10 +44,10 @@ const Landing = () => {
     }, []);
 
     useEffect(() => {
-        if(user) {
+        if(user && !coldStart) {
             navigate(`${user.entity}/dashboard/${user.id}`);
         }
-    }, [user])
+    }, [user, coldStart])
 
     if (coldStart) {
         return (

@@ -14,9 +14,10 @@ import (
 )
 
 type resp struct {
-	Id       string `json:"id"`
-	Username string `json:"username"`
-	Email    string `json:"email"`
+	Id            string `json:"id"`
+	Username      string `json:"username"`
+	Email         string `json:"email"`
+	AccountExists bool   `json:"account_exists"`
 }
 
 // Just a dummy function that helps in checking if the server is working fine
@@ -126,9 +127,10 @@ func (app *Application) Login(c *gin.Context) {
 			return
 		}
 		response = resp{
-			Id:       user.Id,
-			Username: user.FirstName,
-			Email:    user.Email,
+			Id:            user.Id,
+			Username:      user.FirstName,
+			Email:         user.Email,
+			AccountExists: user.AccountExists,
 		}
 	case "brands":
 		brand, err := app.store.BrandInterface.GetBrandByEmail(ctx, payload.Email)
@@ -168,9 +170,10 @@ func (app *Application) Login(c *gin.Context) {
 			return
 		}
 		response = resp{
-			Id:       brand.Id,
-			Username: brand.Name,
-			Email:    brand.Email,
+			Id:            brand.Id,
+			Username:      brand.Name,
+			Email:         brand.Email,
+			AccountExists: brand.AccountExists,
 		}
 	}
 	// --> Assign it to the cookie

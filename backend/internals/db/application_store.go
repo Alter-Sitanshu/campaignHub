@@ -35,6 +35,7 @@ type ApplicationResponse struct {
 
 type ApplicationFeedResponse struct {
 	Id            string `json:"id"`
+	CampaignId    string `json:"campaign_id"`
 	CampaignTitle string `json:"campaign_name"`
 	Brand         string `json:"brand_name"`
 	Status        int    `json:"status"`
@@ -88,7 +89,7 @@ func (s *ApplicationStore) GetCreatorApplications(
 	var hasMore = false
 	// latest first search
 	query := `
-		SELECT a.id, c.title, b.name, a.status, a.created_at
+		SELECT a.id, a.campaign_id, c.title, b.name, a.status, a.created_at
 		FROM applications a
 		LEFT JOIN campaigns c ON c.id = a.campaign_id
 		LEFT JOIN brands b ON b.id = c.brand_id
@@ -109,6 +110,7 @@ func (s *ApplicationStore) GetCreatorApplications(
 		// trying to get the application
 		err := rows.Scan(
 			&appl.Id,
+			&appl.CampaignId,
 			&appl.CampaignTitle,
 			&appl.Brand,
 			&appl.Status,
@@ -245,4 +247,57 @@ func (s *ApplicationStore) DeleteApplication(
 	}
 	// successfully deleted the application status
 	return nil
+}
+
+func (s *ApplicationStore) GetCreatorApplicationsWithoutSubmissions(
+	ctx context.Context, creator_id string,
+) ([]ApplicationFeedResponse, error) {
+	if creator_id == "" {
+		return nil, ErrInvalidId
+	}
+	var output []ApplicationFeedResponse
+	// Get applications that don't have submissions yet
+	query := `
+		SELECT a.id, a.campaign_id, c.title, b.name, a.status, a.created_at
+		FROM applications a
+		LEFT JOIN campaigns c ON c.id = a.campaign_id
+		LEFT JOIN brands b ON b.id = c.brand_id
+		WHERE a.creator_id = $1
+		AND a.status = $2
+		AND NOT EXISTS (
+			SELECT 1 FROM submissions s
+			WHERE s.creator_id = a.creator_id
+			AND s.campaign_id = a.campaign_id
+		)
+		ORDER BY a.created_at DESC
+	`
+	// trying to get the applications by creator_id that don't have submissions
+	rows, err := s.db.QueryContext(ctx, query, creator_id, ApplicationApprove)
+	// error occured
+	if err != nil {
+		log.Printf("error while getting %s applications without submissions: %v", creator_id, err.Error())
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var appl ApplicationFeedResponse
+		// trying to get the application
+		err := rows.Scan(
+			&appl.Id,
+			&appl.CampaignId,
+			&appl.CampaignTitle,
+			&appl.Brand,
+			&appl.Status,
+			&appl.CreatedAt,
+		)
+		// error occured
+		if err != nil {
+			log.Printf("error while getting application: %v", err.Error())
+			return nil, err
+		}
+		output = append(output, appl)
+	}
+
+	// successfully got user applications without submissions
+	return output, nil
 }

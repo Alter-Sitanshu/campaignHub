@@ -20,11 +20,12 @@ type SubmissionPayload struct {
 	CreatorId  string `json:"creator_id" binding:"required"`
 	CampaignId string `json:"campaign_id" binding:"required"`
 	Url        string `json:"url" binding:"required"`
-	Status     int    `json:"status" binding:"required,oneof=1 0 3"`
+	Status     *int   `json:"status" binding:"required,oneof=1 0 3"`
 }
 
 type SubmissionResponse struct {
 	Submissions []Submission `json:"submissions"`
+	HasMore     bool         `json:"has_more"`
 }
 
 type Submission struct {
@@ -42,6 +43,7 @@ type Submission struct {
 	VideoStatus  string  `json:"video_status"`
 	Earnings     float64 `json:"earnings"`
 	LastSyncedAt string  `json:"last_synced_at"`
+	CreatedAt    string  `json:"created_at"`
 	URL          string  `json:"url"`
 }
 
@@ -74,7 +76,7 @@ func (app *Application) CreateSubmission(c *gin.Context) {
 		CreatorId:   payload.CreatorId,
 		CampaignId:  payload.CampaignId,
 		Url:         payload.Url,
-		Status:      payload.Status,
+		Status:      *payload.Status,
 		VideoStatus: "active",
 	}
 
@@ -93,7 +95,7 @@ func (app *Application) CreateSubmission(c *gin.Context) {
 		return
 	}
 
-	Data := data.(platform.VideoMetadata) // convert the meta data type into desired struct
+	Data := data.(*platform.VideoMetadata) // convert the meta data type into desired struct
 
 	ext, _ := mime.ExtensionsByType(Data.Thumbnails.ContentType)
 	extension := ext[0]
@@ -271,7 +273,7 @@ func (app *Application) FilterSubmissions(c *gin.Context) {
 		}
 	}
 	// get the filtered submissions
-	output, err := app.store.SubmissionInterface.FindSubmissionsByFilters(ctx, filter, limit, offset)
+	output, hasMore, err := app.store.SubmissionInterface.FindSubmissionsByFilters(ctx, filter, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, WriteError("server error"))
 		return
@@ -316,7 +318,11 @@ func (app *Application) FilterSubmissions(c *gin.Context) {
 	}
 
 	// successfully filtered
-	c.JSON(http.StatusOK, WriteResponse(resp))
+	response := SubmissionResponse{
+		Submissions: resp,
+		HasMore:     hasMore,
+	}
+	c.JSON(http.StatusOK, WriteResponse(response))
 }
 
 func (app *Application) UpdateSubmission(c *gin.Context) {
@@ -544,53 +550,53 @@ func (app *Application) GetMySubmissions(c *gin.Context) {
 	}
 	// get the user submissions
 	// check cache for the user submissions
-	subids, err := app.cache.GetCreatorSubmissions(ctx, UserID)
-	// Cache Hit
-	if err == nil && len(subids) != 0 {
-		var output []Submission
-		submissions, err := app.store.SubmissionInterface.FindMySubmissions(ctx, time_, subids, limit, offset)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, WriteError("server error"))
-			return
-		}
-		var temp db.Submission
-		for i := range submissions {
-			temp = submissions[i]
-			var resp Submission = Submission{
-				SubmissionID: temp.Id,
-				CreatorID:    temp.CreatorId,
-				CampaignID:   temp.CampaignId,
-				UploadedAt:   temp.CreatedAt,
-				Status:       temp.Status,
-				Earnings:     temp.Earnings,
-				LikeCount:    temp.LikeCount,
-				Views:        temp.Views,
-				LastSyncedAt: temp.LastSyncedAt,
-				URL:          temp.Url,
-			}
-			amt, err := app.cache.GetSubmissionEarnings(ctx, temp.Id)
-			if err == nil {
-				resp.Earnings = amt
-			}
-			meta, err := app.cache.GetVideoMetadata(ctx, temp.Id)
-			if err == nil {
-				resp.VideoID = meta.VideoID
-				resp.Title = meta.Title
-				resp.Thumbnail = meta.Thumbnail.ObjKey
-				resp.LikeCount = meta.LikeCount
-				resp.Views = meta.ViewCount
-				resp.Platform = meta.Platform
-			}
-			status, err := app.cache.GetSubmissionStatus(ctx, temp.Id)
-			if err == nil {
-				resp.Status = status
-			}
-			output = append(output, resp)
-		}
-		// successfully filtered
-		c.JSON(http.StatusOK, WriteResponse(output))
-		return
-	}
+	// subids, err := app.cache.GetCreatorSubmissions(ctx, UserID)
+	// // Cache Hit
+	// if err == nil && len(subids) != 0 {
+	// 	var output []Submission
+	// 	submissions, err := app.store.SubmissionInterface.FindMySubmissions(ctx, time_, subids, limit, offset)
+	// 	if err != nil {
+	// 		c.JSON(http.StatusInternalServerError, WriteError("server error"))
+	// 		return
+	// 	}
+	// 	var temp db.Submission
+	// 	for i := range submissions {
+	// 		temp = submissions[i]
+	// 		var resp Submission = Submission{
+	// 			SubmissionID: temp.Id,
+	// 			CreatorID:    temp.CreatorId,
+	// 			CampaignID:   temp.CampaignId,
+	// 			UploadedAt:   temp.CreatedAt,
+	// 			Status:       temp.Status,
+	// 			Earnings:     temp.Earnings,
+	// 			LikeCount:    temp.LikeCount,
+	// 			Views:        temp.Views,
+	// 			LastSyncedAt: temp.LastSyncedAt,
+	// 			URL:          temp.Url,
+	// 		}
+	// 		amt, err := app.cache.GetSubmissionEarnings(ctx, temp.Id)
+	// 		if err == nil {
+	// 			resp.Earnings = amt
+	// 		}
+	// 		meta, err := app.cache.GetVideoMetadata(ctx, temp.Id)
+	// 		if err == nil {
+	// 			resp.VideoID = meta.VideoID
+	// 			resp.Title = meta.Title
+	// 			resp.Thumbnail = meta.Thumbnail.ObjKey
+	// 			resp.LikeCount = meta.LikeCount
+	// 			resp.Views = meta.ViewCount
+	// 			resp.Platform = meta.Platform
+	// 		}
+	// 		status, err := app.cache.GetSubmissionStatus(ctx, temp.Id)
+	// 		if err == nil {
+	// 			resp.Status = status
+	// 		}
+	// 		output = append(output, resp)
+	// 	}
+	// 	// successfully filtered
+	// 	c.JSON(http.StatusOK, WriteResponse(output))
+	// 	return
+	// }
 
 	// in case cache miss
 	filter := db.Filter{
@@ -598,7 +604,7 @@ func (app *Application) GetMySubmissions(c *gin.Context) {
 		Time:      &time_,
 	}
 	// Database scan for user submissions
-	output, err := app.store.SubmissionInterface.FindSubmissionsByFilters(ctx, filter, limit, offset)
+	output, hasMore, err := app.store.SubmissionInterface.FindSubmissionsByFilters(ctx, filter, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, WriteError("server error"))
 		return
@@ -618,6 +624,7 @@ func (app *Application) GetMySubmissions(c *gin.Context) {
 			CreatorID:    temp.CreatorId,
 			CampaignID:   temp.CampaignId,
 			UploadedAt:   temp.CreatedAt,
+			CreatedAt:    temp.CreatedAt,
 			Status:       temp.Status,
 			Earnings:     temp.Earnings,
 			LikeCount:    temp.LikeCount,
@@ -644,5 +651,9 @@ func (app *Application) GetMySubmissions(c *gin.Context) {
 	}
 
 	// successfully filtered
-	c.JSON(http.StatusOK, WriteResponse(resp))
+	response := SubmissionResponse{
+		Submissions: resp,
+		HasMore:     hasMore,
+	}
+	c.JSON(http.StatusOK, WriteResponse(response))
 }

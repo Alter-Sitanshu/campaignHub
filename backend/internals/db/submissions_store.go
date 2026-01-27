@@ -143,7 +143,7 @@ func (s *SubmissionStore) FindSubmissionById(ctx context.Context, id string) (*S
 // This function filters submissions using filter struct
 // It accepts the Time in format "MM-YYYY"
 func (s *SubmissionStore) FindSubmissionsByFilters(
-	ctx context.Context, filter Filter, limit, offset int) ([]Submission, error,
+	ctx context.Context, filter Filter, limit, offset int) ([]Submission, bool, error,
 ) {
 	var output []Submission
 	query := `
@@ -173,7 +173,7 @@ func (s *SubmissionStore) FindSubmissionsByFilters(
 	if filter.Time != nil && *filter.Time != "" {
 		t, err := time.Parse("01-2006", *filter.Time) // "MM-YYYY"
 		if err != nil {
-			return nil, fmt.Errorf("invalid time format: %v", err)
+			return nil, false, fmt.Errorf("invalid time format: %v", err)
 		}
 
 		month := int(t.Month())
@@ -183,16 +183,21 @@ func (s *SubmissionStore) FindSubmissionsByFilters(
 		args = append(args, month, year)
 		i += 2
 	}
-
 	// building the final query
 	queryBuilder.WriteString(strings.Join(conditions, " AND "))
+	// add the limit and offset constraints
+	queryBuilder.WriteString(
+		fmt.Sprintf(" LIMIT $%d OFFSET $%d", i, i+1),
+	)
+	args = append(args, limit+1, offset)
+	i += 2
 	query = queryBuilder.String()
 
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		// internal server error
 		log.Printf("error filtering submissions: %v, %v, %v", query, args, err.Error())
-		return nil, err
+		return nil, false, err
 	}
 	defer rows.Close()
 	for rows.Next() {
@@ -213,13 +218,14 @@ func (s *SubmissionStore) FindSubmissionsByFilters(
 		// append to the output
 		if err != nil {
 			log.Printf("error scanning submission: %v", err.Error())
-			return nil, err
+			return nil, false, err
 		}
 		output = append(output, sub)
 	}
-
+	hasMore := len(output) > limit
+	n := min(limit, len(output)) // the minimum boundary of the array output
 	// successful filtering
-	return output, nil
+	return output[:n], hasMore, nil
 }
 
 func (s *SubmissionStore) FindMySubmissions(ctx context.Context, time_ string,

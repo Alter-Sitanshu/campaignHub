@@ -9,6 +9,7 @@ import { useAuth } from "../../AuthContext";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../api";
 import UserApplicationFeed from "./components/Feed/UserApplicationFeed";
+import Submissions from "./components/Feed/Submissions";
 
 const UserDashboard = () => {
     const navigate = useNavigate();
@@ -86,7 +87,24 @@ const UserDashboard = () => {
     }, [loading, user]);
 
 
-    if (loading || isPageLoading) return <div>Loading...</div>;
+    if (loading || isPageLoading) {
+        return (
+            <div className="form-page">
+                <div style={{ 
+                    textAlign: 'center', paddingTop: '6rem', 
+                    display: 'flex', flexDirection: 'column',
+                    alignItems: 'center' 
+                }}>
+                    <p>Loading... Please wait</p>
+                    <div className="loading-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+            </div>
+        )
+    };
 
     const handleLogout = () => {
         logout();
@@ -214,23 +232,7 @@ const UserDashboard = () => {
                     </header>
                     <main className="content-area">
                         {activeTab === "overview" && ( <Overview stats={stats} campaigns={subs} isUser={true}/>)}
-                        {activeTab === "submissions" && (
-                            <div>
-                                <div className="campaigns-page-header">
-                                    <div className="campaigns-page-header-text">
-                                    <h3 className="campaigns-page-title">All Campaigns</h3>
-                                    <p className="campaigns-page-subtitle">Manage your brand partnerships</p>
-                                    </div>
-                                </div>
-                                <div className="submissions-table-container">
-                                    <div className="submissions-table-wrapper">
-                                        {subs.length > 0 ? subs.map((sub, i) => (
-                                            <SubCard key={`sub-${i}`} sub={sub} />
-                                        )): <p className="empty-container-text">Start Collaborating with brands today !</p>}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                        {activeTab === "submissions" && (<Submissions />)}
                         {activeTab === 'applications' && (<UserApplicationFeed />)}
                         {activeTab === 'messages' && navigate(`/users/dashboard/${user.id}/messages`)}
                         {activeTab === 'analytics' && (<Analytics />)}

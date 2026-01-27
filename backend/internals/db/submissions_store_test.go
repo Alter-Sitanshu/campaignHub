@@ -185,7 +185,7 @@ func TestFilteringSubmissions(t *testing.T) {
 
 	t.Run("filtering submisisons", func(t *testing.T) {
 		time_filter := fmt.Sprintf("%02d-%d", int(time.Now().UTC().Month()), time.Now().UTC().Year())
-		got, err := MockSubStore.FindSubmissionsByFilters(ctx,
+		got, _, err := MockSubStore.FindSubmissionsByFilters(ctx,
 			Filter{
 				Time: &time_filter,
 			},

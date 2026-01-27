@@ -315,3 +315,28 @@ func (app *Application) DeleteApplication(c *gin.Context) {
 	// successfully deleted the application foem from the database
 	c.JSON(http.StatusNoContent, WriteResponse("applicaion deleted"))
 }
+
+func (app *Application) GetCreatorApplicationsWithoutSubmissions(c *gin.Context) {
+	ctx := c.Request.Context()
+	LogInUser, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	Entity, ok := LogInUser.(db.AuthenticatedEntity)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	CreatorID := Entity.GetID()
+	appls, err := app.store.ApplicationInterface.GetCreatorApplicationsWithoutSubmissions(
+		ctx, CreatorID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, WriteError("internal server error"))
+		return
+	}
+
+	// successfully got the creator applications without submissions
+	c.JSON(http.StatusOK, WriteResponse(appls))
+}
