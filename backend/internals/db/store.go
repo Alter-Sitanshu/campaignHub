@@ -168,6 +168,7 @@ type Store struct {
 		DisableAccount(context.Context, string) error
 		DeleteAccount(context.Context, string) error
 		GetAccount(context.Context, string) (*Account, error)
+		GetAccountID(context.Context, string) (string, error)
 		GetAllAccounts(context.Context, int, int) ([]Account, error)
 	}
 	ApplicationInterface interface {

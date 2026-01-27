@@ -192,6 +192,8 @@ func (app *Application) AddRoutes(addr string, router *gin.Engine) {
 		accounts.GET("", app.GetAllAccounts)
 		accounts.GET("/:acc_id", app.GetUserAccount)
 		accounts.POST("", app.CreateAccount)
+		accounts.PUT("/withdraw", app.WithdrawBalance)
+		accounts.PUT("/deposit", app.DepositBalance)
 		accounts.DELETE("/accounts/:acc_id", app.DeleteUserAccount)
 		accounts.PUT("/accounts/:acc_id", app.DisableUserAccount)
 	}

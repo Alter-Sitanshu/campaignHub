@@ -44,6 +44,7 @@ type User struct {
 	PlatformLinks []Links `json:"links"`
 	IsVerified    bool    `json:"is_verified"`
 	CreatedAt     string  `json:"created_at"`
+	AccountExists bool    `json:"account_exists"`
 }
 
 // User update Options
@@ -141,10 +142,11 @@ func (u *UserStore) GetUserById(ctx context.Context, id string) (*User, error) {
 	// join the roles table to get the name of the role
 	query := `
 		SELECT u.id, u.first_name, u.last_name, u.email, u.password, u.gender, 
-		COALESCE(a.amount, 0), u.age, r.name, u.is_verified, u.created_at
+		COALESCE(a.amount, 0), u.age, r.name, u.is_verified, u.created_at,
+		EXISTS(SELECT 1 FROM accounts acc WHERE acc.holder_id = u.id) AS has_account
 		FROM users u
 		JOIN roles r ON r.id = u.role
-		LEFT  JOIN accounts a ON a.holder_id = u.id
+		LEFT JOIN accounts a ON a.holder_id = u.id
 		WHERE u.id = $1
 	`
 	var user User
@@ -161,6 +163,7 @@ func (u *UserStore) GetUserById(ctx context.Context, id string) (*User, error) {
 		&user.Role,
 		&user.IsVerified,
 		&user.CreatedAt,
+		&user.AccountExists,
 	)
 	if err != nil {
 		// for debugging: Comment out later
@@ -216,7 +219,8 @@ func (u *UserStore) GetUserByEmailForAuth(ctx context.Context, email string) (*U
 	// filter by email and join the roles table to get the role name
 	query := `
 		SELECT u.id, u.first_name, u.last_name, u.email,
-		u.password, u.gender, u.age, r.name, u.is_verified, u.created_at
+		u.password, u.gender, u.age, r.name, u.is_verified, u.created_at,
+		EXISTS(SELECT 1 FROM accounts acc WHERE acc.holder_id = u.id) AS has_account
 		FROM users u
 		JOIN roles r ON r.id = u.role
 		WHERE u.email = $1
@@ -234,6 +238,7 @@ func (u *UserStore) GetUserByEmailForAuth(ctx context.Context, email string) (*U
 		&user.Role,
 		&user.IsVerified,
 		&user.CreatedAt,
+		&user.AccountExists,
 	)
 
 	if err != nil {

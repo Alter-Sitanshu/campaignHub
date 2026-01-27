@@ -15,16 +15,17 @@ type BrandStore struct {
 
 // Brand Model
 type Brand struct {
-	Id         string `json:"id"`
-	Name       string `json:"name"`
-	Email      string `json:"email"`
-	Sector     string `json:"sector"`
-	Password   PassW  `json:"-"`
-	Website    string `json:"website"`
-	Address    string `json:"address"`
-	Campaigns  int    `json:"campaign_count"`
-	CreatedAt  string `json:"created_at"`
-	IsVerified bool   `json:"is_verified"`
+	Id            string `json:"id"`
+	Name          string `json:"name"`
+	Email         string `json:"email"`
+	Sector        string `json:"sector"`
+	Password      PassW  `json:"-"`
+	Website       string `json:"website"`
+	Address       string `json:"address"`
+	Campaigns     int    `json:"campaign_count"`
+	CreatedAt     string `json:"created_at"`
+	IsVerified    bool   `json:"is_verified"`
+	AccountExists bool   `json:"account_exists"`
 }
 
 type BrandUpdatePayload struct {
@@ -105,9 +106,10 @@ func (b *BrandStore) GetBrandById(ctx context.Context, id string) (*Brand, error
 
 func (b *BrandStore) GetBrandByEmail(ctx context.Context, email string) (*Brand, error) {
 	query := `
-		SELECT id, name, email, password, sector, website, address,
-		campaigns, created_at, is_verified
-		FROM brands
+		SELECT b.id, b.name, b.email, b.password, b.sector, b.website, b.address,
+		b.campaigns, b.created_at, b.is_verified,
+		EXISTS(SELECT 1 FROM accounts acc WHERE acc.holder_id = b.id) as has_account
+		FROM brands b
 		WHERE email = $1
 	`
 	var brand Brand
@@ -123,6 +125,7 @@ func (b *BrandStore) GetBrandByEmail(ctx context.Context, email string) (*Brand,
 		&brand.Campaigns,
 		&brand.CreatedAt,
 		&brand.IsVerified,
+		&brand.AccountExists,
 	)
 	if err != nil {
 		// Loggging error

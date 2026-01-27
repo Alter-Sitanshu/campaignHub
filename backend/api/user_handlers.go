@@ -457,6 +457,7 @@ func (app *Application) GetCurrentUser(c *gin.Context) {
 	err := app.cache.GetUserProfile(ctx, UserID, &profile)
 	// Cache hit
 	if err == nil {
+		profile.Amount, _ = app.cache.GetUserBalance(ctx, UserID)
 		c.JSON(http.StatusOK, WriteResponse(profile))
 		return
 	}
@@ -495,6 +496,11 @@ func (app *Application) GetCurrentUser(c *gin.Context) {
 	err = app.cache.SetUserProfile(ctx, UserID, cache.UserResponse(userResponse))
 	if err != nil {
 		log.Printf("error caching the user profile: %s\n", err.Error())
+	}
+	// set the user balance in the cache
+	err = app.cache.SetUserBalance(ctx, UserID, user.Amount)
+	if err != nil {
+		log.Printf("error caching the user balance: %s\n", err.Error())
 	}
 	// successfully retreived the user
 	c.JSON(http.StatusOK, WriteResponse(userResponse))
