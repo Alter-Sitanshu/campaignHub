@@ -167,7 +167,7 @@ func (h *Hub) SubmitMessage(req *MessageRequest) {
 	h.processMessage <- req
 }
 
-func (h *Hub) FlushMessages(clientID string) {
+func (h *Hub) FlushClientMsgBuffers(clientID string) {
 	clientConversationIds := h.Store.getConversationIdtoFlush(context.TODO(), clientID)
 	if clientConversationIds == nil {
 		log.Printf("err no conversation found to flush for <%s>\n", clientID)
@@ -183,5 +183,20 @@ func (h *Hub) FlushMessages(clientID string) {
 		h.Store.SaveMessages(context.Background(), flushBuf)
 		delete(h.msgBuffer, id)
 	}
-	log.Printf("flushed conversation buffer for cleint<%s>\n", clientID)
+	h.msgBufMu.RUnlock()
+	log.Printf("flushed conversation buffer for client<%s>\n", clientID)
+}
+
+func (h *Hub) FlushMessages(conversationID string) {
+	h.msgBufMu.RLock()
+	flushBuf := h.msgBuffer[conversationID]
+	if flushBuf == nil {
+		return
+	}
+
+	h.Store.SaveMessages(context.Background(), flushBuf)
+	delete(h.msgBuffer, conversationID) // delete the buffer from the memory
+	// then unlock the mutex to allow flow of messages
+	h.msgBufMu.RUnlock()
+	log.Printf("flushed conversation buffer for conv<%s>\n", conversationID)
 }

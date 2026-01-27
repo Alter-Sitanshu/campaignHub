@@ -77,7 +77,7 @@ func wsReader(app *Application, client *chats.Client) {
 				log.Printf("socket read error (unexpected): %v", err)
 			} else {
 				if websocket.IsCloseError(err, websocket.CloseGoingAway, websocket.CloseNormalClosure) {
-					go app.msgHub.FlushMessages(string(client.ID))
+					go app.msgHub.FlushClientMsgBuffers(string(client.ID))
 				}
 				log.Printf("socket read closed: %v", err)
 			}
@@ -102,7 +102,7 @@ func wsReader(app *Application, client *chats.Client) {
 
 // wsWriter writes payloads from the Hub to the client's websocket.
 func wsWriter(client *chats.Client) {
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(15 * time.Second)
 	defer func() {
 		ticker.Stop()
 		client.Conn.Close()
@@ -112,6 +112,7 @@ func wsWriter(client *chats.Client) {
 		select {
 		case <-ticker.C:
 			// Send ping
+			client.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 			if err := client.Conn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
 				log.Printf("error sending ping to client %s: %v", client.ID, err)
 				return
@@ -122,6 +123,7 @@ func wsWriter(client *chats.Client) {
 				// Hub closed the channel
 				return
 			}
+			client.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 			if err := client.Conn.WriteMessage(websocket.TextMessage, payload); err != nil {
 				log.Printf("error writing to client %s: %v", client.ID, err)
 				return
