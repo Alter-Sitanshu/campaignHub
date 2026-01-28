@@ -72,8 +72,8 @@ func main() {
 			MetaToken:     env.GetString("METAKEY", ""),
 		},
 		B2Cfg: api.B2Config{
-			KeyID:    env.GetString("B2KeyID", ""),
-			AppKey:   env.GetString("B2API_KEY", ""),
+			KeyID:    env.GetString("B2SecretAccessKey", ""),
+			AppKey:   env.GetString("B2AccessKeyID", ""),
 			Region:   env.GetString("B2Region", "us-east-001"),
 			Endpoint: env.GetString("B2Endpoint", ""),
 		},
@@ -99,8 +99,8 @@ func main() {
 		AWSconfig.WithRegion(config.B2Cfg.Region),
 		AWSconfig.WithCredentialsProvider(
 			credentials.NewStaticCredentialsProvider(
-				config.B2Cfg.KeyID,
 				config.B2Cfg.AppKey,
+				config.B2Cfg.KeyID,
 				"",
 			),
 		),
