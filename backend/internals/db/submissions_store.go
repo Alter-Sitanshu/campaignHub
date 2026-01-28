@@ -413,7 +413,7 @@ func (s *SubmissionStore) GetSubmissionsForSync(ctx context.Context) ([]PollingS
 			&sub.LastSyncedAt,
 			&sub.CreatorId,
 			&sub.CampaignId,
-			&sub.CreatorId,
+			&sub.CreatedAt,
 		)
 		if err != nil {
 			log.Printf("error scanning polling submissions: %s\n", err.Error())

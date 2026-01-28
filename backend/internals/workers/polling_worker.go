@@ -74,15 +74,17 @@ func (w *PollingWorker) syncSubmission(ctx context.Context, submission db.Pollin
 	}
 
 	// Fetch metadata from platform
-	response, err := w.platformClient.GetVideoDetailsForWorkers(ctx, parsed.Name, parsed.VideoID)
+	metadata, err := w.platformClient.GetVideoDetailsForWorkers(ctx, parsed.Name, parsed.VideoID)
 	if err != nil {
 		log.Printf("error: %s", err.Error())
 		return err
 	}
-	metadata, ok := response.(*platform.VideoMetadata)
-	if !ok {
-		log.Printf("invalid response, video meta data packet invalid\n")
-		return err
+	// Calculate changes
+	viewsDelta := metadata.ViewCount - submission.Views
+	if viewsDelta < 0 {
+		// some inconsistency from the API side.
+		// ignore this update
+		return nil
 	}
 
 	// Update cache immediately (real-time data)
@@ -96,9 +98,6 @@ func (w *PollingWorker) syncSubmission(ctx context.Context, submission db.Pollin
 		UploadedAt:   metadata.UploadedAt,
 	}
 	w.cache.SetVideoMetadata(ctx, submission.Id, cacheMetadata)
-
-	// Calculate changes
-	viewsDelta := metadata.ViewCount - submission.Views
 
 	// Only queue batch update if significant change
 	if abs(viewsDelta) >= 10 {

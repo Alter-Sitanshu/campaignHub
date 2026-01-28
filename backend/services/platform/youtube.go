@@ -135,7 +135,7 @@ func (yt *YTClient) GetVideoDetails(ctx context.Context, VideoID string) (any, e
 	}, nil
 }
 
-func (yt *YTClient) GetVideoDetailsForWorkers(ctx context.Context, VideoID string) (any, error) {
+func (yt *YTClient) GetVideoDetailsForWorkers(ctx context.Context, VideoID string) (*VideoMetadata, error) {
 	if VideoID == "" || VideoID == " " {
 		log.Printf("error: video id invalid %q\n", VideoID)
 		return nil, fmt.Errorf("invalid video id")

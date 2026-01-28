@@ -25,6 +25,6 @@ func (i *Instagram) GetVideoDetails(ctx context.Context, VideoID string) (any, e
 	return 0, nil
 }
 
-func (i *Instagram) GetVideoDetailsForWorkers(ctx context.Context, VideoID string) (any, error) {
-	return 0, nil
+func (i *Instagram) GetVideoDetailsForWorkers(ctx context.Context, VideoID string) (*VideoMetadata, error) {
+	return nil, nil
 }
