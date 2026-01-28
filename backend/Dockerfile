@@ -20,11 +20,11 @@ WORKDIR /app
 COPY --from=builder /app/main .
 # COPY --from=builder /app/migrate ./migrate
 # COPY database/migrations ./migrations
-# COPY entrypoint.sh .
-# RUN chmod +x entrypoint.sh
+COPY entrypoint.sh .
+RUN chmod +x entrypoint.sh
 
 EXPOSE 8080
 
 CMD [ "/app/main" ]
 
-# ENTRYPOINT ["./entrypoint.sh"]
+ENTRYPOINT ["./entrypoint.sh"]
