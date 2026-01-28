@@ -88,15 +88,12 @@ func (app *Application) CreateSubmission(c *gin.Context) {
 	}
 	// Fetch the Meta Data for the sumission
 
-	data, err := app.factory.GetVideoDetails(ctx, vid.Name, vid.VideoID)
+	Data, err := app.factory.GetVideoDetails(ctx, vid.Name, vid.VideoID)
 	if err != nil {
 		log.Printf("error fetching meta data: %s\n", err.Error())
 		c.JSON(http.StatusInternalServerError, WriteError("server error try again"))
 		return
 	}
-
-	Data := data.(*platform.VideoMetadata) // convert the meta data type into desired struct
-
 	ext, _ := mime.ExtensionsByType(Data.Thumbnails.ContentType)
 	extension := ext[0]
 	objKey, _ := b2.GenerateFileKey(submission.Id, "thumbnail", extension)
@@ -171,16 +168,6 @@ func (app *Application) CreateSubmission(c *gin.Context) {
 
 func (app *Application) DeleteSubmission(c *gin.Context) {
 	ctx := c.Request.Context()
-	LogInUser, ok := c.Get("user")
-	if !ok {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
-	Entity, ok := LogInUser.(db.AuthenticatedEntity)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
 	sub_id := c.Param("sub_id")
 	// validate the submission id
 	if ok := uuid.Validate(sub_id); ok != nil {
@@ -196,10 +183,6 @@ func (app *Application) DeleteSubmission(c *gin.Context) {
 			return
 		}
 		c.JSON(http.StatusInternalServerError, WriteError("server error"))
-		return
-	}
-	if submission.CreatorId != Entity.GetID() && Entity.GetRole() != "admin" {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
 
@@ -226,20 +209,7 @@ func (app *Application) DeleteSubmission(c *gin.Context) {
 
 func (app *Application) FilterSubmissions(c *gin.Context) {
 	ctx := c.Request.Context()
-	LogInUser, ok := c.Get("user")
-	if !ok {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
-	Entity, ok := LogInUser.(db.AuthenticatedEntity)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
-	if Entity.GetRole() != "admin" {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
+
 	// only the admin is allowed
 	creator_id := c.Query("creator_id")
 	campaign_id := c.Query("campaign_id")
@@ -455,14 +425,12 @@ func (app *Application) GetSubmission(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, WriteError(err.Error()))
 			return
 		}
-		data, err := app.factory.GetVideoDetailsForWorkers(ctx, vid.Name, vid.VideoID)
+		Data, err := app.factory.GetVideoDetailsForWorkers(ctx, vid.Name, vid.VideoID)
 		if err != nil {
 			log.Printf("error fetching meta data: %s\n", err.Error())
 			c.JSON(http.StatusInternalServerError, WriteError("server error try again"))
 			return
 		}
-
-		Data := data.(platform.VideoMetadata) // convert the meta data type into desired struct
 
 		// populate the meta data
 		metaData = cache.VideoMetadata{

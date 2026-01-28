@@ -293,11 +293,7 @@ func (app *Application) UpdateBrand(c *gin.Context) {
 
 func (app *Application) GetBrandStats(c *gin.Context) {
 	ctx := c.Request.Context()
-	brandID := c.Param("id")
-	if brandID == "" {
-		c.JSON(http.StatusBadRequest, WriteError("brand id param missing"))
-		return
-	}
+	brandID := c.Param("brand_id")
 	stats, err := app.store.BrandInterface.GetStats(ctx, brandID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, WriteError(err.Error()))

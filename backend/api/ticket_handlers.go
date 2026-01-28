@@ -85,24 +85,11 @@ func (app *Application) RaiseTicket(c *gin.Context) {
 
 func (app *Application) CloseTicket(c *gin.Context) {
 	ctx := c.Request.Context()
-	LogInUser, ok := c.Get("user")
-	if !ok {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
-	Entity, ok := LogInUser.(db.AuthenticatedEntity)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
+
 	ticket_id := c.Param("ticket_id")
 	// validating the uuid
 	if ok := uuid.Validate(ticket_id); ok != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
-		return
-	}
-	if Entity.GetRole() != "admin" {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
 	// resolve the ticket
@@ -116,21 +103,7 @@ func (app *Application) CloseTicket(c *gin.Context) {
 
 func (app *Application) GetRecentTickets(c *gin.Context) {
 	ctx := c.Request.Context()
-	LogInUser, ok := c.Get("user")
-	if !ok {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
-	Entity, ok := LogInUser.(db.AuthenticatedEntity)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
-	// Authorise the user
-	if Entity.GetRole() != "admin" {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
+
 	status_param := c.Query("status")
 	limit, err := strconv.Atoi(c.Query("limit"))
 	if err != nil {
@@ -165,21 +138,7 @@ func (app *Application) GetRecentTickets(c *gin.Context) {
 
 func (app *Application) DeleteTicket(c *gin.Context) {
 	ctx := c.Request.Context()
-	LogInUser, ok := c.Get("user")
-	if !ok {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
-	Entity, ok := LogInUser.(db.AuthenticatedEntity)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
-	// Authorise the user
-	if Entity.GetRole() != "admin" {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
+
 	ticket_id := c.Param("ticket_id")
 	// validating the uuid
 	if ok := uuid.Validate(ticket_id); ok != nil {

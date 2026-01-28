@@ -142,29 +142,16 @@ func (app *Application) DisableUserAccount(c *gin.Context) {
 
 func (app *Application) DeleteUserAccount(c *gin.Context) {
 	ctx := c.Request.Context()
-	// fetch the current user
-	LogInUser, ok := c.Get("user")
-	if !ok {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
-	User, ok := LogInUser.(*db.User)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
+	// ONly admin can delete any account details of user
+	// check if the user is the owner of the account
+
 	acc_id := c.Param("acc_id")
 	// validate the acc_id uuid
 	if ok := uuid.Validate(acc_id); ok != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
 		return
 	}
-	// ONly admin can delete any account details of user
-	// check if the user is the owner of the account
-	if User.Role != "admin" {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorized request"))
-		return
-	}
+
 	// fetch the user account details
 	_, err := app.store.TransactionInterface.GetAccount(ctx, acc_id)
 	if err != nil {
@@ -189,20 +176,6 @@ func (app *Application) DeleteUserAccount(c *gin.Context) {
 
 func (app *Application) GetAllAccounts(c *gin.Context) {
 	ctx := c.Request.Context()
-	LogInUser, ok := c.Get("user")
-	if !ok {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
-	User, ok := LogInUser.(*db.User)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
-	if User.Role != "admin" {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorized request"))
-		return
-	}
 	limit, err := strconv.Atoi(c.Query("limit"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid query"))

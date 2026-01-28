@@ -243,16 +243,7 @@ func (app *Application) StopCampaign(c *gin.Context) {
 
 func (app *Application) DeleteCampaign(c *gin.Context) {
 	ctx := c.Request.Context()
-	LogInUser, ok := c.Get("user")
-	if !ok {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
-	Entity, ok := LogInUser.(db.AuthenticatedEntity)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
+
 	ID := c.Param("campaign_id")
 	if ok := uuid.Validate(ID); ok != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid request"))
@@ -262,10 +253,6 @@ func (app *Application) DeleteCampaign(c *gin.Context) {
 	campaign, err := app.store.CampaignInterace.GetCampaign(ctx, ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, WriteError("internal server error"))
-		return
-	}
-	if campaign.BrandId != Entity.GetID() && Entity.GetRole() != "admin" {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
 	// delete the campaign
@@ -283,17 +270,8 @@ func (app *Application) DeleteCampaign(c *gin.Context) {
 
 func (app *Application) GetUserCampaigns(c *gin.Context) {
 	ctx := c.Request.Context()
-	LogInUser, ok := c.Get("user")
-	if !ok {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
-	_, ok = LogInUser.(db.AuthenticatedEntity)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
-	UserID := c.Param("userid")
+
+	UserID := c.Param("user_id")
 	if ok := uuid.Validate(UserID); ok != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid request"))
 		return

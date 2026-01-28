@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 
+	"github.com/Alter-Sitanshu/campaignHub/internals/db"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/time/rate"
 )
@@ -27,6 +28,82 @@ func (app *Application) AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 		c.Set("user", user)
+		c.Next()
+	}
+}
+
+func (app *Application) AuthoriseUser() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		LogInUser, ok := c.Get("user")
+		if !ok {
+			c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+			return
+		}
+		Entity, ok := LogInUser.(db.AuthenticatedEntity)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+			return
+		}
+		UserID := Entity.GetID()
+
+		ID := c.Param("user_id")
+		// Authorise the user
+		if ID != UserID {
+			c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+			return
+		}
+
+		c.Next()
+	}
+}
+
+func (app *Application) AuthoriseBrand() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		LogInUser, ok := c.Get("user")
+		if !ok {
+			c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+			return
+		}
+		Entity, ok := LogInUser.(db.AuthenticatedEntity)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+			return
+		}
+		UserID := Entity.GetID()
+		if Entity.GetEntityType() != "brands" {
+			c.JSON(http.StatusForbidden, WriteError("method/operation forbidden"))
+			return
+		}
+
+		ID := c.Param("brand_id")
+		// Authorise the user
+		if ID != UserID {
+			c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+			return
+		}
+
+		c.Next()
+	}
+}
+
+func (app *Application) AuthoriseAdmin() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Fetching the logged in user
+		LogInUser, ok := c.Get("user")
+		if !ok {
+			c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+			return
+		}
+		user, ok := LogInUser.(db.AuthenticatedEntity)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+			return
+		}
+		if user.GetRole() != "admin" {
+			c.JSON(http.StatusForbidden, WriteError("forbidden method or operation"))
+			return
+		}
+
 		c.Next()
 	}
 }

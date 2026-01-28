@@ -21,8 +21,8 @@ func NewInstagramClient(token string) *Instagram {
 // It was too much of hedaache using the Meta API
 // Implement it later IF YOU WANT
 // Returns the View Count of an Instagram Reel
-func (i *Instagram) GetVideoDetails(ctx context.Context, VideoID string) (any, error) {
-	return 0, nil
+func (i *Instagram) GetVideoDetails(ctx context.Context, VideoID string) (*VideoMetadata, error) {
+	return nil, nil
 }
 
 func (i *Instagram) GetVideoDetailsForWorkers(ctx context.Context, VideoID string) (*VideoMetadata, error) {
