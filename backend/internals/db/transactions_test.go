@@ -18,6 +18,7 @@ func generateAccounts(ctx context.Context, holder_id, type_ string) *Account {
 		HolderId: holder_id,
 		Type:     type_,
 		Amount:   10000.0,
+		Currency: "inr",
 	}
 	err := MockTsStore.OpenAccount(ctx, &acc)
 	if err != nil {

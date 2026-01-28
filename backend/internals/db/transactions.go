@@ -209,41 +209,46 @@ func (ts *TransactionStore) OpenAccount(ctx context.Context, acc *Account) error
 	// Only a single request to open an account will be accepted
 	// so row level isolation is sufficient
 	// Check If the person exists
-	creatorCheck := `
-		SELECT COUNT(*) FROM users
-		WHERE id = $1
-	`
-	brandCheck := `
-		SELECT COUNT(*) FROM brands
-		WHERE id = $1
-	`
-	var (
-		ucount int
-		bcount int
-	)
-	err := ts.db.QueryRowContext(ctx, creatorCheck, acc.HolderId).Scan(&ucount)
-	if err != nil {
-		log.Println(err.Error())
-		return fmt.Errorf("user check failed. try again")
-	}
-	err = ts.db.QueryRowContext(ctx, brandCheck, acc.HolderId).Scan(&bcount)
-	if err != nil {
-		log.Println(err.Error())
-		return fmt.Errorf("brand check failed. try again")
-	}
-	if ucount != 1 && bcount != 1 {
-		return fmt.Errorf("invalid credentials entered")
-	}
+	// creatorCheck := `
+	// 	SELECT COUNT(*) FROM users
+	// 	WHERE id = $1
+	// `
+	// brandCheck := `
+	// 	SELECT COUNT(*) FROM brands
+	// 	WHERE id = $1
+	// `
+	// var (
+	// 	ucount int
+	// 	bcount int
+	// )
+
+	// UNNECCESSARY CHECK CAUSE HOLDER_ID AND HOLDER_TYPE HAVE UNIQUE CONSTRAINT
+	// [
+	// err := ts.db.QueryRowContext(ctx, creatorCheck, acc.HolderId).Scan(&ucount)
+	// if err != nil {
+	// 	log.Println(err.Error())
+	// 	return fmt.Errorf("user check failed. try again")
+	// }
+	// err = ts.db.QueryRowContext(ctx, brandCheck, acc.HolderId).Scan(&bcount)
+	// if err != nil {
+	// 	log.Println(err.Error())
+	// 	return fmt.Errorf("brand check failed. try again")
+	// }
+	// if ucount != 1 && bcount != 1 {
+	// 	return fmt.Errorf("invalid credentials entered")
+	// }
+	// ]
 
 	query := `
-		INSERT INTO accounts (id, holder_id, holder_type, amount)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO accounts (id, holder_id, holder_type, amount, currency)
+		VALUES ($1, $2, $3, $4, $5)
 	`
-	_, err = ts.db.ExecContext(ctx, query,
+	_, err := ts.db.ExecContext(ctx, query,
 		acc.Id,
 		acc.HolderId,
 		acc.Type,
 		acc.Amount,
+		acc.Currency,
 	)
 	if err != nil {
 		// user exists but account creation error
@@ -306,6 +311,19 @@ func (ts *TransactionStore) GetAccount(ctx context.Context, id string) (*Account
 
 	// fetched account
 	return &acc, nil
+}
+
+func (ts *TransactionStore) GetAccountID(ctx context.Context, holderID string) (string, error) {
+	query := `
+		SELECT id FROM accounts WHERE holder_id = $1 AND active = $2
+	`
+	var res string
+	err := ts.db.QueryRowContext(ctx, query, holderID, true).Scan(&res)
+	if err != nil {
+		return "", fmt.Errorf("account not found")
+	}
+
+	return res, nil
 }
 
 func (ts *TransactionStore) GetAllAccounts(ctx context.Context, offset, limit int) ([]Account, error) {

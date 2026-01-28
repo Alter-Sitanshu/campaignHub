@@ -420,7 +420,7 @@
     color: var(--text-dark);
 }
 
-.button-new-campaign {
+.button-new-campaign, .button-new-submission {
     background-color: var(--primary-accent);
     color: white;
     padding: 0.5rem 1.5rem;
@@ -432,9 +432,13 @@
     transition: all 0.3s ease;
 }
 
-.button-new-campaign:hover {
+.button-new-campaign:hover, .button-new-submission:hover {
     background-color: var(--text-dark);
     transform: translateY(-0.125rem);
+}
+
+.button-icon {
+    margin-right: 0.5rem;
 }
 
 .campaigns-table-container,

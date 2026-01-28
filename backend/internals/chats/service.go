@@ -247,10 +247,10 @@ func (h *Hub) handleChatMessage(ctx context.Context, req *MessageRequest) error 
 
 	msg.CreatedAt = time.Now().Format(time.RFC3339) // Simplified timestamp
 
-	log.Printf(
-		"Message from %s to %s in conversation %s\n",
-		req.Client.ID, recipientID, conv.ID,
-	)
+	// log.Printf(
+	// 	"Message from %s to %s in conversation %s\n",
+	// 	req.Client.ID, recipientID, conv.ID,
+	// )
 	// Send to recipient using DIRECT broadcast
 	h.broadcast <- &BroadcastMessage{
 		Type:   "direct",
@@ -380,7 +380,7 @@ func (h *Hub) handleBroadcast(msg *BroadcastMessage) error {
 			log.Printf("Dropping direct message to client: %s due to blocked channel\n", recipientClient.ID)
 			return ErrMessageDropped
 		}
-		log.Printf("Direct message sent to client: %s\n", msg.UserID)
+		// log.Printf("Direct message sent to client: %s\n", msg.UserID)
 
 	// Broadcast to all followers of a brand
 	case "followers":
@@ -475,4 +475,13 @@ func (h *Hub) handleUnfollowBrand(ctx context.Context, req *MessageRequest) {
 	}
 	log.Printf("Client %s followed brand %s\n", req.Client.ID, brandID)
 
+}
+
+func (h *Hub) SyncMessages(conversationID string) {
+	h.msgBufMu.RLock()
+	msgs, exists := h.msgBuffer[conversationID]
+	h.msgBufMu.RUnlock()
+	if exists && len(msgs) > 0 {
+		h.FlushMessages(conversationID)
+	}
 }

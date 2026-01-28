@@ -55,6 +55,7 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     setUser(null);
     localStorage.removeItem('user');
+    localStorage.removeItem('currency');
     await supabase.auth.signOut();
     await cookieStore.delete({
       name: 'session',

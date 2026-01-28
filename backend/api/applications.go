@@ -278,20 +278,7 @@ func (app *Application) setApplicationStatus(ctx context.Context, applID string,
 
 func (app *Application) DeleteApplication(c *gin.Context) {
 	ctx := c.Request.Context()
-	LogInUser, ok := c.Get("user")
-	if !ok {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
-	Entity, ok := LogInUser.(db.AuthenticatedEntity)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
-	if Entity.GetRole() != "admin" {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised access denied"))
-		return
-	}
+
 	// get the application id
 	applID := c.Param("application_id")
 	if ok := uuid.Validate(applID); ok != nil {
@@ -314,4 +301,29 @@ func (app *Application) DeleteApplication(c *gin.Context) {
 
 	// successfully deleted the application foem from the database
 	c.JSON(http.StatusNoContent, WriteResponse("applicaion deleted"))
+}
+
+func (app *Application) GetCreatorApplicationsWithoutSubmissions(c *gin.Context) {
+	ctx := c.Request.Context()
+	LogInUser, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	Entity, ok := LogInUser.(db.AuthenticatedEntity)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	CreatorID := Entity.GetID()
+	appls, err := app.store.ApplicationInterface.GetCreatorApplicationsWithoutSubmissions(
+		ctx, CreatorID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, WriteError("internal server error"))
+		return
+	}
+
+	// successfully got the creator applications without submissions
+	c.JSON(http.StatusOK, WriteResponse(appls))
 }

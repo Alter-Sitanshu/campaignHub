@@ -11,7 +11,7 @@ export const api = axios.create({
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 || error.response?.status === 403) {
       try {
         let logout = getLogoutHandler();
         logout?.(); // clear tokens, user state, etc.
@@ -85,6 +85,7 @@ export const signin = async (data) => {
             "id": response.data.data.id,
             "username": response.data.data.username,
             "email": response.data.data.email,
+            "account_exists": response.data.data.account_exists,
             "entity": data.entity,
         };
     } catch(err) {
@@ -117,6 +118,7 @@ export const oauthCallbackSignIn = async (payload) => {
             id: response.data.data.id,
             username: response.data.data.username,
             email: response.data.data.email,
+            account_exists: response.data.data.account_exists,
         };
     } catch (err) {
         if (err.response) return { type: 'error', status: err.response.status };

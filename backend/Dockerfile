@@ -11,20 +11,20 @@ COPY . .
 
 # make the executable
 RUN go build -o main main.go
-RUN apk add curl
-RUN curl -L https://github.com/golang-migrate/migrate/releases/download/v4.19.0/migrate.linux-amd64.tar.gz | tar xvz
+# RUN apk add curl
+# RUN curl -L https://github.com/golang-migrate/migrate/releases/download/v4.19.0/migrate.linux-amd64.tar.gz | tar xvz
 
 # Run stage
 FROM alpine:3.22
 WORKDIR /app
 COPY --from=builder /app/main .
-COPY --from=builder /app/migrate ./migrate
-COPY database/migrations ./migrations
-COPY entrypoint.sh .
-RUN chmod +x entrypoint.sh
+# COPY --from=builder /app/migrate ./migrate
+# COPY database/migrations ./migrations
+# COPY entrypoint.sh .
+# RUN chmod +x entrypoint.sh
 
 EXPOSE 8080
 
 CMD [ "/app/main" ]
 
-ENTRYPOINT ["./entrypoint.sh"]
+# ENTRYPOINT ["./entrypoint.sh"]

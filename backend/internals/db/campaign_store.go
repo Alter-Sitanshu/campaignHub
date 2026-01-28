@@ -102,12 +102,10 @@ func (c *CampaignStore) EndCampaign(ctx context.Context, id string) error {
 		return err
 	}
 	defer tx.Rollback()
-	// Iniate a payout bill to the creators associated to the campaign
-	// TODO: API layer
 
 	query := `
 		UPDATE campaigns
-		SET status = $1 AND accepting_applications = $2
+		SET status = $1, accepting_applications = $2
 		WHERE id = $3
 	`
 	_, err = tx.ExecContext(ctx, query, ExpiredStatus, false, id)

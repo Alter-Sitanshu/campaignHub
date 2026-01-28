@@ -8,6 +8,10 @@ body {
   background: rgb(255, 255, 255);
 }
 
+:root {
+  --cyber-green: #CCFF00;
+}
+
 [class^="code-40"] {
   color: red;
 }

@@ -163,6 +163,9 @@
 
 /* Error Messages */
 .error-message {
+  display: flex;
+  align-items: center;
+  column-gap: 0.5em;
   color: #ef4444;
   font-size: 0.875rem;
   margin-top: 0.25rem;
@@ -251,13 +254,12 @@
 }
 
 .btn-submit {
-  background: linear-gradient(to right, #059669, #0d9488);
-  color: white;
+  background: var(--cyber-green);
+  color: var(--text-dark);
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
 
 .btn-submit:hover {
-  background: linear-gradient(to right, #047857, #0f766e);
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
   transform: translateY(-1px);
 }

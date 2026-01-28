@@ -42,12 +42,18 @@ const MessagePage = () => {
       groups[dateKey].push(msg);
     });
 
-    return Object.entries(groups).map(([date, msgs]) => ({
+    // turning the map into an array of objects
+    let groupedMsgs = Object.entries(groups).map(([date, msgs]) => ({
       date,
+      // sort the messages in each group with oldest first
       messages: msgs.sort(
         (a, b) => new Date(a.created_at) - new Date(b.created_at)
       ),
     }));
+    // sort the groups with oldest group first
+    return groupedMsgs.sort(
+      (a, b) => new Date(a.date) - new Date(b.date)
+    );
   }
 
   const loadMessages = async (conversationId, timestamp = "", cursor = "") => {

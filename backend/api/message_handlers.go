@@ -115,13 +115,18 @@ func (app *Application) GetConversationMessages(c *gin.Context) {
 			return
 		}
 	}
+	// first check if there are conversations in the message buffer of the conversation
+	// if there are, flush them and then fetch the messages from the next cursor
+	// this will prevent droppend/un-flushed messages or ghost messages
+	app.msgHub.SyncMessages(conversationID)
 	output, next, hasMore, err := app.msgHub.Store.GetConversationMessages(ctx, date, lastSeq, conversationID, MessageLimit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, WriteError("could not load messages"))
 		return
 	}
 	if len(output) == 0 || output == nil {
-		c.JSON(http.StatusNoContent, WriteError("No messages Found"))
+		// just return an empty object for the UI
+		c.JSON(http.StatusOK, WriteResponse(MessageResponse{}))
 		return
 	}
 	var buf []byte

@@ -12,8 +12,16 @@ import (
 
 type AccountPayload struct {
 	HolderId string  `json:"holder_id" binding:"required"`
-	Type     string  `json:"type" binding:"required,oneof=creator brand"` // either creator or brand
+	Type     string  `json:"type" binding:"required,oneof=user brand"` // either user or brand
 	Amount   float64 `json:"amount"`
+	Currency string  `json:"currency" binding:"required,oneof=inr yen usd"`
+}
+
+type TxPayload struct {
+	To       string  `json:"to_id" binding:"required"`
+	From     string  `json:"from_id" binding:"required"`
+	Amount   float64 `json:"amount" binding:"required,gte=0"`
+	Currency string  `json:"currency" binding:"required,oneof= inr usd yen"`
 }
 
 func (app *Application) CreateAccount(c *gin.Context) {
@@ -35,6 +43,7 @@ func (app *Application) CreateAccount(c *gin.Context) {
 		HolderId: payload.HolderId,
 		Type:     payload.Type,
 		Amount:   payload.Amount,
+		Currency: payload.Currency,
 	}
 	// open the account for the user
 	err := app.store.TransactionInterface.OpenAccount(ctx, &acc)
@@ -133,36 +142,24 @@ func (app *Application) DisableUserAccount(c *gin.Context) {
 
 func (app *Application) DeleteUserAccount(c *gin.Context) {
 	ctx := c.Request.Context()
-	// fetch the current user
-	LogInUser, ok := c.Get("user")
-	if !ok {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
-	User, ok := LogInUser.(*db.User)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
+	// ONly admin can delete any account details of user
+	// check if the user is the owner of the account
+
 	acc_id := c.Param("acc_id")
 	// validate the acc_id uuid
 	if ok := uuid.Validate(acc_id); ok != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
 		return
 	}
+
 	// fetch the user account details
-	acc, err := app.store.TransactionInterface.GetAccount(ctx, acc_id)
+	_, err := app.store.TransactionInterface.GetAccount(ctx, acc_id)
 	if err != nil {
 		if err == db.ErrNotFound {
 			c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
 			return
 		}
 		c.JSON(http.StatusInternalServerError, WriteError("server error"))
-		return
-	}
-	// check if the user is the owner of the account
-	if acc.HolderId != User.Id && User.Role != "admin" {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorized request"))
 		return
 	}
 
@@ -179,20 +176,6 @@ func (app *Application) DeleteUserAccount(c *gin.Context) {
 
 func (app *Application) GetAllAccounts(c *gin.Context) {
 	ctx := c.Request.Context()
-	LogInUser, ok := c.Get("user")
-	if !ok {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
-	User, ok := LogInUser.(*db.User)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
-	if User.Role != "admin" {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorized request"))
-		return
-	}
 	limit, err := strconv.Atoi(c.Query("limit"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid query"))
@@ -212,4 +195,99 @@ func (app *Application) GetAllAccounts(c *gin.Context) {
 
 	// sucessful in fetching accounts
 	c.JSON(http.StatusOK, WriteResponse(accounts))
+}
+
+func (app *Application) WithdrawBalance(c *gin.Context) {
+	ctx := c.Request.Context()
+	// fetch the current user
+	LogInUser, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	User, ok := LogInUser.(*db.User)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	var payload TxPayload
+	if err := c.ShouldBindBodyWithJSON(&payload); err != nil {
+		c.JSON(http.StatusBadRequest, WriteError(err.Error()))
+		return
+	}
+	// check if the user is the owner of the account
+	if payload.From != User.Id || payload.To != User.Id {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorized request"))
+		return
+	}
+	accountID, err := app.store.TransactionInterface.GetAccountID(ctx, payload.From)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, WriteError("account deactivated/not avaialable"))
+		return
+	}
+	tx := db.Transaction{
+		Id:       uuid.NewString(),
+		FromId:   accountID,
+		ToId:     accountID,
+		Currency: payload.Currency,
+		Amount:   payload.Amount,
+		Type:     "withdraw",
+	}
+	err = app.store.TransactionInterface.Withdraw(ctx, &tx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, WriteError(err.Error()))
+		return
+	}
+	// update the cache
+	app.cache.UpdateUserBalance(ctx, User.GetID(), -payload.Amount)
+	c.JSON(http.StatusOK, WriteResponse("Withdraw successful."))
+
+}
+
+func (app *Application) DepositBalance(c *gin.Context) {
+	ctx := c.Request.Context()
+	// fetch the current user
+	LogInUser, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	User, ok := LogInUser.(*db.User)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
+		return
+	}
+	var payload TxPayload
+	if err := c.ShouldBindBodyWithJSON(&payload); err != nil {
+		c.JSON(http.StatusBadRequest, WriteError(err.Error()))
+		return
+	}
+	// check if the user is the owner of the account
+	if payload.From != User.Id || payload.To != User.Id {
+		c.JSON(http.StatusUnauthorized, WriteError("unauthorized request"))
+		return
+	}
+
+	accountID, err := app.store.TransactionInterface.GetAccountID(ctx, payload.From)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, WriteError("account disabled/unavailable"))
+		return
+	}
+
+	tx := db.Transaction{
+		Id:       uuid.NewString(),
+		FromId:   accountID,
+		ToId:     accountID,
+		Currency: payload.Currency,
+		Amount:   payload.Amount,
+		Type:     "deposit",
+	}
+	err = app.store.TransactionInterface.Deposit(ctx, &tx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, WriteError(err.Error()))
+		return
+	}
+
+	app.cache.UpdateUserBalance(ctx, User.GetID(), payload.Amount)
+	c.JSON(http.StatusOK, WriteResponse("Deposit successful."))
 }

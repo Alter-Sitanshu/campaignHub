@@ -82,7 +82,24 @@ const Dashboard = () => {
         return () => { mounted = false; };
     }, [loading, user]);
     
-    if (loading || isPageLoading) return <div>Loading...</div>;
+    if (loading || isPageLoading) {
+        return (
+            <div className="form-page">
+                <div style={{ 
+                    textAlign: 'center', paddingTop: '6rem', 
+                    display: 'flex', flexDirection: 'column',
+                    alignItems: 'center' 
+                }}>
+                    <p>Loading... Please wait</p>
+                    <div className="loading-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+            </div>
+        )
+    };
 
     
     if (!user) return null;

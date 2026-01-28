@@ -108,6 +108,7 @@ const BrandCampaignFeed = () => {
                         setfillForm(null);
                         setLaunchCampaign(true);
                     }}
+                    disabled={!user.account_exists}
                 >+ New Campaign</button>
             </div>
             < CampaignLaunchModal

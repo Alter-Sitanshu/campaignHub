@@ -30,8 +30,8 @@ import (
 
 const (
 	ShutdownDelta time.Duration = 1 * time.Minute
-	BatchInterval time.Duration = 10 * time.Minute
-	PollInterval  time.Duration = 15 * time.Minute
+	BatchInterval time.Duration = 15 * time.Minute
+	PollInterval  time.Duration = 10 * time.Minute
 )
 
 func main() {

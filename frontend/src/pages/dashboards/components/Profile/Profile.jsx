@@ -4,6 +4,9 @@ import defaultProfile from "../../../../assets/default-profile.avif";
 import { useAuth } from "../../../../AuthContext";
 import { api } from "../../../../api";
 import { useNavigate } from "react-router-dom";
+import CreateAccountForm from "./CreateAccountForm";
+import BalanceUpdateForm from "./BalanceUpdateForm";
+import { DollarSign, IndianRupee, JapaneseYen } from "lucide-react";
 
 function validateImage(file) {
     return file.size < 2 * 1024 * 1024; // 2 MB
@@ -24,7 +27,9 @@ const Profile = ({ entity }) => {
     });
     const navigate = useNavigate();
     const [popup, setPopup] = useState(false);
-
+    const [ accountFormOpen, setAccountFormOpen ] = useState(false);
+    const [ balanceFormOpen, setIsBalanceFormOpen ] = useState(false);
+    const [ balanceAction, setBalanceAction ] = useState('deposit');
     // --------------------------
     //  Fetch Data
     // --------------------------
@@ -148,6 +153,34 @@ const Profile = ({ entity }) => {
             alert("Error updating profile!");
         }
     }
+
+    const handleNewAccount = () => setAccountFormOpen(true);
+
+    const handleBalanceForm = (e) => {
+        const action = e.target.name;
+        if (user?.entity === 'users' && action === 'deposit') {
+            console.log("deposit not allowed.");
+            return;
+        }
+        setBalanceAction(action);
+        setIsBalanceFormOpen(true);
+    }
+
+    const getCurrencySymbol = () => {
+        const curr = localStorage.getItem('currency') ?? '';
+        switch (curr) {
+            case 'inr':
+                return <IndianRupee size={15} />
+            case 'usd':
+                return <DollarSign size={15} />
+            case 'yen':
+                return <JapaneseYen size={15} />
+            default:
+                console.log("currency not allowed: ", curr);
+                throw Error("currency is not allowed: ", curr);
+        }
+    }
+
     return (
         <div>
             {popup && (
@@ -206,6 +239,13 @@ const Profile = ({ entity }) => {
                                 onChange={handlePhotoChange}
                             />
                         </label>
+                        <div className="account-balance">
+                            <h3>Balance</h3>
+                            <div className="balance-box">
+                                {getCurrencySymbol()}
+                                <p>{profile.amount}</p>
+                            </div>
+                        </div>
                     </div>
                     {(entity === "users") && (
                         <div className="profile-form-section">
@@ -225,7 +265,17 @@ const Profile = ({ entity }) => {
                             <label className="profile-form-label">Age</label>
                             <input type="text" placeholder="0" onChange={handleOnChange} className="profile-form-input" value={profile.age} />
                             </div>
-                            <button className="profile-save-button">Save Changes</button>
+                            <div className="profile-btn-group">
+                                <button className="profile-save-button">Save Changes</button>
+                                <button className="profile-account-add-btn"
+                                    disabled={user.account_exists}
+                                    onClick={handleNewAccount}
+                                >Add Account</button>
+                                <button className="withdraw-btn" 
+                                    onClick={handleBalanceForm}
+                                    name="withdraw"
+                                >Withdraw</button>
+                            </div>
                         </div>
                     )}
                     {(entity === "brands") && (
@@ -250,10 +300,50 @@ const Profile = ({ entity }) => {
                             <label className="profile-form-label">Website</label>
                             <input type="text" placeholder="https://" className="profile-form-input" name="website" onChange={handleOnChange} value={profile.website} />
                             </div>
-                            <button className="profile-save-button">Save Changes</button>
+                            <div className="profile-btn-group">
+                                <button className="profile-save-button">Save Changes</button>
+                                <button className="profile-account-add-btn"
+                                    disabled={user.account_exists}
+                                    onClick={handleNewAccount}
+                                >Add Account</button>
+                                <button className="deposit-btn" 
+                                    onClick={handleBalanceForm}
+                                    name="deposit"    
+                                >Deposit Money</button>
+
+                                <button className="withdraw-btn" 
+                                    onClick={handleBalanceForm}
+                                    name="withdraw"    
+                                >Withdraw</button>
+                            </div>
                         </div>
                     )}
                 </div>
+                <CreateAccountForm 
+                    isOpen={accountFormOpen}
+                    onClose={() => setAccountFormOpen(false)}
+                />
+                <BalanceUpdateForm 
+                    balance={profile?.amount}
+                    isOpen={balanceFormOpen}
+                    action={balanceAction}
+                    onSuccess={
+                        balanceAction === 'deposit' ? 
+                        (amount) => {
+                            setProfile(prev => ({
+                                ...prev,
+                                ["amount"]: prev.amount + amount
+                            }));
+                        } : 
+                        (amount) => {
+                            setProfile(prev => ({
+                                ...prev,
+                                ["amount"]: prev.amount - amount
+                            }));
+                        }
+                    }
+                    onClose={() => setIsBalanceFormOpen(false)}
+                />
             </div>
             {(entity === "users") && (
                 <div className="profile-social-card">

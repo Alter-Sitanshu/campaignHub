@@ -90,7 +90,7 @@ type TokenConfig struct {
 const (
 	defaultUserLVL       = "LVL1"
 	SessionTimeout       = time.Hour * 24 * 1 // Timeout of 1 Day
-	CookieExp            = 3600 * 24 * 7      // 7 Days
+	CookieExp            = 3600 * 24 * 1      // 1 Day
 	ResetTokenExpiry     = time.Minute * 15   // 15 Minutes
 	DefaultSyncFrequency = 5                  // in minutes
 )
@@ -114,28 +114,27 @@ func (app *Application) AddRoutes(addr string, router *gin.Engine) {
 	users := base.Group("/users", app.AuthMiddleware())
 	{
 		users.GET("/me", app.GetCurrentUser)
-		users.GET("/:id", app.GetUserById)
+		users.GET("/:user_id", app.GetUserById)
 		users.GET("/email/:email", app.GetUserByEmail)
-		users.DELETE("/:id", app.DeleteUser)
-		users.PATCH("/:id", app.UpdateUser)
-		users.GET("/campaigns/:id", app.GetUserCampaigns) // parameter: id
+		users.DELETE("/:user_id", app.DeleteUser, app.AuthoriseAdmin())
+		users.PATCH("/:user_id", app.UpdateUser, app.AuthoriseUser())
 		// query paramater ext (supported: jpeg, jpg, png)
 		users.GET("/profile_picture/", app.GetProfilePicUpdateURL)
 		// request must contain json{objectKey: ""}
 		users.POST("/profile_picture/confirm", app.ConfirmProfilePicUpload)
 		// query parameter id(user id)
 		users.GET("/profile_picture/download/", app.GetUserProfilePic)
-		users.GET("/stats/:id", app.GetUserStats)
+		users.GET("/stats/:user_id", app.GetUserStats, app.AuthoriseUser())
 	}
 
 	// Brand routes
 	brands := base.Group("/brands", app.AuthMiddleware())
 	{
 		brands.GET("/:brand_id", app.GetBrand)
-		brands.DELETE("/:brand_id", app.DeleteBrand)
-		brands.PATCH("/:brand_id", app.UpdateBrand)
+		brands.DELETE("/:brand_id", app.DeleteBrand, app.AuthoriseAdmin())
+		brands.PATCH("/:brand_id", app.UpdateBrand, app.AuthoriseBrand())
 		brands.GET("/campaigns/:brand_id", app.GetBrandCampaigns) // parameter: brandid
-		brands.GET("/stats/:id", app.GetBrandStats)
+		brands.GET("/stats/:brand_id", app.GetBrandStats, app.AuthoriseBrand())
 	}
 
 	// campaign routes
@@ -143,8 +142,8 @@ func (app *Application) AddRoutes(addr string, router *gin.Engine) {
 	{
 		campaigns.GET("/feed", app.GetCampaignFeed) // query parametes: cursor
 		campaigns.GET("/:campaign_id", app.GetCampaign)
-		campaigns.GET("/user/:userid", app.GetUserCampaigns)    // query parameters: cursor
-		campaigns.GET("/brand/:brandid", app.GetBrandCampaigns) // query parameters: cursor
+		campaigns.GET("/user/:user_id", app.GetUserCampaigns, app.AuthoriseUser()) // query parameters: cursor
+		campaigns.GET("/brand/:brand_id", app.GetBrandCampaigns)                   // query parameters: cursor
 		campaigns.POST("", app.CreateCampaign)
 		campaigns.PUT("/stop/:campaign_id", app.StopCampaign)
 		campaigns.PUT("/activate/:campaign_id", app.ActivateCampaign)
@@ -155,43 +154,46 @@ func (app *Application) AddRoutes(addr string, router *gin.Engine) {
 
 	applications := base.Group("/applications", app.AuthMiddleware())
 	{
-		applications.GET(":application_id", app.GetApplication)
+		applications.GET("/:application_id", app.GetApplication)
 		applications.GET("/campaigns/:campaign_id", app.GetCampaignApplications)
-		applications.GET("/my-applications", app.GetCreatorApplications) // query: offset, limit
+		applications.GET("/my-applications", app.GetCreatorApplications)                             // query: offset, limit
+		applications.GET("/my-applications/available", app.GetCreatorApplicationsWithoutSubmissions) // query: offset, limit
 		applications.PUT("/accept/:application_id", app.AcceptApplication)
 		applications.PUT("/reject/:application_id", app.RejectApplication)
-		applications.DELETE("/delete/:application_id", app.DeleteApplication)
+		applications.DELETE("/delete/:application_id", app.DeleteApplication, app.AuthoriseAdmin())
 		applications.POST("/:campaign_id", app.CreateApplication)
 	}
 
 	// tickets routes
 	tickets := base.Group("/tickets", app.AuthMiddleware())
 	{
-		tickets.GET("", app.GetRecentTickets) // query: status("open"/"close"), limit, offset
-		tickets.GET("/:ticket_id", app.GetTicket)
+		tickets.GET("", app.GetRecentTickets, app.AuthoriseAdmin()) // query: status("open"/"close"), limit, offset
+		tickets.GET("/:ticket_id", app.GetTicket, app.AuthoriseAdmin())
 		tickets.POST("", app.RaiseTicket)
-		tickets.PUT("/:ticket_id", app.CloseTicket)
-		tickets.DELETE("/:ticket_id", app.DeleteTicket)
+		tickets.PUT("/:ticket_id", app.CloseTicket, app.AuthoriseAdmin())
+		tickets.DELETE("/:ticket_id", app.DeleteTicket, app.AuthoriseAdmin())
 	}
 
 	// submissions routes
 	submission := base.Group("/submissions", app.AuthMiddleware())
 	{
 		submission.GET("", app.FilterSubmissions)               // query: creator_id, campaign_id, time
-		submission.GET("/my-submissions", app.GetMySubmissions) // query: time
+		submission.GET("/my-submissions", app.GetMySubmissions) // query: time, limit, offset
 		submission.GET("/:sub_id", app.GetSubmission)
 		submission.POST("", app.CreateSubmission)
-		submission.DELETE("/:sub_id", app.DeleteSubmission)
+		submission.DELETE("/:sub_id", app.DeleteSubmission, app.AuthoriseAdmin())
 		submission.PATCH("/:sub_id", app.UpdateSubmission)
 	}
 
 	// accounts routes
 	accounts := base.Group("/accounts", app.AuthMiddleware())
 	{
-		accounts.GET("", app.GetAllAccounts)
+		accounts.GET("", app.GetAllAccounts, app.AuthoriseAdmin())
 		accounts.GET("/:acc_id", app.GetUserAccount)
 		accounts.POST("", app.CreateAccount)
-		accounts.DELETE("/accounts/:acc_id", app.DeleteUserAccount)
+		accounts.PUT("/withdraw", app.WithdrawBalance)
+		accounts.PUT("/deposit", app.DepositBalance)
+		accounts.DELETE("/accounts/:acc_id", app.DeleteUserAccount, app.AuthoriseAdmin())
 		accounts.PUT("/accounts/:acc_id", app.DisableUserAccount)
 	}
 
@@ -309,14 +311,14 @@ func (app *Application) Run() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	app.workers.SetCancel(cancel)
 	app.wg.Add(3) // One for each service running
+	go func() {
+		defer app.wg.Done()
+		app.workers.Poll.Start(ctx)
+	}()
 	// Start the batch workers go routines
 	go func() {
 		defer app.wg.Done()
 		app.workers.Batch.Start(ctx)
-	}()
-	go func() {
-		defer app.wg.Done()
-		app.workers.Poll.Start(ctx)
 	}()
 
 	// Start the Sockets Hub in a go routine

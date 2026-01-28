@@ -1,12 +1,10 @@
 package api
 
 import (
-	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/Alter-Sitanshu/campaignHub/internals/db"
-	"github.com/Alter-Sitanshu/campaignHub/internals/mailer"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -58,28 +56,28 @@ func (app *Application) RaiseTicket(c *gin.Context) {
 		return
 	}
 	// Notify the admin mail
-	InvitationReq := mailer.EmailRequest{
-		To:      app.cfg.MailCfg.Support,
-		Subject: "Verify your account",
-		Body: mailer.GenerateTicketEmail(
-			app.cfg.MailCfg.Support,
-			ticket,
-		),
-	}
-	// Implementing a retry fallback
-	tries := 1
-	for tries <= app.cfg.MailCfg.MailRetries {
-		err = app.mailer.PushMail(InvitationReq)
-		if err == nil {
-			break
-		}
-		tries++
-	}
-	if err != nil && tries > app.cfg.MailCfg.MailRetries {
-		log.Printf("error sending verification to %s: %v\n", "support", err.Error())
-		c.JSON(http.StatusInternalServerError, WriteError("Server Error"))
-		return
-	}
+	// InvitationReq := mailer.EmailRequest{
+	// 	To:      app.cfg.MailCfg.Support,
+	// 	Subject: "Verify your account",
+	// 	Body: mailer.GenerateTicketEmail(
+	// 		app.cfg.MailCfg.Support,
+	// 		ticket,
+	// 	),
+	// }
+	// // Implementing a retry fallback
+	// tries := 1
+	// for tries <= app.cfg.MailCfg.MailRetries {
+	// 	err = app.mailer.PushMail(InvitationReq)
+	// 	if err == nil {
+	// 		break
+	// 	}
+	// 	tries++
+	// }
+	// if err != nil && tries > app.cfg.MailCfg.MailRetries {
+	// 	log.Printf("error sending verification to %s: %v\n", "support", err.Error())
+	// 	c.JSON(http.StatusInternalServerError, WriteError("Server Error"))
+	// 	return
+	// }
 
 	// successfully raised the ticket
 	c.JSON(http.StatusCreated, WriteResponse(ticket))
@@ -87,24 +85,11 @@ func (app *Application) RaiseTicket(c *gin.Context) {
 
 func (app *Application) CloseTicket(c *gin.Context) {
 	ctx := c.Request.Context()
-	LogInUser, ok := c.Get("user")
-	if !ok {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
-	Entity, ok := LogInUser.(db.AuthenticatedEntity)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
+
 	ticket_id := c.Param("ticket_id")
 	// validating the uuid
 	if ok := uuid.Validate(ticket_id); ok != nil {
 		c.JSON(http.StatusBadRequest, WriteError("invalid credentials"))
-		return
-	}
-	if Entity.GetRole() != "admin" {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
 		return
 	}
 	// resolve the ticket
@@ -118,21 +103,7 @@ func (app *Application) CloseTicket(c *gin.Context) {
 
 func (app *Application) GetRecentTickets(c *gin.Context) {
 	ctx := c.Request.Context()
-	LogInUser, ok := c.Get("user")
-	if !ok {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
-	Entity, ok := LogInUser.(db.AuthenticatedEntity)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
-	// Authorise the user
-	if Entity.GetRole() != "admin" {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
+
 	status_param := c.Query("status")
 	limit, err := strconv.Atoi(c.Query("limit"))
 	if err != nil {
@@ -167,21 +138,7 @@ func (app *Application) GetRecentTickets(c *gin.Context) {
 
 func (app *Application) DeleteTicket(c *gin.Context) {
 	ctx := c.Request.Context()
-	LogInUser, ok := c.Get("user")
-	if !ok {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
-	Entity, ok := LogInUser.(db.AuthenticatedEntity)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
-	// Authorise the user
-	if Entity.GetRole() != "admin" {
-		c.JSON(http.StatusUnauthorized, WriteError("unauthorised request"))
-		return
-	}
+
 	ticket_id := c.Param("ticket_id")
 	// validating the uuid
 	if ok := uuid.Validate(ticket_id); ok != nil {

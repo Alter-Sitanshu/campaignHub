@@ -10,8 +10,8 @@ import (
 )
 
 type Client interface {
-	GetVideoDetails(ctx context.Context, VideoID string) (any, error)
-	GetVideoDetailsForWorkers(ctx context.Context, VideoID string) (any, error)
+	GetVideoDetails(ctx context.Context, VideoID string) (*VideoMetadata, error)
+	GetVideoDetailsForWorkers(ctx context.Context, VideoID string) (*VideoMetadata, error)
 }
 
 type Factory struct {
@@ -42,18 +42,18 @@ func (f *Factory) GetClient(platform string) (Client, error) {
 	}
 }
 
-func (f *Factory) GetVideoDetails(ctx context.Context, platform, VideoID string) (any, error) {
+func (f *Factory) GetVideoDetails(ctx context.Context, platform, VideoID string) (*VideoMetadata, error) {
 	client, err := f.GetClient(platform)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	return client.GetVideoDetails(ctx, VideoID)
 }
 
-func (f *Factory) GetVideoDetailsForWorkers(ctx context.Context, platform, VideoID string) (any, error) {
+func (f *Factory) GetVideoDetailsForWorkers(ctx context.Context, platform, VideoID string) (*VideoMetadata, error) {
 	client, err := f.GetClient(platform)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	return client.GetVideoDetailsForWorkers(ctx, VideoID)
 }

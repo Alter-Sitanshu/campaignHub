@@ -51,13 +51,13 @@
   align-items: center;
   justify-content: center;
   border-radius: 10px;
-  background: black;
+  background: var(--cyber-green);
 }
 
 .campaign-header-left svg {
   width: 20px;
   height: 20px;
-  color: var(--color-primary);
+  color: var(--text-dark);
 }
 
 /* Name + date */
@@ -103,7 +103,7 @@ button[class^="campaign-status-"] {
 }
 
 .campaign-status-completed {
-  background: var(--bg-medium-light);
+  background: var(--cyber-green);
   color: var(--text-dark);
 }
 
@@ -214,12 +214,12 @@ button[class^="campaign-status-"] {
 }
 
 .campaign-card-footer button {
-  background: var(--color-primary);
+  background: var(--cyber-green);
   color: var(--bg-secondary);
 }
 
 .campaign-card-footer button:hover {
-  background: var(--text-dark);
+  background: rgb(52, 141, 0);
   color: white;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(35, 83, 71, 0.2);

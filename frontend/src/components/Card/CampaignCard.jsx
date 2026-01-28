@@ -2,10 +2,12 @@ import "./CampaignCard.css";
 import { api } from "../../api";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { useAuth } from "../../AuthContext";
 
 
 const CampaignCard = ({ campaign, isBrand, onClick }) => {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [ Applied, setApplied ] = useState(false);
     const [ Applying, setApplying ] = useState(false);
 
@@ -102,7 +104,7 @@ const CampaignCard = ({ campaign, isBrand, onClick }) => {
             </div>
             <div className="campaign-card-footer">
                 {!isBrand && (<button onClick={handleApply}
-                    disabled={Applying || Applied || !campaign.accepting_applications}
+                    disabled={!user.account_exists || Applying || Applied || !campaign.accepting_applications}
                 >{campaign.accepting_applications ? Applied ? "Applied" : Applying ? "Applying..." : "Apply Now" : "Applications Closed"}</button>
                 )}
                 <a href={campaign.doc_link}>Open Details</a>
