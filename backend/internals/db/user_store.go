@@ -143,7 +143,7 @@ func (u *UserStore) GetUserById(ctx context.Context, id string) (*User, error) {
 	// join the roles table to get the name of the role
 	query := `
 		SELECT u.id, u.first_name, u.last_name, u.email, u.password, u.gender, 
-		COALESCE(a.amount, 0), a.currency, u.age, r.name, u.is_verified, u.created_at,
+		COALESCE(a.amount, 0), COALESCE(a.currency, ''), u.age, r.name, u.is_verified, u.created_at,
 		EXISTS(SELECT 1 FROM accounts acc WHERE acc.holder_id = u.id) AS has_account
 		FROM users u
 		JOIN roles r ON r.id = u.role
@@ -184,7 +184,7 @@ func (u *UserStore) GetUserByEmail(ctx context.Context, email string) (*User, er
 	// filter by email and join the roles table to get the role name
 	query := `
 		SELECT u.id, u.first_name, u.last_name, u.email,
-		u.password, u.gender, COALESCE(a.amount, 0), a.currency, u.age, r.name, u.is_verified, u.created_at
+		u.password, u.gender, COALESCE(a.amount, 0), COALESCE(a.currency, ''), u.age, r.name, u.is_verified, u.created_at
 		FROM users u
 		JOIN roles r ON r.id = u.role
 		LEFT JOIN accounts a ON a.holder_id = u.id
