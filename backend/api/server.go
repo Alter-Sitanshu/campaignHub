@@ -119,7 +119,7 @@ func (app *Application) AddRoutes(addr string, router *gin.Engine) {
 		users.DELETE("/:user_id", app.DeleteUser, app.AuthoriseAdmin())
 		users.PATCH("/:user_id", app.UpdateUser, app.AuthoriseUser())
 		// query paramater ext (supported: jpeg, jpg, png)
-		users.GET("/profile_picture/", app.GetProfilePicUpdateURL)
+		users.GET("/profile_picture", app.GetProfilePicUpdateURL)
 		// request must contain json{objectKey: ""}
 		users.POST("/profile_picture/confirm", app.ConfirmProfilePicUpload)
 		// query parameter id(user id)

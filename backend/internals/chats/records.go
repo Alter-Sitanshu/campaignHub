@@ -96,8 +96,9 @@ func (hs *HubStore) GetUserConversations(ctx context.Context, entity, entityID s
 		// TODO: later modify the database service to separate the direct conversations and
 		// campaign conversations. Here assume that the userid will always be in the participant_one
 		query = `
-			SELECT c.id, c.participant_two, COALESCE(b.name, u2.first_name) as participant_name , c.type, c.campaign_id, c.status,
-			c.created_at, c.last_message_at, lm.content
+			SELECT c.id, c.participant_two, COALESCE(b.name, u2.first_name) as participant_name,
+			c.type, c.campaign_id, c.status,
+			c.created_at, c.last_message_at, lm.content, camp.title
 			FROM conversations c
 			LEFT JOIN brands b ON b.id = c.participant_two
 			LEFT JOIN users u2 ON u2.id = c.participant_two
@@ -108,13 +109,14 @@ func (hs *HubStore) GetUserConversations(ctx context.Context, entity, entityID s
 				ORDER BY m.created_at DESC
 				LIMIT 1
 			) lm ON TRUE
+			LEFT JOIN campaigns camp ON camp.id = c.campaign_id
 			WHERE c.participant_one = $1 AND (c.type = 'campaign' OR c.type = 'direct')
 			ORDER BY c.last_message_at DESC
 		`
 	case "brand":
 		query = `
-			SELECT c.id, c.participant_one, u.first_name as participant_name, c.type, c.campaign_id,
-			c.status, c.created_at, c.last_message_at, lm.content
+			SELECT c.id, c.participant_one, u.first_name as participant_name, c.type,
+		 	c.campaign_id, c.status, c.created_at, c.last_message_at, lm.content, camp.title
 			FROM conversations c
 			LEFT JOIN users u ON u.id = c.participant_one
 			LEFT JOIN LATERAL (
@@ -124,6 +126,7 @@ func (hs *HubStore) GetUserConversations(ctx context.Context, entity, entityID s
 				ORDER BY m.created_at DESC
 				LIMIT 1
 			) lm ON TRUE
+			LEFT JOIN campaigns camp ON camp.id = c.campaign_id
 			WHERE c.participant_two = $1 AND c.type = 'campaign'
 			ORDER BY c.last_message_at DESC
 		`
@@ -148,6 +151,7 @@ func (hs *HubStore) GetUserConversations(ctx context.Context, entity, entityID s
 			&conv.CreatedAt,
 			&conv.LastMessageAt,
 			&conv.LastMessage,
+			&conv.CampaignTitle,
 		)
 		if err != nil {
 			return nil, err

@@ -15,8 +15,9 @@ type UserResponse struct {
 	IsVerified     bool       `json:"is_verified" binding:"required"`
 	Gender         string     `json:"gender" binding:"required"`
 	Amount         float64    `json:"amount" binding:"required,min=0"`
+	Currency       string     `json:"currency"`
 	Age            int        `json:"age" binding:"required"`
-	ProfilePicture string     `json:"prfile_picture"`
+	ProfilePicture string     `json:"picture"`
 	PlatformLinks  []db.Links `json:"links" binding:"required"`
 }
 

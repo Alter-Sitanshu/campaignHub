@@ -51,6 +51,10 @@ const Profile = ({ entity }) => {
 
                 // Set profile
                 setProfile(data);
+                if ((data.picture && data.picture !== "") || 
+                (data.profile_picture && data.profile_picture !== "")) {
+                    setPreview(data.picture ?? data.profile_picture);
+                }
 
                 // Initialize form based on entity
                 if (entity === "users") {
@@ -114,10 +118,10 @@ const Profile = ({ entity }) => {
             // 1) Upload Photo (if selected)
             if (selectedFile) {
                 const ext = selectedFile.name.split(".").pop();
-                const response = await api.get(`/${entity}/profile_picture/?ext=${ext}`);
+                const response = await api.get(`/${entity}/profile_picture?ext=${ext}`);
 
-                const uploadUrl = response.data.data.uploadUrl;
-                const objKey = response.data.data.objKey;
+                const uploadUrl = response.data.uploadUrl;
+                const objKey = response.data.objectKey;
 
                 // Upload file to signed URL
                 await fetch(uploadUrl, {
@@ -150,7 +154,7 @@ const Profile = ({ entity }) => {
             alert("Profile updated!");
         } catch (err) {
             console.error(err);
-            alert("Error updating profile!");
+            console.log("Error updating profile!");
         }
     }
 
@@ -167,17 +171,19 @@ const Profile = ({ entity }) => {
     }
 
     const getCurrencySymbol = () => {
-        const curr = localStorage.getItem('currency') ?? '';
+        const curr = localStorage.getItem('currency') ?? profile.currency ?? '';
         switch (curr) {
             case 'inr':
-                return <IndianRupee size={15} />
+                return <IndianRupee size={15} />;
             case 'usd':
-                return <DollarSign size={15} />
+                return <DollarSign size={15} />;
             case 'yen':
-                return <JapaneseYen size={15} />
+                return <JapaneseYen size={15} />;
             default:
-                console.log("currency not allowed: ", curr);
-                throw Error("currency is not allowed: ", curr);
+                console.log("default currency fallback");
+                return <IndianRupee size={15} />;
+                // console.log("currency not allowed: ", curr);
+                // throw Error("currency is not allowed: ", curr);
         }
     }
 
@@ -266,7 +272,7 @@ const Profile = ({ entity }) => {
                             <input type="text" placeholder="0" onChange={handleOnChange} className="profile-form-input" value={profile.age} />
                             </div>
                             <div className="profile-btn-group">
-                                <button className="profile-save-button">Save Changes</button>
+                                <button className="profile-save-button" onClick={handleProfileChange}>Save Changes</button>
                                 <button className="profile-account-add-btn"
                                     disabled={user.account_exists}
                                     onClick={handleNewAccount}
@@ -301,7 +307,7 @@ const Profile = ({ entity }) => {
                             <input type="text" placeholder="https://" className="profile-form-input" name="website" onChange={handleOnChange} value={profile.website} />
                             </div>
                             <div className="profile-btn-group">
-                                <button className="profile-save-button">Save Changes</button>
+                                <button className="profile-save-button" onClick={handleProfileChange}>Save Changes</button>
                                 <button className="profile-account-add-btn"
                                     disabled={user.account_exists}
                                     onClick={handleNewAccount}

@@ -7,8 +7,22 @@ const SubCard = ({ sub }) => {
   const likes = sub.like_count ?? sub.likeCount ?? 0;
   const title = sub.title ?? sub.video_title ?? "Untitled";
   const platform = (sub.platform ?? sub.video_platform ?? "unknown").toLowerCase();
-  const videoStatus = (sub.video_status ?? sub.videoStatus ?? "unknown").toLowerCase();
-
+  const getStatusConfig = (status) => {
+    switch (status) {
+      case 0:
+          return 'Draft';
+      case 1:
+          return 'Active';
+      case 2:
+        return 'Pending';
+      case 3:
+        return 'Completed';
+        default:
+          return 'Unknown';
+    }
+  };
+      
+  const videoStatus = getStatusConfig(sub.status).toLowerCase();
   const formatCount = (n) => {
     if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
     if (n >= 1_000) return (n / 1_000).toFixed(1).replace(/\.0$/, "") + "K";
@@ -33,7 +47,7 @@ const SubCard = ({ sub }) => {
     <a className="sub-card detailed" role="article" aria-label={`${title} submission`} href={sub.url} target="_blank" rel="noopener noreferrer">
       <div className="thumbnail-wrapper">
         <img
-          src={sub.thumbnail?.url !== "" ? sub.thumbnail.url : fallbackThumbnail}
+          src={sub.thumbnail ? sub.thumbnail : fallbackThumbnail}
           alt={title}
           className="thumbnail"
           loading="lazy"
@@ -64,7 +78,7 @@ const SubCard = ({ sub }) => {
                 <path fill="currentColor" d="M12 5a7 7 0 100 14 7 7 0 000-14zm0 2a5 5 0 110 10 5 5 0 010-10z" />
                 <path fill="currentColor" d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" opacity="0.15" />
               </svg>
-              <div>
+              <div className="metric-wrapper">
                 <div className="metric-number">{formatCount(views)}</div>
                 <div className="metric-label">views</div>
               </div>

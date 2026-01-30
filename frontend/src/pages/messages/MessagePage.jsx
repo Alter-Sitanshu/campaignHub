@@ -18,10 +18,21 @@ const MessagePage = () => {
   const [input, setInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const messagesEndRef = useRef(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
+  // Handle window resize to track mobile state
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const fetchConversations = async () => {
     const response = await api.get("/private/conversations");
@@ -76,6 +87,15 @@ const MessagePage = () => {
       setMessages(response.data.data);
     }
     setLoadingMessages(false);
+  };
+
+  const handleConversationClick = (conv) => {
+    setactiveConv(conv);
+  };
+
+  const handleBackToList = () => {
+    setactiveConv(null);
+    setMessages(null);
   };
 
   useEffect(() => {
@@ -221,7 +241,7 @@ const MessagePage = () => {
   return (
     <div className="messaging-page">
       {/* Sidebar - Conversation List */}
-      <aside className="messaging-sidebar">
+      <aside className={`messaging-sidebar ${isMobile && activeConv ? 'hidden-mobile' : ''}`}>
         <div className="sidebar-header">
           <h2>Messages</h2>
         </div>
@@ -243,7 +263,7 @@ const MessagePage = () => {
               className={`conversation-item ${
                 activeConv?.id === conv.id ? "active" : ""
               }`}
-              onClick={() => {setactiveConv(conv)}}
+              onClick={() => handleConversationClick(conv)}
             >
               <div className="conversation-avatar">{conv.participant_name.slice(0,2)}</div>
               <div className="conversation-info">
@@ -260,25 +280,25 @@ const MessagePage = () => {
 
       {/* Main Chat Area */}
       {!activeConv ? (
-        <main className="messaging-container empty-state">
+        <main className={`messaging-container empty-state ${!isMobile ? '' : 'active-mobile'}`}>
           <div className="empty-message">
             <h3>Select a conversation</h3>
             <p>Choose a conversation from the left to start messaging.</p>
           </div>
         </main>
       ) : (
-        <main className="messaging-container">
+        <main className={`messaging-container ${isMobile ? 'active-mobile' : ''}`}>
           {/* Header */}
           <div className="messaging-header">
             <div className="header-left">
-              <a className="back-button" href={`${user.entity}/dashboard/${user.id}`}>
+              <button className="back-button" onClick={handleBackToList}>
                 <ArrowLeft />
-              </a>
+              </button>
               <div className="header-avatar">
                 {activeConv?.participant_name.slice(0,2)}
               </div>
               <div className="header-info">
-                <h3>{activeConv?.participant_name}</h3>
+                <h3>{`${activeConv?.participant_name} - ${activeConv?.campaign_title}`}</h3>
                 <p className="header-status">{formatRelativeTime(activeConv?.last_message_at)}</p>
               </div>
             </div>
@@ -337,7 +357,7 @@ const MessagePage = () => {
               disabled={!input.trim() || activeConv?.status === 'closed'}
             >
               <Send />
-              Send
+              <span>Send</span>
             </button>
           </div>
         </main>

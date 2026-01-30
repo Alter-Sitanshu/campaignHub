@@ -98,7 +98,7 @@ func (app *Application) CreateSubmission(c *gin.Context) {
 	extension := ext[0]
 	objKey, _ := b2.GenerateFileKey(submission.Id, "thumbnail", extension)
 
-	fileKey := fmt.Sprintf("%s/%s", app.s3Store.BucketName, objKey)
+	fileKey := fmt.Sprintf("%s%s", app.s3Store.BucketName, objKey)
 
 	err = app.s3Store.UploadFile(fileKey, Data.Thumbnails.Raw, Data.Thumbnails.ContentType)
 	if err != nil {
@@ -594,21 +594,26 @@ func (app *Application) GetMySubmissions(c *gin.Context) {
 			UploadedAt:   temp.CreatedAt,
 			CreatedAt:    temp.CreatedAt,
 			Status:       temp.Status,
+			Title:        temp.VideoTitle,
 			Earnings:     temp.Earnings,
 			LikeCount:    temp.LikeCount,
 			Views:        temp.Views,
 			LastSyncedAt: temp.LastSyncedAt,
 			URL:          temp.Url,
+			Thumbnail: fmt.Sprintf("%s%s%s",
+				"https://nsyyvtwxyaxcvzjiaynx.supabase.co/storage/v1/object/public/frogmedia/",
+				app.s3Store.BucketName,
+				temp.ThumbnailURL,
+			),
 		}
 		VideoMeta, err := app.cache.GetVideoMetadata(ctx, output[i].Id)
 		if err == nil {
 			tempMeta = *VideoMeta
 			resp[i].Platform = tempMeta.Platform
 			resp[i].VideoID = tempMeta.VideoID
-			resp[i].Title = tempMeta.Title
+			// resp[i].Title = tempMeta.Title
 			resp[i].Views = tempMeta.ViewCount
 			resp[i].LikeCount = tempMeta.LikeCount
-			resp[i].Thumbnail = tempMeta.Thumbnail.ObjKey
 			// i do not need to throw an error
 			// i will ignore the failure and move forward
 		} else {

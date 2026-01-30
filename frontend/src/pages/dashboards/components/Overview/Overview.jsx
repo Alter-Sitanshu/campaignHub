@@ -3,8 +3,7 @@ import "./overview.css";
 import CampaignCard from "../../../../components/Card/CampaignCard";
 import SubCard from "../../../../components/Card/SubCard";
 import { IndianRupeeIcon } from "lucide-react";
-import { useEffect, useState } from "react";
-import { api } from "../../../../api";
+import { useState } from "react";
 import TicketForm from "../../../../components/Tickets/TicketForm";
 
 const Overview = ({ stats, campaigns, isUser = false }) => {
@@ -92,7 +91,7 @@ const Overview = ({ stats, campaigns, isUser = false }) => {
                 )}
                 {isUser && (
                     <div className="campaigns-list">
-                        {campaigns?.length > 0 ? campaigns?.map(campaign => (
+                        {campaigns?.submissions?.length > 0 ? campaigns?.submissions.map(campaign => (
                             <SubCard key={`sub-${campaign.submission_id}`} sub={campaign} />
                         )) : <p className="empty-container-text">Start Collaborating today !</p>}
                     </div>

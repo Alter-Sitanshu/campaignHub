@@ -100,6 +100,7 @@ type ConversationResponse struct {
 	CreatedAt     string  `json:"created_at"`
 	LastMessage   *string `json:"last_message"`
 	LastMessageAt string  `json:"last_message_at"`
+	CampaignTitle string  `json:"campaign_title,omitempty"`
 }
 
 type BroadcastMessage struct {

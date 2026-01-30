@@ -28,13 +28,19 @@
   overflow: hidden;
 }
 
-/* Sidebar - Hidden on mobile by default */
+/* Sidebar - Visible on mobile by default, hidden when chat is active */
 .messaging-sidebar {
-  display: none;
+  display: flex;
+  flex-direction: column;
   width: 100%;
   background-color: white;
   border-right: 1px solid rgba(35, 83, 71, 0.1);
   overflow-y: auto;
+}
+
+/* Hide sidebar on mobile when chat is active */
+.messaging-sidebar.hidden-mobile {
+  display: none;
 }
 
 .sidebar-header {
@@ -58,10 +64,11 @@
   justify-content: space-between;
   padding: 0.75rem 1rem;
   border-bottom: 1px solid rgba(35, 83, 71, 0.1);
+  gap: 0.5rem;
 }
 
 .sidebar-search input {
-  flex: 0.8;
+  flex: 1;
   width: 100%;
   padding: 0.75rem 1rem;
   border: 2px solid var(--bg-medium-light);
@@ -70,6 +77,7 @@
   outline: none;
   transition: all 0.2s;
   box-sizing: border-box;
+  min-width: 0;
 }
 
 .sidebar-search input:focus {
@@ -78,7 +86,6 @@
 }
 
 .home-button {
-  flex: 0.2;
   padding: 10px 16px;
   border: 1px solid var(--bg-light);
   border-radius: 8px;
@@ -90,7 +97,8 @@
   transition: all 0.3s ease-in;
   text-decoration: none;
   text-align: center;
-  max-width: fit-content;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .home-button:hover {
@@ -163,12 +171,14 @@
   flex-direction: column;
   align-items: flex-end;
   gap: 0.25rem;
+  flex-shrink: 0;
 }
 
 .conversation-time {
   font-size: 0.75rem;
   color: var(--text-dark);
   opacity: 0.6;
+  white-space: nowrap;
 }
 
 .unread-badge {
@@ -184,11 +194,16 @@
 
 /* Main Chat Container */
 .messaging-container {
-  display: flex;
+  display: none;
   flex-direction: column;
   flex: 1;
   background-color: white;
   height: 100vh;
+}
+
+/* Show chat container on mobile when active */
+.messaging-container.active-mobile {
+  display: flex;
 }
 
 /* Chat Header */
@@ -223,6 +238,7 @@
   justify-content: center;
   transition: background-color 0.2s;
   text-decoration: none;
+  flex-shrink: 0;
 }
 
 .back-button:hover {
@@ -257,6 +273,9 @@
   font-size: 1rem;
   font-weight: 600;
   color: white;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .header-status {
@@ -413,6 +432,7 @@
   border-radius: 24px;
   padding: 0.5rem 1rem;
   transition: all 0.2s;
+  min-width: 0;
 }
 
 .input-wrapper:focus-within {
@@ -431,6 +451,7 @@
   justify-content: center;
   opacity: 0.6;
   transition: opacity 0.2s;
+  flex-shrink: 0;
 }
 
 .attachment-btn:hover {
@@ -449,6 +470,7 @@
   font-size: 0.9375rem;
   background: transparent;
   color: var(--text-dark);
+  min-width: 0;
 }
 
 .messaging-input input::placeholder {
@@ -470,6 +492,7 @@
   align-items: center;
   gap: 0.5rem;
   box-shadow: 0 2px 8px rgba(35, 83, 71, 0.2);
+  flex-shrink: 0;
 }
 
 .send-button:hover {
@@ -492,6 +515,34 @@
   transform: none;
 }
 
+/* Mobile: show send icon only */
+@media (max-width: 480px) {
+  .send-button {
+    padding: 0.75rem;
+  }
+  
+  .send-button span {
+    display: none;
+  }
+  
+  .header-info h3 {
+    font-size: 0.875rem;
+  }
+  
+  .sidebar-search {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .sidebar-search input {
+    width: 100%;
+  }
+  
+  .home-button {
+    width: 100%;
+  }
+}
+
 /* Tablet and Desktop */
 @media (min-width: 768px) {
   .messaging-page {
@@ -504,6 +555,15 @@
     width: 360px;
     max-width: 360px;
     border-right-color: var(--text-deep);
+  }
+  
+  /* Always show sidebar and chat on desktop */
+  .messaging-sidebar.hidden-mobile {
+    display: flex;
+  }
+  
+  .messaging-container {
+    display: flex;
   }
 
   .back-button {
@@ -520,6 +580,10 @@
 
   .messaging-input {
     padding: 1.25rem 1.5rem;
+  }
+  
+  .send-button span {
+    display: inline;
   }
 }
 

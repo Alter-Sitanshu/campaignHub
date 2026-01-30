@@ -39,8 +39,9 @@ type UserResponse struct {
 	IsVerified     bool       `json:"is_verified" binding:"required"`
 	Gender         string     `json:"gender" binding:"required"`
 	Amount         float64    `json:"amount,omitempty"`
+	Currency       string     `json:"currency"`
 	Age            int        `json:"age" binding:"required"`
-	ProfilePicture string     `json:"profile_picture"`
+	ProfilePicture string     `json:"picture"`
 	PlatformLinks  []db.Links `json:"links" binding:"required"`
 }
 
@@ -229,6 +230,7 @@ func (app *Application) GetUserById(c *gin.Context) {
 		Email:          user.Email,
 		Gender:         user.Gender,
 		Amount:         user.Amount,
+		Currency:       user.Currency,
 		Age:            user.Age,
 		ProfilePicture: profilePic,
 		PlatformLinks:  user.PlatformLinks,
@@ -279,6 +281,7 @@ func (app *Application) GetUserByEmail(c *gin.Context) {
 		IsVerified:     user.IsVerified,
 		Gender:         user.Gender,
 		Amount:         user.Amount,
+		Currency:       user.Currency,
 		Age:            user.Age,
 		ProfilePicture: profilePic,
 		PlatformLinks:  user.PlatformLinks,
@@ -435,16 +438,20 @@ func (app *Application) GetCurrentUser(c *gin.Context) {
 	}
 	// make the response object
 	userResponse := UserResponse{
-		Id:             user.Id,
-		FirstName:      user.FirstName,
-		LastName:       user.LastName,
-		Email:          user.Email,
-		Gender:         user.Gender,
-		Amount:         user.Amount,
-		Age:            user.Age,
-		IsVerified:     user.IsVerified,
-		ProfilePicture: profilePic,
-		PlatformLinks:  user.PlatformLinks,
+		Id:         user.Id,
+		FirstName:  user.FirstName,
+		LastName:   user.LastName,
+		Email:      user.Email,
+		Gender:     user.Gender,
+		Amount:     user.Amount,
+		Currency:   user.Currency,
+		Age:        user.Age,
+		IsVerified: user.IsVerified,
+		ProfilePicture: fmt.Sprintf("%s%s",
+			"https://nsyyvtwxyaxcvzjiaynx.supabase.co/storage/v1/object/public/frogmedia/",
+			profilePic,
+		),
+		PlatformLinks: user.PlatformLinks,
 	}
 	// set the user profile in the cache
 	err = app.cache.SetUserProfile(ctx, UserID, cache.UserResponse(userResponse))
@@ -490,7 +497,7 @@ func (app *Application) GetProfilePicUpdateURL(c *gin.Context) {
 		// I need to delete the old profile picture
 		go app.s3Store.DeleteFileWithPerms(oldUrl)
 	}
-	fileKey := fmt.Sprintf("%s/%s", app.s3Store.BucketName, objKey)
+	fileKey := fmt.Sprintf("%s%s", app.s3Store.BucketName, objKey)
 	signedURL, err := app.s3Store.GetSignedURL(&fileKey, b2.PutObj)
 	if err != nil {
 		switch {
@@ -532,11 +539,12 @@ func (app *Application) ConfirmProfilePicUpload(c *gin.Context) {
 	}
 
 	// Verify object exists in S3 before saving
-	exists, err := app.s3Store.ObjectExists(req.ObjectKey)
-	if err != nil || !exists {
-		c.JSON(http.StatusBadRequest, WriteError("upload not found"))
-		return
-	}
+	// edit :- maybe the user is uploading profile picture for the first time, so redundant
+	// exists, err := app.s3Store.ObjectExists(req.ObjectKey)
+	// if err != nil || !exists {
+	// 	c.JSON(http.StatusBadRequest, WriteError("upload not found"))
+	// 	return
+	// }
 
 	// NOW save to DB
 	if err := app.store.UserInterface.SetUserProfilePicture(ctx, UserID, req.ObjectKey); err != nil {

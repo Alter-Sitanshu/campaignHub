@@ -39,6 +39,7 @@ type User struct {
 	Password      PassW   `json:"-"`
 	Gender        string  `json:"gender"`
 	Amount        float64 `json:"amount"`
+	Currency      string  `json:"currency"`
 	Age           int     `json:"age"`
 	Role          string  `json:"role"`
 	PlatformLinks []Links `json:"links"`
@@ -142,7 +143,7 @@ func (u *UserStore) GetUserById(ctx context.Context, id string) (*User, error) {
 	// join the roles table to get the name of the role
 	query := `
 		SELECT u.id, u.first_name, u.last_name, u.email, u.password, u.gender, 
-		COALESCE(a.amount, 0), u.age, r.name, u.is_verified, u.created_at,
+		COALESCE(a.amount, 0), a.currency, u.age, r.name, u.is_verified, u.created_at,
 		EXISTS(SELECT 1 FROM accounts acc WHERE acc.holder_id = u.id) AS has_account
 		FROM users u
 		JOIN roles r ON r.id = u.role
@@ -159,6 +160,7 @@ func (u *UserStore) GetUserById(ctx context.Context, id string) (*User, error) {
 		&user.Password.hashed_pass,
 		&user.Gender,
 		&user.Amount,
+		&user.Currency,
 		&user.Age,
 		&user.Role,
 		&user.IsVerified,
@@ -182,7 +184,7 @@ func (u *UserStore) GetUserByEmail(ctx context.Context, email string) (*User, er
 	// filter by email and join the roles table to get the role name
 	query := `
 		SELECT u.id, u.first_name, u.last_name, u.email,
-		u.password, u.gender, COALESCE(a.amount, 0), u.age, r.name, u.is_verified, u.created_at
+		u.password, u.gender, COALESCE(a.amount, 0), a.currency, u.age, r.name, u.is_verified, u.created_at
 		FROM users u
 		JOIN roles r ON r.id = u.role
 		LEFT JOIN accounts a ON a.holder_id = u.id
@@ -198,6 +200,7 @@ func (u *UserStore) GetUserByEmail(ctx context.Context, email string) (*User, er
 		&user.Password.hashed_pass,
 		&user.Gender,
 		&user.Amount,
+		&user.Currency,
 		&user.Age,
 		&user.Role,
 		&user.IsVerified,
@@ -445,9 +448,7 @@ func (u *UserStore) GetUserProfilePicture(ctx context.Context, id string) string
 		WHERE user_id = $1
 	`
 	var url string
-	if err := u.db.QueryRowContext(ctx, query, id).Scan(
-		&url,
-	); err != nil {
+	if err := u.db.QueryRowContext(ctx, query, id).Scan(&url); err != nil {
 		return ""
 	}
 
